@@ -25,7 +25,7 @@ config.kickChannels ??= [];
 // [{ login, userId, accessToken, refreshToken, mode: 'all' | 'custom', channels: [], needsRelink }]
 export const accounts = readJson(ACCOUNTS_FILE, []);
 
-// { clientId, clientSecret, profiles: ['Profile 1', ...] } — perfis do Chrome usados como contas da Kick.
+// { clientId, clientSecret, browser: 'chrome' | 'brave' | 'edge', profiles: ['Profile 1', ...] } — perfis do navegador usados como contas da Kick.
 export const kick = readJson(KICK_FILE, {});
 kick.profiles ??= [];
 

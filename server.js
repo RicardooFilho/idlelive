@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { config, accounts, kick, saveConfig, saveAccounts, saveKick, normalizeChannel, MAX_ACCOUNTS } from './src/store.js';
 import { startDeviceFlow, waitDeviceToken, refreshToken, validate, revoke, fetchLive } from './src/twitch.js';
 import { fetchKickLive, resetKickToken } from './src/kick.js';
-import { findChrome, listProfiles, openWatchWindow, closeWatchWindows, openWindowCount } from './src/chrome.js';
+import { installedBrowsers, browserName, listProfiles, openWatchWindow, closeWatchWindows, openWindowCount, openWindowList } from './src/browser.js';
 import { ChatConnection } from './src/chat.js';
 import { recordMinute, boostHistory, todayBoostMinutes, liveHours } from './src/stats.js';
 import { autostartEnabled, setAutostart } from './src/autostart.js';
@@ -15,7 +15,12 @@ import { autostartEnabled, setAutostart } from './src/autostart.js';
 const PORT = Number(process.env.PORT) || 3000;
 const LIVE_INTERVAL = 60 * 1000;
 const TOKEN_INTERVAL = 30 * 60 * 1000;
-const PANEL_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public', 'index.html');
+// O botão "Reiniciar servidor" só funciona quando o painel foi aberto pelo iniciar.bat, que repete ao receber esse código.
+const RESTART_CODE = 75;
+const CAN_RESTART = process.env.IDLELIVE_LAUNCHER === '1';
+const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
+const PANEL_FILE = path.join(PUBLIC_DIR, 'index.html');
+const FAVICON_FILE = path.join(PUBLIC_DIR, 'favicon.ico');
 
 const log = (msg) => console.log(`[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`);
 
@@ -125,14 +130,17 @@ async function updateKickLive() {
 }
 
 // Janelas pequenas num bloco 2x2 no canto inferior direito da tela, sem sobrepor.
-// O Chrome pode aumentar um pouco se for menor que o mínimo dele.
+// O navegador pode aumentar um pouco se for menor que o mínimo dele.
 const KICK_WINDOW = { width: 360, height: 260 };
+
+// Navegador escolhido no painel; sem escolha, o primeiro instalado (Chrome, Brave, Edge).
+const currentBrowser = () => kick.browser ?? installedBrowsers()[0]?.id ?? null;
 
 // Sem `profile`, abre o canal em todas as contas da Kick.
 function watchKick({ channel, profile, screen }) {
   if (!config.kickChannels.includes(channel)) throw new Error('Canal não está na lista');
   if (profile === undefined) {
-    if (kick.profiles.length === 0) throw new Error('Marque os perfis do Chrome que vão ser as contas da Kick');
+    if (kick.profiles.length === 0) throw new Error('Marque os perfis do navegador que vão ser as contas da Kick');
     for (const p of kick.profiles) watchKick({ channel, profile: p, screen });
     return;
   }
@@ -141,24 +149,30 @@ function watchKick({ channel, profile, screen }) {
   // O painel manda a tela em pixels CSS; o Windows posiciona em pixels físicos.
   const scale = screen.scale || 1;
   const { width, height } = KICK_WINDOW;
-  openWatchWindow(slot, profile, `https://kick.com/${channel}`, {
+  openWatchWindow(currentBrowser(), slot, profile, `https://kick.com/${channel}`, {
     x: (screen.left + screen.width - (2 - (slot % 2)) * width) * scale,
     y: (screen.top + screen.height - (2 - Math.floor(slot / 2)) * height) * scale,
     width: width * scale,
     height: height * scale,
   });
-  log(`Kick: abrindo #${channel} no perfil ${profile}`);
+  log(`Kick: abrindo #${channel} no perfil ${profile} (${browserName(currentBrowser())})`);
 }
 
 function kickState() {
-  const profiles = listProfiles();
+  const browser = currentBrowser();
+  const profiles = listProfiles(browser);
+  const browsers = installedBrowsers();
   return {
     configured: kickConfigured(),
     error: kickError,
-    chromeFound: !!findChrome(),
+    browsers,
+    browser,
+    browserFound: browsers.some((b) => b.id === browser),
     availableProfiles: profiles,
     profiles: kick.profiles.map((dir) => profiles.find((p) => p.dir === dir) ?? { dir, name: dir }),
     openWindows: openWindowCount(),
+    // Perfil -> canal que a janela dele está mostrando (para o botão da conta ficar verde).
+    watching: Object.fromEntries(openWindowList().map((w) => [w.profileDir, w.url.split('/').pop()])),
     channels: config.kickChannels.map((name) => ({
       name,
       live: kickLive.has(name),
@@ -179,9 +193,23 @@ async function handleKick(req, res, action, id) {
     return send(res, 200, state());
   }
 
+  if (req.method === 'PUT' && action === 'browser') {
+    const { browser } = await readBody(req);
+    if (!installedBrowsers().some((b) => b.id === browser)) return send(res, 400, { error: 'Navegador não encontrado neste PC' });
+    if (browser !== currentBrowser()) {
+      // Os perfis são de cada navegador: ao trocar, as contas são escolhidas de novo.
+      closeWatchWindows();
+      kick.browser = browser;
+      kick.profiles = [];
+      saveKick();
+      log(`Kick: navegador trocado para ${browserName(browser)}`);
+    }
+    return send(res, 200, state());
+  }
+
   if (req.method === 'PUT' && action === 'profiles') {
     const { profiles } = await readBody(req);
-    const known = new Set(listProfiles().map((p) => p.dir));
+    const known = new Set(listProfiles(currentBrowser()).map((p) => p.dir));
     kick.profiles = [...new Set(profiles)].filter((p) => known.has(p)).slice(0, MAX_ACCOUNTS);
     saveKick();
     return send(res, 200, state());
@@ -260,6 +288,7 @@ function state() {
     maxAccounts: MAX_ACCOUNTS,
     pendingLink: pendingLink && { userCode: pendingLink.userCode, uri: pendingLink.uri, error: pendingLink.error },
     autostart: autostartEnabled(),
+    canRestart: CAN_RESTART,
     channels: config.channels.map((name) => ({
       name,
       live: live.has(name),
@@ -311,6 +340,15 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'GET' && resource === 'state') return send(res, 200, state());
   if (resource === 'kick') return handleKick(req, res, id, rawSub && decodeURIComponent(rawSub));
+
+  if (req.method === 'POST' && resource === 'restart') {
+    if (!CAN_RESTART) return send(res, 400, { error: 'Para reiniciar por aqui, abra o painel pelo iniciar.bat' });
+    send(res, 200, { restarting: true });
+    log('Reiniciando o servidor…');
+    // O iniciar.bat abre o servidor de novo quando ele sai com esse código.
+    setTimeout(() => process.exit(RESTART_CODE), 300);
+    return;
+  }
 
   if (req.method === 'PUT' && resource === 'autostart') {
     const { enabled } = await readBody(req);
@@ -387,6 +425,10 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       return res.end(fs.readFileSync(PANEL_FILE));
+    }
+    if (url.pathname === '/favicon.ico') {
+      res.writeHead(200, { 'Content-Type': 'image/x-icon', 'Cache-Control': 'max-age=86400' });
+      return res.end(fs.readFileSync(FAVICON_FILE));
     }
     send(res, 404, { error: 'Não encontrado' });
   } catch (err) {

@@ -2,6 +2,25 @@
 
 Mudanças do IdleLive, da mais recente para a mais antiga.
 
+## 31/10/2026
+
+### Novidades
+- **Kick com Brave e Edge:** além do Chrome, as lives da Kick agora abrem no Brave ou no Edge. O painel mostra só os navegadores instalados no campo **Navegador**. Sem escolha, ele usa o primeiro que encontrar (Chrome, Brave, Edge). Como o Edge vem no Windows, quem não tem Chrome também consegue usar a parte da Kick.
+- **Botão Reiniciar servidor** no topo: fecha e abre o servidor de novo na mesma janela preta, sem abrir outra aba, e o painel recarrega sozinho quando ele volta. Serve para carregar atualizações. Só aparece quando o painel foi aberto pelo `iniciar.bat`.
+- **Visual novo**, feito com os componentes do Web Awesome e a fonte Montserrat:
+  - **menu lateral** com Visão geral, Twitch, Kick, Histórico e Configurações, que vira gaveta no celular;
+  - página **Visão geral** com o bônus atual, contas da Twitch e da Kick, lives ao vivo, a lista "Ao vivo agora" (Twitch e Kick juntas) e o "Boost hoje";
+  - cores por seção: roxo na Twitch, verde na Kick e laranja (#fc5e03) no resto;
+  - cards em grade de 4 colunas em telas largas, e filtro **Todos / Ao vivo / Offline** nos canais;
+  - espectadores em vermelho, e a barra de horários com as marcações 0h, 6h, 12h, 18h e 24h;
+  - o ícone do IdleLive aparece no menu e na aba do navegador.
+- **Kick:** o botão da conta fica verde enquanto ela está assistindo aquele canal.
+
+### Mudanças
+- Na Kick, os botões das contas mostram só o nome do perfil (sem "Conta 1", "Conta 2"). Com 3 ou 4 contas, ou em card estreito, o "Todas" fica numa linha e as contas embaixo.
+- O app da Kick (Client ID e Client Secret) agora fica na página **Configurações**.
+- Trocar de navegador desmarca as contas da Kick e fecha as janelas abertas, porque cada navegador tem os próprios perfis.
+
 ## 30/10/2026
 
 ### Novidades

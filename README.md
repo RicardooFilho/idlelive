@@ -19,19 +19,24 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 
 **Kick**
 - Mostra o status ao vivo e o número de espectadores dos parceiros, pela API oficial da Kick.
-- Cada conta da Kick é um perfil do Chrome. O botão **▶** abre a live daquele perfil numa janela pequena, e as janelas ficam lado a lado no canto da tela.
+- Cada conta da Kick é um perfil do navegador (Chrome, Brave ou Edge). O botão **▶** abre a live daquele perfil numa janela pequena, e as janelas ficam lado a lado no canto da tela.
 - **▶ Todas** abre a live em todas as contas de uma vez. **✕ Fechar janelas** fecha as janelas que o painel abriu.
+
+**Painel**
+- Menu lateral com **Visão geral** (resumo de tudo), **Twitch**, **Kick**, **Histórico** e **Configurações**. No celular, ele vira uma gaveta no botão ☰.
 
 **Geral**
 - Uma barrinha de 24 horas em cada canal mostra os horários em que ele costuma estar ao vivo. O painel vai aprendendo enquanto fica aberto.
 - Tem a opção **Iniciar com o Windows**, que abre o painel minimizado quando o PC liga.
+- O botão **Reiniciar servidor** fecha e abre o servidor de novo, para carregar atualizações sem fechar a janela preta.
 - O botão **Hub** leva direto para o hub do jogo.
 
 ## Do que você precisa
 
 - Windows 10 ou 11.
 - [Node.js](https://nodejs.org) versão 20 ou mais nova. Baixe a versão **LTS** e vá clicando em "Avançar".
-- Google Chrome. Só é necessário para a parte da Kick.
+- Internet: além da Twitch e da Kick, o visual do painel (componentes Web Awesome e fonte Montserrat) carrega da internet.
+- Google Chrome, Brave ou Microsoft Edge. Só é necessário para a parte da Kick. O Edge já vem no Windows. O Firefox não é compatível.
 
 ## Instalação
 
@@ -55,8 +60,8 @@ Pronto. As contas entram sozinhas nos chats quando os parceiros estiverem ao viv
 
 ### Kick (opcional)
 1. Em **kick.com → Configurações → Desenvolvedor**, crie um app. Em Redirect URL, coloque `http://localhost`.
-2. Cole o **Client ID** e o **Client Secret** na seção Kick do painel. Não mostre o Client Secret para ninguém.
-3. No Chrome, crie um perfil para cada conta da Kick e faça login na Kick em cada um.
+2. Cole o **Client ID** e o **Client Secret** na página **Configurações** do painel. Não mostre o Client Secret para ninguém.
+3. No seu navegador (Chrome, Brave ou Edge), crie um perfil para cada conta da Kick e faça login na Kick em cada um. Se tiver mais de um instalado, escolha qual usar no campo **Navegador** do painel.
 4. No painel, marque os perfis que vão ser as suas contas.
 5. Quando um parceiro estiver ao vivo, clique em **▶** ou em **▶ Todas**.
 
@@ -104,15 +109,16 @@ Isso mantém as suas contas dentro das regras da Twitch, da Kick e do jogo.
 
 ## Para desenvolvedores
 
-Node.js puro (ES modules), sem dependências.
+Node.js puro (ES modules), sem dependências no servidor. O painel usa o [Web Awesome](https://webawesome.com) 3.14.0 (licença MIT) e a fonte Montserrat, carregados de CDN com versão fixa, sem build.
 
 ```
 server.js              servidor HTTP do painel + orquestração
-public/index.html      o painel (HTML/CSS/JS num arquivo só)
+public/index.html      o painel (HTML/CSS/JS num arquivo só, com Web Awesome)
+public/favicon.ico     ícone do IdleLive
 src/twitch.js          login por código, tokens e status das lives (Helix)
 src/chat.js            conexão IRC com o chat da Twitch, com reconexão
 src/kick.js            status das lives pela API oficial da Kick
-src/chrome.js          perfis do Chrome e janelas da Kick
+src/browser.js         navegadores (Chrome, Brave, Edge), perfis e janelas da Kick
 src/open-window.ps1    abre a janela e posiciona na tela
 src/close-windows.ps1  fecha as janelas abertas pelo painel
 src/win.cs             funções do Windows usadas pelos dois scripts acima

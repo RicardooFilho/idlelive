@@ -6,7 +6,7 @@ Leia antes de mexer no projeto. Elas valem para qualquer agente (Claude, Copilot
 
 IdleLive é um painel local (Node.js) para jogadores de jogos idle que dão bônus por assistir lives de parceiros:
 - **Twitch:** mantém até 4 contas no **chat** dos canais parceiros ao vivo, que é o que o jogo usa para dar bônus de XP;
-- **Kick:** lista as lives dos parceiros e abre a live numa janela visível do Chrome quando o usuário clica.
+- **Kick:** lista as lives dos parceiros e abre a live numa janela visível do navegador (Chrome, Brave ou Edge) quando o usuário clica.
 
 O público é de jogadores, não programadores. Veja o [README.md](README.md).
 
@@ -32,7 +32,9 @@ Se o pedido cair aqui, explique o motivo e ofereça uma alternativa permitida.
 ## Código
 
 - Node.js 20+, ES modules, **sem dependências**. Não adicione pacotes do npm. Use `fetch`, `node:tls`, `node:http`, etc.
-- O painel é um arquivo só (`public/index.html`), com CSS e JS puros, sem framework e sem build.
+- O painel é um arquivo só (`public/index.html`), sem framework e sem build. Os componentes são do **Web Awesome 3.14.0** (`<wa-button>`, `<wa-card>`…) e a fonte é Montserrat, ambos via CDN com versão fixa. Não troque por React/Tailwind nem adicione etapa de build.
+- Cores: roxo (`--twitch`) na página Twitch, verde (`--kick`) na Kick e laranja (`--orange`, #fc5e03) no resto. A cor "brand" do Web Awesome é trocada por seção no CSS. Use `variant="brand"` em vez de cores fixas.
+- O painel atualiza a cada 5 s. Use `setHTML()`, que só troca o HTML quando ele muda, para não fechar menus abertos nem piscar.
 - Siga o estilo do código ao redor: comentários curtos e em português explicando o *porquê*, nomes em inglês, `const`, arrow functions, 2 espaços.
 - Textos da interface e mensagens de log são em **português do Brasil**, simples, para quem não é programador.
 - Os dados ficam em JSON na raiz e são lidos e gravados por `src/store.js` (ou `src/stats.js`).
@@ -50,6 +52,7 @@ Se o pedido cair aqui, explique o motivo e ofereça uma alternativa permitida.
 - Não há testes automatizados. Rode `node --check` nos arquivos alterados e teste o painel no navegador.
 - **Não rode uma segunda instância com as contas reais** enquanto o painel do usuário estiver aberto: as duas renovariam o mesmo refresh token e uma derrubaria a outra. Para testar, copie o projeto para outra pasta **sem** `accounts.json` e rode com outra porta (`PORT=3005 node server.js`).
 - Mudanças no servidor só valem depois de reiniciar o painel. O `index.html` é lido a cada acesso, então a página nova pode rodar com o servidor antigo. Escreva o front-end tolerando campos que ainda não existem (`?.`, `?? 0`).
+- O botão "Reiniciar servidor" faz o processo sair com o código 75, e o `iniciar.bat` (que define `IDLELIVE_LAUNCHER=1`) abre o servidor de novo. Fora do `.bat` o botão fica escondido. Se mudar o `iniciar.bat`, mantenha esse laço.
 - Não abra janelas na tela do usuário sem avisar.
 
 ## Documentação

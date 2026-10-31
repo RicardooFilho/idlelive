@@ -1,8 +1,8 @@
 # IdleLive
 
-Painel local para quem joga **pokeidle** com várias contas. Ele cuida das lives dos streamers parceiros na **Twitch** e na **Kick** por você.
+Painel local para quem joga jogos idle com várias contas e ganha bônus assistindo lives de streamers parceiros. Ele cuida disso na **Twitch** e na **Kick** por você.
 
-- **Twitch:** suas contas (até 4) entram sozinhas no chat dos canais parceiros que estão ao vivo. É assim que o pokeidle reconhece que você está assistindo e libera o bônus de XP (+15% pela primeira live, +2,5% por live a mais).
+- **Twitch:** suas contas (até 4) entram sozinhas no chat dos canais parceiros que estão ao vivo. É assim que o jogo reconhece que você está assistindo e libera o bônus de XP (+15% pela primeira live, +2,5% por live a mais).
 - **Kick:** mostra quais parceiros estão ao vivo e abre a live numa janela pequena, com a conta que você escolher, num clique. Os pontos de canal da Kick só sobem assistindo de verdade, então o painel não tenta burlar isso.
 
 Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além da própria Twitch e da Kick.
@@ -25,7 +25,7 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 **Geral**
 - Uma barrinha de 24 horas em cada canal mostra os horários em que ele costuma estar ao vivo. O painel vai aprendendo enquanto fica aberto.
 - Tem a opção **Iniciar com o Windows**, que abre o painel minimizado quando o PC liga.
-- O botão **Hub** leva direto para o pokeidle.
+- O botão **Hub** leva direto para o hub do jogo.
 
 ## Do que você precisa
 
@@ -63,7 +63,7 @@ Pronto. As contas entram sozinhas nos chats quando os parceiros estiverem ao viv
 Dica: na primeira vez, escolha 160p no player da Kick para gastar menos internet e PC.
 
 ### Lista de parceiros
-O painel já vem com os parceiros atuais. Se o pokeidle adicionar ou remover algum, use o campo **Adicionar** embaixo de cada lista. Para remover, passe o mouse no canal e clique no **✕**.
+O painel já vem com os parceiros atuais. Se o jogo adicionar ou remover algum, use o campo **Adicionar** embaixo de cada lista. Para remover, passe o mouse no canal e clique no **✕**.
 
 ## Seus dados e segurança
 
@@ -100,7 +100,7 @@ Use o `iniciar.bat`, que não depende disso.
 - Não dá play sozinho na Kick. Toda janela é aberta por um clique seu.
 - Não automatiza resgate de pontos ou recompensas.
 
-Isso mantém as suas contas dentro das regras da Twitch, da Kick e do pokeidle.
+Isso mantém as suas contas dentro das regras da Twitch, da Kick e do jogo.
 
 ## Para desenvolvedores
 

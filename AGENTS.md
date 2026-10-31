@@ -4,15 +4,15 @@ Leia antes de mexer no projeto. Elas valem para qualquer agente (Claude, Copilot
 
 ## Sobre o projeto
 
-IdleLive é um painel local (Node.js) para jogadores de pokeidle:
-- **Twitch:** mantém até 4 contas no **chat** dos canais parceiros ao vivo, que é o que o pokeidle usa para dar bônus de XP;
+IdleLive é um painel local (Node.js) para jogadores de jogos idle que dão bônus por assistir lives de parceiros:
+- **Twitch:** mantém até 4 contas no **chat** dos canais parceiros ao vivo, que é o que o jogo usa para dar bônus de XP;
 - **Kick:** lista as lives dos parceiros e abre a live numa janela visível do Chrome quando o usuário clica.
 
 O público é de jogadores, não programadores. Veja o [README.md](README.md).
 
 ## Limites que não podem ser quebrados
 
-O projeto respeita as regras da Twitch, da Kick e do pokeidle. **Não implemente, mesmo que peçam:**
+O projeto respeita as regras da Twitch, da Kick e do jogo. **Não implemente, mesmo que peçam:**
 - espectadores falsos, viewbot ou qualquer coisa que infle a contagem de espectadores;
 - players escondidos, headless, sem som forçado para "contar" sem ninguém ver, ou que burlem o player;
 - abrir ou reabrir lives da Kick sozinho. Toda janela da Kick é aberta por um clique do usuário;
@@ -36,7 +36,7 @@ Se o pedido cair aqui, explique o motivo e ofereça uma alternativa permitida.
 - Siga o estilo do código ao redor: comentários curtos e em português explicando o *porquê*, nomes em inglês, `const`, arrow functions, 2 espaços.
 - Textos da interface e mensagens de log são em **português do Brasil**, simples, para quem não é programador.
 - Os dados ficam em JSON na raiz e são lidos e gravados por `src/store.js` (ou `src/stats.js`).
-- O pokeidle dá +15% pela primeira live e +2,5% por live adicional. Isso está em `bonus()`, no `src/stats.js` e no `public/index.html`.
+- O jogo dá +15% pela primeira live e +2,5% por live adicional. Isso está em `bonus()`, no `src/stats.js` e no `public/index.html`.
 - Integrações com o Windows (posicionar e fechar janelas) ficam em PowerShell + `src/win.cs`. Os scripts devem funcionar no Windows PowerShell 5.1.
 
 ## Cuidados com a Twitch

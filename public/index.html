@@ -327,7 +327,7 @@
       <span class="badge">T</span>
       <div>
         <h2>Twitch</h2>
-        <div class="sub">As contas ficam no chat dos canais oficiais ao vivo (boost de XP do pokeidle)</div>
+        <div class="sub">As contas ficam no chat dos canais oficiais ao vivo (boost de XP do jogo)</div>
       </div>
       <span class="summary" id="summary"></span>
     </div>
@@ -397,7 +397,7 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   let state = null;
 
-  // Bônus do pokeidle: +15% pela primeira live, +2,5% por live adicional.
+  // Bônus do jogo: +15% pela primeira live, +2,5% por live adicional.
   const bonus = (n) => (n === 0 ? 0 : 15 + (n - 1) * 2.5);
   const pct = (n) => `+${(Math.round(n * 10) / 10).toString().replace('.', ',')}%`;
   const duration = (min) => (min < 60 ? `${min}min` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`);

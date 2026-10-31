@@ -20,7 +20,7 @@ stats.boost ??= {};
 stats.observed ??= { twitch: hours(), kick: hours() };
 stats.live ??= { twitch: {}, kick: {} };
 
-// Bônus do pokeidle: +15% pela primeira live, +2,5% por live adicional.
+// Bônus do jogo: +15% pela primeira live, +2,5% por live adicional.
 export const bonus = (n) => (n === 0 ? 0 : 15 + (n - 1) * 2.5);
 
 const dayKey = (date) => date.toLocaleDateString('sv-SE'); // AAAA-MM-DD no horário local

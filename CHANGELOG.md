@@ -6,7 +6,7 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 
 ### Novidades
 - **Novo visual:** o painel agora tem duas seções, Twitch (roxa) e Kick (verde), e uma barra no topo com quantos canais estão ao vivo em cada uma.
-- **Botão Hub** no topo, que abre o pokeidle (`/#hunt`) numa aba nova.
+- **Botão Hub** no topo, que abre o hub do jogo numa aba nova.
 - **Iniciar com o Windows:** uma chave no topo cria um atalho na pasta Inicializar, e o painel abre minimizado, sem abrir o navegador.
 - **Histórico de boost:** cada conta mostra quanto tempo ficou com boost hoje. Uma tabela mostra os últimos 7 dias, com as horas de boost e o bônus médio de cada conta. Os dados ficam em `stats.json` por até 30 dias.
 - **Horários das lives:** cada canal, da Twitch e da Kick, ganhou uma barrinha de 24 horas com a chance de estar ao vivo em cada hora, e o texto "Costuma estar ao vivo: …".

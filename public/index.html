@@ -448,7 +448,10 @@
     const cells = hours.map((p, h) => `<i class="${p === null ? 'unk' : ''} ${h === now ? 'now' : ''}" style="--p:${p ?? 0};--c:${color}"
       title="${h}h: ${p === null ? 'ainda sem dados' : `ao vivo ${Math.round(p * 100)}% das vezes`}"></i>`).join('');
     const known = hours.filter((p) => p !== null).length;
-    const text = known < 6 ? 'Aprendendo os horários…' : usualRanges(hours) ? `Costuma estar ao vivo: ${usualRanges(hours)}` : 'Ainda sem horário certo';
+    // Mostra o que já sabe desde a primeira hora observada; avisa que ainda está aprendendo até cobrir metade do dia.
+    const ranges = usualRanges(hours);
+    const text = known === 0 ? 'Aprendendo os horários…'
+      : `${ranges ? `Costuma estar ao vivo: ${ranges}` : 'Ainda sem horário certo'}${known < 12 ? ' · ainda aprendendo' : ''}`;
     return `<div class="heat">${cells}</div>
       <div class="heat-scale"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span></div>
       <div class="usual">${text}</div>`;

@@ -21,6 +21,9 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 - O app da Kick (Client ID e Client Secret) agora fica na página **Configurações**.
 - Trocar de navegador desmarca as contas da Kick e fecha as janelas abertas, porque cada navegador tem os próprios perfis.
 
+### Correções
+- **Horários das lives:** o visual novo escondia o "Costuma estar ao vivo" até o painel ter observado 6 horas do dia. Agora ele mostra o que já sabe desde a primeira hora, com o aviso "ainda aprendendo" até cobrir metade do dia.
+
 ## 30/10/2026
 
 ### Novidades

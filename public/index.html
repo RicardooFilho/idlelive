@@ -212,6 +212,29 @@
   .link-box > div { flex: 1; min-width: 240px; }
   .link-box a { color: #c9a8ff; }
 
+  /* Botões de acontecimentos no topo (erros e coisas boas), com o número de novos. */
+  .events-btn { position: relative; }
+  .events-btn::part(base) { padding: 0 8px; font-size: 18px; }
+  .events-btn.bad { color: #ff6b6b; }
+  .events-btn.good { color: var(--live); }
+  .events-count {
+    position: absolute; top: -4px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+    border-radius: 99px; font: 700 11px/18px 'Montserrat', sans-serif; text-align: center; pointer-events: none;
+  }
+  .events-btn.bad .events-count { background: #c62828; color: #fff; }
+  .events-btn.good .events-count { background: var(--live); color: #062a12; }
+  /* Lista na gaveta da direita. */
+  .event-day { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); margin: 16px 0 6px; }
+  .event-day:first-child { margin-top: 0; }
+  .event { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--wa-color-surface-border); font-size: 13px; line-height: 1.4; }
+  .event .icon { flex: none; width: 18px; padding-top: 2px; text-align: center; }
+  .event.bad .icon { color: #ff6b6b; }
+  .event.good .icon { color: var(--live); }
+  .event .body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .event .who { font-weight: 600; }
+  .event .when { flex: none; font-size: 12px; color: var(--wa-color-text-quiet); font-variant-numeric: tabular-nums; }
+  .event.new { background: linear-gradient(90deg, var(--brand-soft), transparent 60%); }
+
   /* Avisos no topo de todas as páginas. */
   #alerts { display: flex; flex-direction: column; gap: 10px; }
   #alerts:not(:empty) { margin-bottom: 20px; }
@@ -281,6 +304,10 @@
         <div class="sub" id="page-sub"></div>
       </div>
       <div class="actions">
+        <wa-button class="events-btn bad" appearance="plain" size="small" data-action="events" data-kind="bad" title="Erros da Twitch e da Kick">
+          <wa-icon name="bug" label="Erros"></wa-icon><span class="events-count" data-events-count="bad" hidden></span></wa-button>
+        <wa-button class="events-btn good" appearance="plain" size="small" data-action="events" data-kind="good" title="Baús, Momentos e raids">
+          <wa-icon name="gift" label="Baús, Momentos e raids"></wa-icon><span class="events-count" data-events-count="good" hidden></span></wa-button>
         <wa-switch size="small" data-autostart>Iniciar com o Windows</wa-switch>
         <wa-button variant="brand" appearance="outlined" size="small" data-restart hidden><wa-icon slot="start" name="rotate-right"></wa-icon>Reiniciar servidor</wa-button>
         <wa-button variant="brand" size="small" href="https://pokeidle-gg.pages.dev/#hunt" target="_blank"><wa-icon slot="end" name="arrow-up-right-from-square"></wa-icon>Hub</wa-button>
@@ -404,6 +431,10 @@
 </div>
 
 <wa-drawer id="drawer" placement="start" label="IdleLive" style="--size: 280px"></wa-drawer>
+<wa-drawer id="events-drawer" placement="end" style="--size: min(440px, 100vw)">
+  <div class="meta" id="events-intro" style="margin-bottom:12px"></div>
+  <div id="events-list"></div>
+</wa-drawer>
 <wa-dialog id="farm-help" label="Como funciona o farm de pontos" class="brand-twitch" light-dismiss>
   <div class="farm-help">
     <section>
@@ -642,6 +673,7 @@
     $$('.play-tip').forEach((t) => (t.hidden = tipSeen || !hasAccounts));
     renderHistory();
     renderAlerts();
+    renderEvents();
     renderConfig();
   }
 
@@ -851,6 +883,78 @@
     setHTML($('kick-channels'), channelCards('kick', state.kick.channels));
   }
 
+  // ---------- Acontecimentos (erros e coisas boas) ----------
+
+  let eventsKind = null; // lista aberta na gaveta: 'good' | 'bad'
+  let eventsSeenBefore = 0; // o que era novo quando a lista abriu (fica destacado)
+  const EVENTS_INFO = {
+    bad: { title: 'Erros da Twitch e da Kick', intro: 'Erros que as plataformas devolveram nos últimos 30 dias. O mesmo erro da mesma conta só aparece de novo depois de 10 minutos.', empty: 'Nenhum erro nos últimos 30 dias.' },
+    good: { title: 'Baús, Momentos e raids', intro: 'O que as contas da Twitch pegaram nos últimos 30 dias.', empty: 'Nenhum baú, Momento ou raid ainda.' },
+  };
+
+  // Quando cada lista foi vista pela última vez (guardado no navegador, para o contador de novos).
+  const seenAt = (kind) => {
+    try {
+      return Number(localStorage.getItem(`eventsSeen.${kind}`)) || 0;
+    } catch {
+      return 0;
+    }
+  };
+  const markSeen = (kind) => {
+    try {
+      localStorage.setItem(`eventsSeen.${kind}`, String(Date.now()));
+    } catch {}
+  };
+
+  const eventIcon = (e) => e.kind === 'bad' ? 'triangle-exclamation'
+    : /^baú/i.test(e.text) ? 'gift' : /^momento/i.test(e.text) ? 'star' : /raid/i.test(e.text) ? 'people-group' : 'circle-check';
+
+  function renderEvents() {
+    const events = state.events ?? { good: [], bad: [] };
+    for (const kind of ['good', 'bad']) {
+      const fresh = (events[kind] ?? []).filter((e) => e.at > seenAt(kind)).length;
+      $$(`[data-events-count="${kind}"]`).forEach((b) => {
+        b.hidden = !fresh || eventsKind === kind;
+        b.textContent = fresh > 99 ? '99+' : fresh;
+      });
+    }
+    if (!eventsKind) return;
+    const info = EVENTS_INFO[eventsKind];
+    const list = events[eventsKind] ?? [];
+    $('events-intro').textContent = info.intro;
+    let lastDay = '';
+    setHTML($('events-list'), list.length ? list.map((e) => {
+      const date = new Date(e.at);
+      const day = date.toLocaleDateString('sv-SE');
+      const header = day !== lastDay ? `<div class="event-day">${dayLabel(day)}</div>` : '';
+      lastDay = day;
+      const text = e.text.charAt(0).toUpperCase() + e.text.slice(1);
+      return `${header}<div class="event ${e.kind} ${e.at > eventsSeenBefore ? 'new' : ''}">
+        <span class="icon"><wa-icon name="${eventIcon(e)}"></wa-icon></span>
+        <span class="body">${e.platform ? `<span class="platform ${esc(e.platform)}" style="display:inline-grid;width:16px;height:16px;font-size:10px;vertical-align:-2px">${e.platform === 'kick' ? 'K' : 'T'}</span> ` : ''}${e.account ? `<span class="who">${esc(e.account)}</span> · ` : ''}${esc(text)}</span>
+        <span class="when">${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>`;
+    }).join('') : `<div class="empty">${info.empty}</div>`);
+  }
+
+  function openEvents(kind) {
+    eventsKind = kind;
+    eventsSeenBefore = seenAt(kind);
+    markSeen(kind);
+    $('events-drawer').label = EVENTS_INFO[kind].title;
+    $('events-drawer').className = kind === 'good' ? 'brand-twitch' : '';
+    $('events-list')._html = null; // força redesenhar com os destaques de "novo"
+    renderEvents();
+    $('events-drawer').open = true;
+  }
+
+  // Fechou a gaveta: tudo o que estava nela conta como visto.
+  $('events-drawer').addEventListener('wa-after-hide', () => {
+    if (eventsKind) markSeen(eventsKind);
+    eventsKind = null;
+    if (state) renderEvents();
+  });
+
   function renderAlerts() {
     setHTML($('alerts'), (state.alerts ?? []).map((a) => `<wa-callout variant="${esc(a.variant)}" size="small">
       <wa-icon slot="icon" name="${a.variant === 'danger' ? 'circle-exclamation' : 'triangle-exclamation'}"></wa-icon>${esc(a.text)}</wa-callout>`).join(''));
@@ -992,6 +1096,7 @@
     // Rotas das contas: /api/points/<login> na Twitch, /api/kick/accounts/<id> na Kick.
     const accountPath = platform === 'kick' ? `kick/accounts/${encodeURIComponent(key)}` : `points/${encodeURIComponent(key)}`;
     if (action === 'points-link') api('POST', 'points/link');
+    if (action === 'events') openEvents(el.dataset.kind);
     if (action === 'go-twitch-link') {
       show('twitch');
       api('POST', 'points/link');

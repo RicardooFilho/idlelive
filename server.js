@@ -13,6 +13,7 @@ import { autostartEnabled, setAutostart } from './src/autostart.js';
 import { PointsMiner } from './src/points.js';
 import { KickMiner } from './src/kickpoints.js';
 import { sleep } from './src/human.js';
+import { addEvent, recentEvents } from './src/events.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const LIVE_INTERVAL = 60 * 1000;
@@ -47,6 +48,7 @@ async function updateLive() {
     liveOffline = false;
   } catch (err) {
     liveOk = false;
+    if (err.message !== liveError) addEvent({ kind: 'bad', platform: 'twitch', text: `não deu para ver quem está ao vivo (${err.message})` });
     liveError = err.message;
     liveOffline = isNetworkError(err);
     throw err;
@@ -109,7 +111,10 @@ async function scanKickLive() {
     }
     if (errors.length === config.kickChannels.length) throw errors[0];
   }
-  if (errors.length) log(`Kick: ${errors.length} canal(is) não responderam agora (${errors[0].message})`);
+  if (errors.length) {
+    log(`Kick: ${errors.length} canal(is) não responderam agora (${errors[0].message})`);
+    addEvent({ kind: 'bad', platform: 'kick', text: `${errors.length} canal(is) não responderam ao ver quem está ao vivo (${errors[0].message})` });
+  }
   return next;
 }
 
@@ -119,6 +124,7 @@ async function updateKickLive() {
     kickError = null;
     kickOffline = false;
   } catch (err) {
+    if (err.message !== kickError) addEvent({ kind: 'bad', platform: 'kick', text: `não deu para ver quem está ao vivo (${err.message})` });
     kickError = err.message;
     kickOffline = isNetworkError(err);
   }
@@ -249,6 +255,7 @@ function state() {
     points: miner.state(),
     pointsHistory: pointsHistory(),
     alerts: alerts(),
+    events: recentEvents(),
     kick: kickState(),
   };
 }

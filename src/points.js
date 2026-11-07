@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { startDeviceFlow, waitDeviceToken, refreshToken, validate, revoke, isNetworkError, GQL_URL, TV_CLIENT_ID as CLIENT_ID } from './twitch.js';
 import { pointsAccounts, savePoints, MAX_ACCOUNTS } from './store.js';
 import { recordPoints } from './stats.js';
+import { addEvent } from './events.js';
 import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK } from './human.js';
 
 const SCOPES = 'channel_read chat:read user_blocks_edit user_blocks_read user_follows_edit user_read';
@@ -205,6 +206,12 @@ class PointsAccount {
     this.baseLog(`Pontos (${this.account.login}): ${msg}`);
   }
 
+  // Escreve na janela preta e anota na lista do topo do painel (good = baú, Momento, raid; bad = erro).
+  report(kind, msg, channel = null) {
+    this.log(msg);
+    addEvent({ kind, platform: 'twitch', account: this.account.login, channel, text: msg });
+  }
+
   get active() {
     return !this.stopped && !!this.account.accessToken && !this.account.needsRelink;
   }
@@ -238,7 +245,7 @@ class PointsAccount {
     await sleep(random(START_DELAY));
     if (this.stopped) return;
     if (this.active && !this.resting) this.pubsub.start();
-    const check = () => this.checkBonuses().catch((err) => this.log(`erro ao checar bônus (${err.message})`));
+    const check = () => this.checkBonuses().catch((err) => this.report('bad', `erro ao checar bônus (${err.message})`));
     check();
     this.timer = setInterval(check, CHECK_TICK);
     this.watchLoop();
@@ -334,7 +341,7 @@ class PointsAccount {
   }
 
   markRelink() {
-    this.log('não deu para renovar o token, vincule a conta de novo no painel');
+    this.report('bad', 'não deu para renovar o login; vincule a conta de novo no painel');
     this.account.needsRelink = true;
     savePoints();
     this.watching = [];
@@ -455,7 +462,7 @@ class PointsAccount {
         await sleep(WATCH_CYCLE);
         continue;
       }
-      await updateSite().catch((err) => this.log(`erro ao ler a página da Twitch (${err.message})`));
+      await updateSite().catch((err) => this.report('bad', `erro ao ler a página da Twitch (${err.message})`));
       for (const live of targets) {
         if (this.stopped) return;
         const started = Date.now();
@@ -468,7 +475,7 @@ class PointsAccount {
           ch.error = null;
         } catch (err) {
           // Loga só quando o erro muda, para não encher a janela a cada 20 s.
-          if (ch.error !== err.message) this.log(`#${live.name} não contou (${err.message})`);
+          if (ch.error !== err.message) this.report('bad', `#${live.name} não contou (${err.message})`, live.name);
           ch.error = err.message;
         }
         // Intervalo com uma variação aleatória de até 15%, para não ser sempre exato.
@@ -514,7 +521,7 @@ class PointsAccount {
       channelId = data.community?.channel?.id;
     } catch (err) {
       if (!this.active) return;
-      this.log(`erro ao ver os pontos de #${name} (${err.message})`);
+      this.report('bad', `erro ao ver os pontos de #${name} (${err.message})`, name);
       return;
     }
     if (channelId) this.channelNames.set(channelId, name);
@@ -542,9 +549,9 @@ class PointsAccount {
     try {
       await this.gql('ClaimCommunityPoints', { input: { channelID: channelId, claimID: claimId } });
       this.channel(name).claims++;
-      this.log(`bônus pego em #${name}`);
+      this.report('good', `baú pego em #${name}`, name);
     } catch (err) {
-      this.log(`não deu para pegar o bônus em #${name} (${err.message})`);
+      this.report('bad', `não deu para pegar o baú em #${name} (${err.message})`, name);
     }
   }
 
@@ -553,9 +560,9 @@ class PointsAccount {
     try {
       await this.gql('CommunityMomentCallout_Claim', { input: { momentID: momentId } });
       this.channel(name).moments++;
-      this.log(`Momento pego em #${name}`);
+      this.report('good', `Momento pego em #${name}`, name);
     } catch (err) {
-      this.log(`não deu para pegar o Momento em #${name} (${err.message})`);
+      this.report('bad', `não deu para pegar o Momento em #${name} (${err.message})`, name);
     }
   }
 
@@ -569,9 +576,9 @@ class PointsAccount {
     try {
       await this.gql('JoinRaid', { input: { raidID: raid.id } });
       this.raidTarget = { name: to, until: Date.now() + RAID_STAY };
-      this.log(`entrou na raid de #${from} para #${to}`);
+      this.report('good', `entrou na raid de #${from} para #${to}`, to);
     } catch (err) {
-      this.log(`não deu para entrar na raid de #${from} para #${to} (${err.message})`);
+      this.report('bad', `não deu para entrar na raid de #${from} para #${to} (${err.message})`, to);
     }
   }
 
@@ -685,7 +692,7 @@ export class PointsMiner {
   }
 
   ensureFresh() {
-    return Promise.all(this.accounts.map((a) => a.ensureFresh().catch((err) => a.log(`erro ao checar token (${err.message})`))));
+    return Promise.all(this.accounts.map((a) => a.ensureFresh().catch((err) => a.report('bad', `erro ao checar o login (${err.message})`))));
   }
 
   find(login) {

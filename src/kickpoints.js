@@ -6,6 +6,7 @@ import { kick, saveKick, MAX_ACCOUNTS } from './store.js';
 import { fetchKickUser, fetchKickPoints, fetchViewerToken, cleanKickToken } from './kick.js';
 import { isNetworkError } from './twitch.js';
 import { recordPoints } from './stats.js';
+import { addEvent } from './events.js';
 import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK } from './human.js';
 
 const MAX_WATCH = 2; // lives por conta ao mesmo tempo (mais que isso a Kick começa a bloquear)
@@ -19,10 +20,11 @@ const STABLE_AFTER = 60 * 1000; // a espera entre reconexões só volta ao míni
 
 // Uma conexão de espectador numa live (wss://websockets.kick.com/viewer/v1/connect).
 class KickWatch {
-  constructor({ token, live, log, onAuthError }) {
+  constructor({ token, live, log, report, onAuthError }) {
     this.token = token;
     this.live = live; // { slug, channelId, userId, livestreamId }
     this.log = log;
+    this.report = report;
     this.onAuthError = onAuthError;
     this.ws = null;
     this.timers = [];
@@ -73,7 +75,7 @@ class KickWatch {
       every(HANDSHAKE_EVERY, () => {
         // A Kick responde o ping; sem resposta nenhuma por muito tempo, derruba para reconectar.
         if (Date.now() - lastData > SILENCE_LIMIT) {
-          this.log(`#${this.live.slug}: sem resposta da Kick, refazendo a conexão`);
+          this.report('bad', `#${this.live.slug}: sem resposta da Kick, refazendo a conexão`, this.live.slug);
           ws.close();
           return;
         }
@@ -116,7 +118,7 @@ class KickWatch {
     // A Kick responde 403 ao token de espectador quando o token da conta não vale mais; a conta confere antes de pedir outro.
     if (err.status === 403) this.onAuthError(err);
     const text = isNetworkError(err) ? 'sem internet' : err.message;
-    if (this.error !== text) this.log(`#${this.live.slug} não contou (${text})`);
+    if (this.error !== text) this.report('bad', `#${this.live.slug} não contou (${text})`, this.live.slug);
     this.error = text;
     if (!this.connected) this.retry();
   }
@@ -160,6 +162,12 @@ class KickAccount {
     this.baseLog(`Kick (${this.account.username}): ${msg}`);
   }
 
+  // Escreve na janela preta e anota na lista de erros do topo do painel.
+  report(kind, msg, channel = null) {
+    this.log(msg);
+    addEvent({ kind, platform: 'kick', account: this.account.username, channel, text: msg });
+  }
+
   get active() {
     return !this.stopped && !!this.account.token && !this.account.needsRelink;
   }
@@ -188,7 +196,7 @@ class KickAccount {
   async start() {
     await sleep(random(START_DELAY));
     if (this.stopped) return;
-    const check = () => this.checkBalances().catch((err) => this.log(`erro ao ler saldos (${err.message})`));
+    const check = () => this.checkBalances().catch((err) => this.report('bad', `erro ao ler saldos (${err.message})`));
     check();
     this.timer = setInterval(check, CHECK_TICK);
     this.loop();
@@ -215,7 +223,7 @@ class KickAccount {
   markRelink() {
     if (this.account.needsRelink) return;
     this.netFails = 0;
-    this.log('o token foi recusado, cole um token novo no painel');
+    this.report('bad', 'o token foi recusado; cole um token novo na página Kick');
     this.account.needsRelink = true;
     saveKick();
     for (const w of this.watches.values()) w.stop();
@@ -270,7 +278,7 @@ class KickAccount {
         if (this.watches.size || this.lastWatched) await sleep(random(SWITCH_DELAY));
         if (this.stopped) return;
         for (const live of added) {
-          const watch = new KickWatch({ token: () => this.account.token, live, log: (m) => this.log(m), onAuthError: (err) => this.checkAuth(err).catch((e) => this.log(`erro ao conferir o token (${e.message})`)) });
+          const watch = new KickWatch({ token: () => this.account.token, live, log: (m) => this.log(m), report: (...a) => this.report(...a), onAuthError: (err) => this.checkAuth(err).catch((e) => this.report('bad', `erro ao conferir o token (${e.message})`)) });
           this.watches.set(live.slug, watch);
           this.channel(live.slug).nextCheck = 0; // lê o saldo logo, como o site faz ao abrir a live
           watch.start();
@@ -320,7 +328,7 @@ class KickAccount {
       else {
         this.siteFails++;
         this.siteError = err.message;
-        this.log(`erro ao ver os pontos de #${slug} (${err.message})`);
+        this.report('bad', `erro ao ver os pontos de #${slug} (${err.message})`, slug);
       }
       return;
     }

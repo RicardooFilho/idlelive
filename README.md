@@ -27,6 +27,7 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 
 **Painel**
 - Menu lateral com **Visão geral** (resumo de tudo), **Twitch**, **Kick**, **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
+- No topo, o ícone de inseto 🐞 lista os erros da Twitch e da Kick, e o de presente 🎁 lista os baús, Momentos e raids, dos últimos 30 dias.
 - Avisos no topo quando algo para de funcionar (conta para vincular de novo, Twitch recusando pedidos, conexão caída). No celular, ele vira uma gaveta no botão ☰.
 
 **Geral**
@@ -87,6 +88,7 @@ Esses arquivos são criados na pasta do projeto e **nunca devem ser enviados par
 | `kick.json` | Tokens das contas da Kick, app da Kick e navegador escolhido |
 | `stats.json` | Horários das lives e histórico de pontos por dia |
 | `points.json` | Login das contas de pontos do canal (tokens) |
+| `eventos.jsonl` | Erros e baús/Momentos/raids dos últimos 30 dias (as listas do topo) |
 
 Se você usava uma versão antiga, o `accounts.json` (contas do chat) não é mais usado e pode ser apagado.
 
@@ -128,6 +130,7 @@ src/kickpoints.js      pontos do canal na Kick: conexão de espectador e saldos
 src/human.js           travas comuns às duas plataformas (descanso, tempos aleatórios)
 src/browser.js         navegadores (Chrome, Brave, Edge), perfis e o botão ▶
 src/stats.js           horários das lives e histórico de pontos
+src/events.js          erros e baús/Momentos/raids dos últimos 30 dias (eventos.jsonl)
 src/autostart.js       atalho "Iniciar com o Windows"
 src/store.js           leitura e gravação dos arquivos .json
 config.json            listas de canais

@@ -25,6 +25,7 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 - O painel atualiza a cada 5 s. Use `setHTML()`, que só troca o HTML quando ele muda, para não fechar menus abertos nem piscar.
 - Siga o estilo do código ao redor: comentários curtos e em português explicando o *porquê*, nomes em inglês, `const`, arrow functions, 2 espaços.
 - Textos da interface e mensagens de log são em **português do Brasil**, simples, para quem não é programador.
+- Erros e coisas boas (baús, Momentos, raids) vão para `addEvent` de `src/events.js` (arquivo `eventos.jsonl`, 30 dias, erro repetido da mesma conta só entra depois de 10 min). Use `report('good'|'bad', …)` das contas em vez de só `log` quando o usuário deve ver o acontecimento no painel.
 - Os dados ficam em JSON na raiz e são lidos e gravados por `readJson`/`writeJson` de `src/store.js` (também usados por `src/stats.js`). A gravação é atômica (arquivo `.tmp` + troca) e um arquivo quebrado é guardado como `.quebrado-<data>`; os dois estão no `.gitignore` porque podem ter tokens.
 
 ## Cuidados com a Twitch

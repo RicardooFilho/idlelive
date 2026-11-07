@@ -1079,6 +1079,20 @@
     toast('O servidor não voltou. Veja a janela preta (a que abriu com o iniciar.bat) e abra o iniciar.bat de novo se ela estiver fechada.');
   }
 
+  // Botão do meio (scroll) no ▶ também abre a live, para abrir várias seguidas como links em abas novas.
+  // O mousedown tira a rolagem automática que o Windows liga ao apertar o scroll.
+  document.addEventListener('mousedown', (e) => {
+    if (e.button === 1 && e.target.closest('[data-action="points-open"]')) e.preventDefault();
+  });
+  document.addEventListener('auxclick', (e) => {
+    const el = e.button === 1 && e.target.closest('[data-action="points-open"]');
+    if (!el) return;
+    e.preventDefault();
+    const { platform, key, channel } = el.dataset;
+    const path = platform === 'kick' ? `kick/accounts/${encodeURIComponent(key)}` : `points/${encodeURIComponent(key)}`;
+    api('POST', `${path}/open`, { channel });
+  });
+
   document.addEventListener('click', (e) => {
     const nav = e.target.closest('a[data-page]');
     if (nav) {

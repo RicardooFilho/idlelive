@@ -1,16 +1,18 @@
-// Painel local + orquestração: status das lives da Twitch e da Kick, pontos do canal e janelas da Kick.
+// Painel local + orquestração: status das lives da Twitch e da Kick e o farm de pontos do canal nas duas.
 // Uso: npm start  →  http://localhost:3000
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config, kick, saveConfig, saveKick, normalizeChannel, MAX_ACCOUNTS } from './src/store.js';
+import { config, kick, pointsAccounts, saveConfig, saveKick, savePoints, normalizeChannel, MAX_ACCOUNTS } from './src/store.js';
 import { fetchLive, isNetworkError } from './src/twitch.js';
-import { fetchKickLive, resetKickToken } from './src/kick.js';
-import { installedBrowsers, browserName, listProfiles, openWatchWindow, closeWatchWindows, openWindowCount, openWindowList, openInProfile } from './src/browser.js';
-import { recordMinute, liveHours, pointsHistory } from './src/stats.js';
+import { fetchKickLive, fetchKickChannel, resetKickToken } from './src/kick.js';
+import { installedBrowsers, browserName, listProfiles, openInProfile } from './src/browser.js';
+import { recordMinute, pointsHistory } from './src/stats.js';
 import { autostartEnabled, setAutostart } from './src/autostart.js';
 import { PointsMiner } from './src/points.js';
+import { KickMiner } from './src/kickpoints.js';
+import { sleep } from './src/human.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const LIVE_INTERVAL = 60 * 1000;
@@ -29,6 +31,7 @@ let liveOk = false; // a última checagem das lives da Twitch deu certo?
 let liveError = null; // mensagem da última falha, para o aviso no painel
 let liveOffline = false; // a última falha foi falta de internet?
 const miner = new PointsMiner({ log });
+const kickMiner = new KickMiner({ log });
 
 // ---------- Twitch ----------
 
@@ -54,80 +57,109 @@ async function updateLive() {
 
 const safeUpdateLive = () => updateLive().catch((err) => log(`Erro ao checar lives: ${err.message}`));
 
-// ---------- Kick (só status das lives + abrir o player no perfil escolhido) ----------
+// ---------- Kick ----------
 
-let kickLive = new Map(); // slug -> { viewers }
+let kickLive = new Map(); // slug -> { viewers, channelId, userId, livestreamId }
 let kickError = null;
+let kickOffline = false;
+let kickScanAt = 0;
+// Números do canal e da live, guardados por transmissão (startTime) para não pedir de novo a cada minuto.
+const kickIds = new Map(); // slug -> { key, channelId, userId, livestreamId }
+const KICK_SCAN_INTERVAL = 2 * 60 * 1000; // sem o app da Kick, checa canal por canal, então com menos frequência
 
+// O app da Kick (API oficial) é opcional: ele diz quem está ao vivo num pedido só. Sem ele, o painel pergunta canal por canal.
 const kickConfigured = () => !!(kick.clientId && kick.clientSecret);
 
-async function updateKickLive() {
-  if (!kickConfigured() || config.kickChannels.length === 0) {
-    kickLive = new Map();
-    return;
+// Um canal com erro não derruba a lista inteira: ele fica de fora (ou com os números antigos) e os outros seguem.
+// Só se todos falharem o erro sobe, para virar aviso no painel.
+async function scanKickLive() {
+  const next = new Map();
+  const errors = [];
+  if (kickConfigured()) {
+    const official = await fetchKickLive(kick, config.kickChannels);
+    for (const [slug, info] of official) {
+      let ids = kickIds.get(slug);
+      if (!ids || ids.key !== info.startTime) {
+        try {
+          ids = { key: info.startTime, ...(await fetchKickChannel(slug)) };
+          // Live que acabou de começar pode ainda não ter número; tenta de novo na próxima vez.
+          if (ids.livestreamId) kickIds.set(slug, ids);
+        } catch (err) {
+          errors.push(err);
+          ids = kickIds.get(slug) ?? {};
+        }
+        await sleep(300);
+      }
+      next.set(slug, { viewers: info.viewers, channelId: ids.channelId, userId: ids.userId, livestreamId: ids.livestreamId });
+    }
+    if (official.size && errors.length === official.size) throw errors[0];
+  } else {
+    if (Date.now() - kickScanAt < KICK_SCAN_INTERVAL) return kickLive;
+    kickScanAt = Date.now();
+    for (const slug of config.kickChannels) {
+      try {
+        const channel = await fetchKickChannel(slug);
+        if (channel.livestreamId) next.set(slug, channel);
+      } catch (err) {
+        errors.push(err);
+        // Sem resposta agora: mantém o que se sabia desse canal até a próxima checagem.
+        if (kickLive.has(slug)) next.set(slug, kickLive.get(slug));
+      }
+      await sleep(300);
+    }
+    if (errors.length === config.kickChannels.length) throw errors[0];
   }
+  if (errors.length) log(`Kick: ${errors.length} canal(is) não responderam agora (${errors[0].message})`);
+  return next;
+}
+
+async function updateKickLive() {
   try {
-    kickLive = await fetchKickLive(kick, config.kickChannels);
+    kickLive = config.kickChannels.length ? await scanKickLive() : new Map();
     kickError = null;
+    kickOffline = false;
   } catch (err) {
     kickError = err.message;
+    kickOffline = isNetworkError(err);
   }
+  syncKick();
 }
 
-// Janelas pequenas num bloco 2x2 no canto inferior direito da tela, sem sobrepor.
-// O navegador pode aumentar um pouco se for menor que o mínimo dele.
-const KICK_WINDOW = { width: 360, height: 260 };
+function syncKick() {
+  kickMiner.setLive(
+    config.kickChannels.filter((slug) => kickLive.get(slug)?.livestreamId).map((slug) => ({ slug, ...kickLive.get(slug) })),
+    config.kickChannels,
+  );
+}
 
-// Navegador escolhido no painel; sem escolha, o primeiro instalado (Chrome, Brave, Edge).
+// Navegador escolhido no painel; sem escolha, o primeiro instalado (Chrome, Brave, Edge). Usado pelo ▶ das duas plataformas.
 const currentBrowser = () => kick.browser ?? installedBrowsers()[0]?.id ?? null;
-
-// Sem `profile`, abre o canal em todas as contas da Kick.
-function watchKick({ channel, profile, screen }) {
-  if (!config.kickChannels.includes(channel)) throw new Error('Canal não está na lista');
-  if (profile === undefined) {
-    if (kick.profiles.length === 0) throw new Error('Marque os perfis do navegador que vão ser as contas da Kick');
-    for (const p of kick.profiles) watchKick({ channel, profile: p, screen });
-    return;
-  }
-  const slot = kick.profiles.indexOf(profile);
-  if (slot === -1) throw new Error('Perfil não está entre as contas da Kick');
-  // O painel manda a tela em pixels CSS; o Windows posiciona em pixels físicos.
-  const scale = screen.scale || 1;
-  const { width, height } = KICK_WINDOW;
-  openWatchWindow(currentBrowser(), slot, profile, `https://kick.com/${channel}`, {
-    x: (screen.left + screen.width - (2 - (slot % 2)) * width) * scale,
-    y: (screen.top + screen.height - (2 - Math.floor(slot / 2)) * height) * scale,
-    width: width * scale,
-    height: height * scale,
-  });
-  log(`Kick: abrindo #${channel} no perfil ${profile} (${browserName(currentBrowser())})`);
-}
 
 function kickState() {
   const browser = currentBrowser();
-  const profiles = listProfiles(browser);
   const browsers = installedBrowsers();
   return {
-    configured: kickConfigured(),
+    appConfigured: kickConfigured(),
     error: kickError,
     browsers,
     browser,
     browserFound: browsers.some((b) => b.id === browser),
-    availableProfiles: profiles,
-    profiles: kick.profiles.map((dir) => profiles.find((p) => p.dir === dir) ?? { dir, name: dir }),
-    openWindows: openWindowCount(),
-    // Perfil -> canal que a janela dele está mostrando (para o botão da conta ficar verde).
-    watching: Object.fromEntries(openWindowList().map((w) => [w.profileDir, w.url.split('/').pop()])),
+    availableProfiles: listProfiles(browser),
+    points: kickMiner.state(),
     channels: config.kickChannels.map((name) => ({
       name,
       live: kickLive.has(name),
       viewers: kickLive.get(name)?.viewers ?? 0,
-      hours: liveHours('kick', name),
     })),
   };
 }
 
-async function handleKick(req, res, action, id) {
+// Rotas /api/kick/<ação>/<id>/<sub>.
+async function handleKick(req, res, url) {
+  const [, , , action, rawId, rawSub] = url.pathname.split('/');
+  const id = rawId && decodeURIComponent(rawId);
+  const sub = rawSub && decodeURIComponent(rawSub);
+
   if (req.method === 'PUT' && action === 'app') {
     const { clientId, clientSecret } = await readBody(req);
     kick.clientId = String(clientId ?? '').trim();
@@ -142,33 +174,39 @@ async function handleKick(req, res, action, id) {
     const { browser } = await readBody(req);
     if (!installedBrowsers().some((b) => b.id === browser)) return send(res, 400, { error: 'Navegador não encontrado neste PC' });
     if (browser !== currentBrowser()) {
-      // Os perfis são de cada navegador: ao trocar, as contas são escolhidas de novo.
-      closeWatchWindows();
+      // Os perfis são de cada navegador: ao trocar, os perfis das contas são escolhidos de novo.
       kick.browser = browser;
-      kick.profiles = [];
+      for (const a of kick.accounts ?? []) a.profile = null;
+      for (const a of pointsAccounts) a.profile = null;
       saveKick();
-      log(`Kick: navegador trocado para ${browserName(browser)}`);
+      savePoints();
+      log(`Navegador trocado para ${browserName(browser)}`);
     }
     return send(res, 200, state());
   }
 
-  if (req.method === 'PUT' && action === 'profiles') {
-    const { profiles } = await readBody(req);
-    const known = new Set(listProfiles(currentBrowser()).map((p) => p.dir));
-    kick.profiles = [...new Set(profiles)].filter((p) => known.has(p)).slice(0, MAX_ACCOUNTS);
-    saveKick();
-    return send(res, 200, state());
-  }
-
-  if (req.method === 'POST' && action === 'watch') {
-    watchKick(await readBody(req));
-    return send(res, 200, state());
-  }
-
-  if (req.method === 'DELETE' && action === 'watch') {
-    closeWatchWindows();
-    log('Kick: fechando as janelas abertas pelo painel');
-    return send(res, 200, state());
+  if (action === 'accounts') {
+    if (req.method === 'POST' && !id) {
+      await kickMiner.addAccount((await readBody(req)).token);
+      return send(res, 200, state());
+    }
+    if (req.method === 'DELETE' && id && !sub) {
+      kickMiner.removeAccount(id);
+      return send(res, 200, state());
+    }
+    if (req.method === 'PUT' && sub === 'profile') {
+      const { profile } = await readBody(req);
+      if (profile && !listProfiles(currentBrowser()).some((p) => p.dir === profile)) return send(res, 400, { error: 'Perfil não encontrado' });
+      kickMiner.setProfile(id, profile);
+      return send(res, 200, state());
+    }
+    if (req.method === 'POST' && sub === 'open') {
+      const channel = normalizeChannel((await readBody(req)).channel ?? '');
+      if (!config.kickChannels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
+      openInProfile(currentBrowser(), kickMiner.profileOf(id), `https://kick.com/${channel}`);
+      log(`Kick: abrindo #${channel} no navegador`);
+      return send(res, 200, state());
+    }
   }
 
   if (action === 'channels') {
@@ -178,6 +216,7 @@ async function handleKick(req, res, action, id) {
       if (!config.kickChannels.includes(name)) {
         config.kickChannels.push(name);
         saveConfig();
+        kickScanAt = 0;
         await updateKickLive();
       }
       return send(res, 200, state());
@@ -187,6 +226,7 @@ async function handleKick(req, res, action, id) {
       config.kickChannels = config.kickChannels.filter((c) => c !== id);
       kickLive.delete(id);
       saveConfig();
+      syncKick();
       return send(res, 200, state());
     }
   }
@@ -205,7 +245,6 @@ function state() {
       name,
       live: live.has(name),
       viewers: live.get(name)?.viewers ?? 0,
-      hours: liveHours('twitch', name),
     })),
     points: miner.state(),
     pointsHistory: pointsHistory(),
@@ -217,20 +256,21 @@ function state() {
 // Problemas para mostrar no topo do painel: [{ variant: 'danger' | 'warning', text }].
 // Sem internet vira um aviso só, em vez de um por conta dizendo que a Twitch recusou.
 function alerts() {
-  const offline = liveOffline || miner.offline;
+  const offline = liveOffline || miner.offline || kickOffline || kickMiner.offline;
   const list = [];
   if (offline) {
     list.push({ variant: 'warning', text: 'Sem conexão com a internet. Os pontos não contam enquanto ela estiver fora; o painel volta sozinho quando ela voltar.' });
-  } else if (liveError) {
-    list.push({ variant: 'danger', text: `Não deu para ver quem está ao vivo na Twitch: ${liveError}` });
+  } else {
+    if (liveError) list.push({ variant: 'danger', text: `Não deu para ver quem está ao vivo na Twitch: ${liveError}` });
+    if (kickError) list.push({ variant: 'danger', text: `Não deu para ver quem está ao vivo na Kick: ${kickError}` });
   }
-  return [...list, ...miner.alerts({ offline })];
+  return [...list, ...miner.alerts({ offline }), ...kickMiner.alerts({ offline })];
 }
 
 // A cada minuto: anota quais canais estão ao vivo (para os horários).
 function recordStats() {
   const twitchOk = liveOk && config.channels.length > 0;
-  const kickOk = kickConfigured() && !kickError && config.kickChannels.length > 0;
+  const kickOk = !kickError && config.kickChannels.length > 0;
   recordMinute({
     twitchLive: twitchOk ? config.channels.filter((c) => live.has(c)) : null,
     kickLive: kickOk ? config.kickChannels.filter((c) => kickLive.has(c)) : null,
@@ -253,7 +293,7 @@ async function handleApi(req, res, url) {
   const id = rawId && decodeURIComponent(rawId);
 
   if (req.method === 'GET' && resource === 'state') return send(res, 200, state());
-  if (resource === 'kick') return handleKick(req, res, id, rawSub && decodeURIComponent(rawSub));
+  if (resource === 'kick') return handleKick(req, res, url);
 
   if (req.method === 'POST' && resource === 'restart') {
     if (!CAN_RESTART) return send(res, 400, { error: 'Para reiniciar por aqui, abra o painel pelo iniciar.bat' });
@@ -339,6 +379,7 @@ await miner.ensureFresh().catch((err) => log(`Pontos: erro ao checar token (${er
 await safeUpdateLive();
 await updateKickLive();
 miner.start();
+kickMiner.start();
 setInterval(safeUpdateLive, LIVE_INTERVAL);
 setInterval(updateKickLive, LIVE_INTERVAL);
 setInterval(() => miner.ensureFresh().catch((err) => log(`Pontos: erro ao checar token (${err.message})`)), TOKEN_INTERVAL);

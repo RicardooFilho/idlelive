@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { startDeviceFlow, waitDeviceToken, refreshToken, validate, revoke, isNetworkError, GQL_URL, TV_CLIENT_ID as CLIENT_ID } from './twitch.js';
 import { pointsAccounts, savePoints, MAX_ACCOUNTS } from './store.js';
 import { recordPoints } from './stats.js';
+import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK } from './human.js';
 
 const SCOPES = 'channel_read chat:read user_blocks_edit user_blocks_read user_follows_edit user_read';
 const TV_UA = 'Mozilla/5.0 (Linux; Android 7.1; Smart Box C1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36';
@@ -20,24 +21,13 @@ const HASHES = {
 
 const MAX_WATCH = 2; // a Twitch só conta tempo assistido em 2 lives ao mesmo tempo, por conta
 const WATCH_CYCLE = 20 * 1000; // cada live recebe um "minuto assistido" a cada ~20 s, como no miner original
-const CHECK_TICK = 60 * 1000; // de quanto em quanto tempo vê se algum saldo precisa ser lido
-const CHECKS_PER_TICK = 4; // poucas consultas por vez, como um navegador, em vez de todas de uma vez
 
-// Para parecer uma pessoa e não um robô: tempos aleatórios em vez de exatos, e menos consultas.
+// Para parecer uma pessoa e não um robô (o resto das travas fica em human.js).
 // Um navegador lê o saldo quando abre a live e depois só recebe avisos; por isso, com a conexão em tempo real,
 // o saldo das lives assistidas é lido a cada 5–10 min e o resto a cada ~30 min.
 const CHECK_WATCHING = [5 * 60 * 1000, 10 * 60 * 1000];
 const CHECK_WATCHING_NO_EVENTS = [50 * 1000, 70 * 1000]; // sem a conexão em tempo real, o baú só aparece consultando
-const CHECK_OTHERS = [25 * 60 * 1000, 35 * 60 * 1000];
 const CLAIM_DELAY = [5 * 1000, 40 * 1000]; // espera antes de pegar baú ou Momento, como alguém que vê e clica
-const SWITCH_DELAY = [5 * 1000, 45 * 1000]; // espera antes de trocar de live
-const START_DELAY = [0, 90 * 1000]; // cada conta começa num momento diferente
-
-// Descanso diário (horário de Brasília): as contas param como quem vai dormir.
-// Cada conta dorme e acorda até 20 min antes ou depois, num horário que muda todo dia.
-// 3 horas: quebra o padrão de 24 h por dia perdendo só ~12% dos pontos (das 4h às 10h ainda tem parceiro ao vivo, ex.: cogu e guaxilol1).
-const REST = { start: 5 * 60, end: 8 * 60, jitter: 20 }; // em minutos do dia
-const TIMEZONE = 'America/Sao_Paulo';
 const SITE_INTERVAL = 60 * 60 * 1000;
 const STREAK_MS = 7 * 60 * 1000; // assistir uns minutos de cada live garante a sequência (watch streak), que dá +300 a +450 pontos
 const GQL_FAILS_ALERT = 3; // falhas seguidas na API da Twitch antes de avisar no painel
@@ -46,21 +36,8 @@ const RAID_STAY = 5 * 60 * 1000; // depois de entrar numa raid, fica uns minutos
 const PUBSUB_URL = 'wss://pubsub-edge.twitch.tv/v1';
 const PUBSUB_PING = 4 * 60 * 1000; // a Twitch pede um PING a cada 5 min no máximo
 const PUBSUB_DOWN_ALERT = 2 * 60 * 1000;
+const STABLE_AFTER = 60 * 1000; // a espera entre reconexões só volta ao mínimo depois de a conexão ficar de pé esse tempo
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const random = ([min, max]) => min + Math.random() * (max - min);
-
-// Minutos do dia e data (AAAA-MM-DD) no horário de Brasília, seja qual for o fuso do PC.
-function brasiliaNow() {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
-    timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).formatToParts(new Date()).map((p) => [p.type, p.value]));
-  return { minutes: Number(parts.hour) * 60 + Number(parts.minute), day: `${parts.year}-${parts.month}-${parts.day}` };
-}
-
-// Número entre -jitter e +jitter, fixo para a mesma conta no mesmo dia.
-const dailyOffset = (seed) => (crypto.createHash('sha256').update(seed).digest().readUInt16BE(0) % (2 * REST.jitter + 1)) - REST.jitter;
-const clock = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 const lastUrl = (text) => text.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')).at(-1);
 
 // O endereço que recebe os "minutos assistidos" e a versão do site ficam na página da Twitch; valem para todas as contas.
@@ -94,33 +71,41 @@ class PubSub {
     this.connected = false;
     this.downSince = Date.now();
     this.retryDelay = 1000;
-    this.closed = false;
+    this.closed = true;
+    this.reconnectTimer = null;
   }
 
   start() {
-    if (!PubSub.supported || (this.ws && !this.closed)) return;
+    if (!PubSub.supported || !this.closed) return;
     this.closed = false;
     this.downSince = Date.now();
     this.connect();
   }
 
   // Fecha (desvincular ou descanso). start() abre de novo e escuta os mesmos tópicos.
+  // Cancela também a reconexão agendada, senão ela abriria uma conexão que ninguém fecha.
   close() {
     this.closed = true;
     this.connected = false;
-    this.ws?.close();
+    clearTimeout(this.reconnectTimer);
+    const ws = this.ws;
+    this.ws = null;
+    ws?.close();
   }
 
   connect() {
+    if (this.closed) return;
     const ws = new WebSocket(PUBSUB_URL);
     this.ws = ws;
     let pinger;
     let pongTimer;
+    let stableTimer;
 
     ws.onopen = () => {
       this.connected = true;
       this.downSince = null;
-      this.retryDelay = 1000;
+      // Se a Twitch derrubar logo depois de aceitar, a espera continua crescendo em vez de virar um laço rápido.
+      stableTimer = setTimeout(() => (this.retryDelay = 1000), STABLE_AFTER);
       for (const topic of this.topics.keys()) this.sendListen(topic);
       // Sem PONG em 10 s, a conexão está morta: derruba para reconectar.
       pinger = setInterval(() => {
@@ -154,12 +139,13 @@ class PubSub {
     ws.onclose = () => {
       clearInterval(pinger);
       clearTimeout(pongTimer);
+      clearTimeout(stableTimer);
       if (this.ws !== ws || this.closed) return;
       if (this.connected) this.log(`conexão em tempo real caiu, reconectando em ${this.retryDelay / 1000}s`);
       this.connected = false;
       this.downSince ??= Date.now();
-      setTimeout(() => this.connect(), this.retryDelay);
-      this.retryDelay = Math.min(this.retryDelay * 2, 60 * 1000);
+      this.reconnectTimer = setTimeout(() => this.connect(), this.retryDelay);
+      this.retryDelay = Math.min(this.retryDelay * 2, 2 * 60 * 1000);
     };
     ws.onerror = () => {}; // o onclose cuida da reconexão
   }
@@ -225,17 +211,11 @@ class PointsAccount {
 
   // Horário de descanso de hoje desta conta, em minutos do dia (Brasília).
   restWindow() {
-    const { day } = brasiliaNow();
-    return {
-      start: REST.start + dailyOffset(`${this.account.userId}:${day}:start`),
-      end: REST.end + dailyOffset(`${this.account.userId}:${day}:end`),
-    };
+    return restWindow(this.account.userId);
   }
 
   get resting() {
-    const { minutes } = brasiliaNow();
-    const { start, end } = this.restWindow();
-    return minutes >= start && minutes < end;
+    return isResting(this.account.userId);
   }
 
   // Está farmando agora: conta ativa e fora do descanso.
@@ -257,7 +237,7 @@ class PointsAccount {
     // Cada conta começa num momento diferente, para não agirem todas juntas.
     await sleep(random(START_DELAY));
     if (this.stopped) return;
-    if (!this.resting) this.pubsub.start();
+    if (this.active && !this.resting) this.pubsub.start();
     const check = () => this.checkBonuses().catch((err) => this.log(`erro ao checar bônus (${err.message})`));
     check();
     this.timer = setInterval(check, CHECK_TICK);
@@ -347,6 +327,9 @@ class PointsAccount {
     this.account.refreshToken = tokens.refresh_token ?? this.account.refreshToken;
     savePoints();
     this.log('token renovado');
+    // Se os avisos da conta tinham sido recusados com o token velho, pede de novo com o novo.
+    this.pubsub.unlisten(this.userTopic);
+    this.pubsub.listen(this.userTopic, () => this.account.accessToken);
     return true;
   }
 
@@ -431,16 +414,19 @@ class PointsAccount {
     if (res.status !== 204) throw new Error(`a Twitch respondeu ${res.status} ao minuto assistido`);
   }
 
-  // Entra e sai do descanso: para tudo e fecha a conexão em tempo real, como um navegador fechado.
+  // Entra e sai da pausa (descanso ou conta precisando vincular de novo): para tudo e fecha a conexão
+  // em tempo real, como um navegador fechado. Na pausa nada é lido, então as falhas de rede antigas não valem mais.
   updateRest() {
-    const resting = this.active && this.resting;
-    if (resting === this.wasResting) return;
-    this.wasResting = resting;
-    if (resting) {
-      this.log(`descansando até ${clock(this.restWindow().end)} (horário de Brasília)`);
+    const paused = !this.active || this.resting;
+    if (paused === this.wasResting) return;
+    this.wasResting = paused;
+    if (paused) {
+      this.pausedForRest = this.active;
+      if (this.pausedForRest) this.log(`descansando até ${clock(this.restWindow().end)} (horário de Brasília)`);
       this.pubsub.close();
+      this.netFails = 0;
     } else {
-      this.log('voltou do descanso');
+      this.log(this.pausedForRest ? 'voltou do descanso' : 'voltou a farmar');
       this.pubsub.start();
     }
   }
@@ -450,7 +436,8 @@ class PointsAccount {
       this.updateRest();
       const targets = this.farming ? this.pickTargets() : [];
       const names = targets.map((t) => t.name);
-      if (names.join() !== this.watching.join()) {
+      const sameLives = [...names].sort().join() === [...this.watching].sort().join();
+      if (!sameLives) {
         // Antes de trocar de live, espera um pouco, como alguém que demora para clicar.
         if (this.watching.length && names.length) {
           await sleep(random(SWITCH_DELAY));
@@ -617,7 +604,7 @@ class PointsAccount {
 
   // Sem internet: várias falhas de rede seguidas.
   get offline() {
-    return this.netFails >= GQL_FAILS_ALERT;
+    return this.farming && this.netFails >= GQL_FAILS_ALERT;
   }
 
   // Problemas para mostrar no topo do painel. Sem internet, os avisos de Twitch e conexão caída ficam de fora:

@@ -1,9 +1,9 @@
 // Estatísticas locais (stats.json), anotadas com o painel aberto:
 // - em que horas cada canal costuma estar ao vivo (a cada minuto);
 // - pontos do canal ganhos por conta e por dia, separados pelo motivo.
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readJson, writeJson } from './store.js';
 
 const STATS_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'stats.json');
 // Precisa de umas horas de observação antes de dizer "costuma estar ao vivo".
@@ -15,14 +15,14 @@ const hours = () => Array(24).fill(0);
 // observed: { twitch: [24], kick: [24] } — minutos em que o painel checou cada hora do dia
 // live: { twitch: { canal: [24] }, kick: { canal: [24] } } — minutos ao vivo em cada hora do dia
 // points: { 'AAAA-MM-DD': { login: { motivo: { points, count } } } } — motivo é o reason_code da Twitch (WATCH, CLAIM…)
-const stats = fs.existsSync(STATS_FILE) ? JSON.parse(fs.readFileSync(STATS_FILE, 'utf8')) : {};
+const stats = readJson(STATS_FILE, {});
 delete stats.boost; // tempo com boost das antigas contas do chat, que não existem mais
 stats.observed ??= { twitch: hours(), kick: hours() };
 stats.live ??= { twitch: {}, kick: {} };
 stats.points ??= {};
 
 const dayKey = (date) => date.toLocaleDateString('sv-SE'); // AAAA-MM-DD no horário local
-const save = () => fs.writeFileSync(STATS_FILE, JSON.stringify(stats) + '\n');
+const save = () => writeJson(STATS_FILE, stats, 0);
 
 // twitchLive/kickLive: lista de canais ao vivo, ou null se não deu para checar.
 export function recordMinute({ twitchLive, kickLive }) {

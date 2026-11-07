@@ -6,7 +6,7 @@ Leia antes de mexer no projeto. Elas valem para qualquer agente (Claude, Copilot
 
 IdleLive é um painel local (Node.js) para jogadores de jogos idle que dão bônus por assistir lives de parceiros:
 - **Twitch:** mostra quem está ao vivo e até 4 contas juntam **pontos do canal** nas lives dos parceiros (`src/points.js`, baseado no Twitch Channel Points Miner v2). O jogo dá o bônus de XP para quem resgata com esses pontos;
-- **Kick:** lista as lives dos parceiros e abre a live numa janela visível do navegador (Chrome, Brave ou Edge) quando o usuário clica.
+- **Kick:** lista as lives dos parceiros e até 4 contas juntam **pontos do canal** em segundo plano (`src/kickpoints.js`, baseado no Kick Channel Points Miner de Baillora). O login é o token da conta, colado no painel.
 
 O público é de jogadores, não programadores. Veja o [README.md](README.md).
 
@@ -25,8 +25,7 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 - O painel atualiza a cada 5 s. Use `setHTML()`, que só troca o HTML quando ele muda, para não fechar menus abertos nem piscar.
 - Siga o estilo do código ao redor: comentários curtos e em português explicando o *porquê*, nomes em inglês, `const`, arrow functions, 2 espaços.
 - Textos da interface e mensagens de log são em **português do Brasil**, simples, para quem não é programador.
-- Os dados ficam em JSON na raiz e são lidos e gravados por `src/store.js` (ou `src/stats.js`).
-- Integrações com o Windows (posicionar e fechar janelas) ficam em PowerShell + `src/win.cs`. Os scripts devem funcionar no Windows PowerShell 5.1.
+- Os dados ficam em JSON na raiz e são lidos e gravados por `readJson`/`writeJson` de `src/store.js` (também usados por `src/stats.js`). A gravação é atômica (arquivo `.tmp` + troca) e um arquivo quebrado é guardado como `.quebrado-<data>`; os dois estão no `.gitignore` porque podem ter tokens.
 
 ## Cuidados com a Twitch
 
@@ -35,7 +34,14 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 - Tudo da Twitch usa o Client ID do app de TV (`TV_CLIENT_ID` em `src/twitch.js`), porque a API interna (GQL) só aceita os apps da própria Twitch. O status das lives vem da GQL **sem login**, em lotes. As consultas usam hashes fixos (em `src/twitch.js` e `HASHES` em `src/points.js`); se a Twitch trocar algum, o log mostra `PersistedQueryNotFound`.
 - Momentos, baús na hora e o motivo dos pontos chegam pelo PubSub da Twitch (`wss://pubsub-edge.twitch.tv/v1`), com **uma conexão por conta**, como um navegador logado. Não junte contas numa conexão só. Raids só são seguidas de um canal oficial para outro, e só pelas contas que assistiam a origem. Sem ele, o histórico anota a diferença de saldo como `OTHER`.
 - O farm imita uma pessoa para diminuir o risco de punição: descanso diário (`REST`, 5h–8h de Brasília, com variação por conta e por dia), esperas aleatórias antes de pegar baú/Momento e de trocar de live, intervalos com variação e poucas leituras de saldo (`CHECK_*`). Não volte para tempos exatos nem consultas a cada minuto.
-- A Twitch só conta tempo assistido em 2 lives ao mesmo tempo, por conta. Cada conta (`PointsAccount`) escolhe as suas pelos próprios saldos.
+- A Twitch só conta tempo assistido em 2 lives ao mesmo tempo, por conta.
+
+## Cuidados com a Kick
+
+- Use a API do site (`kick.com/api`) **sem fingir ser o Chrome**: com User-Agent de navegador e o TLS do Node, a Kick bloqueia ("Request blocked by security policy"). Com o `fetch` padrão, responde.
+- O farm abre a conexão de espectador (`wss://websockets.kick.com/viewer/v1/connect`) e manda `tracking.user.watch.livestream` a cada ~11 s, como o player. Máximo de 2 lives por conta.
+- O token de espectador responde 403 quando o token da conta não vale mais. Antes de marcar `needsRelink`, confira com `fetchKickUser` (só 401 marca), para um bloqueio passageiro não pedir token novo.
+- As travas de `src/human.js` valem para as duas plataformas. Cada conta (`PointsAccount`) escolhe as suas pelos próprios saldos.
 
 ## Testes
 

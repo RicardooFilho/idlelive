@@ -15,14 +15,45 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 - **Baú na hora:** a Twitch avisa em tempo real quando o baú aparece, e o painel pega sem esperar a checagem de cada minuto.
 - **Histórico de pontos:** a página **Histórico** voltou, agora com os pontos ganhos por conta e por dia, e uma tabela de onde vieram os pontos nos últimos 7 dias (tempo assistido, baús, sequências, raids, Momentos).
 - **Avisos no topo do painel** quando algo para de funcionar: conta que precisa ser vinculada de novo, a Twitch recusando os pedidos, a conexão em tempo real caída ou falha ao ver quem está ao vivo. Se o problema for a internet, aparece um aviso só, "Sem conexão com a internet", em vez de um por conta.
-- **Botão ▶ nos pontos:** abre a live no navegador para você resgatar as recompensas. Em **Configurações → Contas da Twitch no navegador**, escolha o perfil do navegador de cada conta para ela abrir já logada.
+- **Botão ▶ nos pontos:** abre a live no navegador para você resgatar as recompensas. Em **Configurações → Navegador e perfis**, escolha o perfil do navegador de cada conta para ela abrir já logada.
+
+- **Pontos do canal na Kick:** até 4 contas da Kick juntam pontos em segundo plano, cada uma em até 2 lives por vez (as que têm mais pontos na conta), com as mesmas travas da Twitch (descanso das 5h às 8h, tempos aleatórios, poucas leituras de saldo). A conta entra pelo favorito **⚡ Enviar para o IdleLive**: arraste ele uma vez para a barra de favoritos e clique nele no kick.com, logado na conta. O painel pergunta antes de adicionar. Também dá para colar o token à mão. Cada card mostra os saldos, o que está assistindo e o botão ▶ para abrir a live no perfil da conta. Baseado no Kick Channel Points Miner (Baillora).
+- **Navegador e perfis** agora ficam em Configurações, para as contas da Twitch e da Kick.
 
 ### Mudanças
+- **Conteúdo do painel usa a largura toda da tela**, alinhado com o botão Hub.
+- **Páginas Twitch e Kick padronizadas:** os cards de canais são iguais nas duas (a Kick também perdeu a barra de horários), e as listas se chamam "Canais parceiros" nas duas.
+- **Nomes dos streamers inteiros nos cards de pontos:** "assistindo" virou um ícone de olho 👁 (com a explicação ao passar o mouse) e o ganho fica embaixo do saldo, para sobrar espaço para o nome.
+- **Textos mais claros no painel:** o mesmo nome para o mesmo estado ("Vincule de novo" na Twitch, "Token recusado" na Kick), "Remover conta" na Kick, "bônus de XP" e "baú de pontos", e menos termos técnicos nas ajudas.
+- **Adicionar canal** agora tem um botão **Adicionar** (o Enter continua funcionando), e o nome digitado só some se der certo.
+- **App da Kick:** não deixa salvar com os campos vazios e confirma quando salva.
+- **Ajuda da Kick** completa: painel aberto, como resgatar e onde adicionar contas.
+- **Visão geral sem contas** mostra botões para vincular uma conta da Twitch ou adicionar uma da Kick.
+- O **✕** de remover canal fica sempre visível (bem fraco). Uma dica explica o **▶** até a primeira vez que você usar.
+- **Histórico** mostra as duas plataformas no título, e tocar num valor mostra de onde vieram os pontos (no celular também).
+- Em Configurações, o painel avisa embaixo do seletor que trocar de navegador apaga os perfis escolhidos.
+- **Saem as janelas da Kick:** o painel não abre mais a live numa janela pequena por perfil; o farm é em segundo plano. O app da Kick ficou opcional: sem ele, o painel vê quem está ao vivo canal por canal.
+- Lista da Kick atualizada com os parceiros do jogo: entraram denissnider, fnblol, daniels, revolta, yoda, kennzy e ookina8.
 - **Saem as contas do chat da Twitch:** agora o bônus de XP do jogo vem de resgatar com pontos do canal, então ficar no chat não serve mais. Saíram os cards das contas, o "+% de XP", o "Boost hoje" e a página **Histórico**. Na Visão geral, o lugar do "Boost hoje" agora mostra os pontos do canal.
 - A lista de quem está ao vivo na Twitch funciona **sem nenhuma conta vinculada**.
 - O `accounts.json` não é mais usado e pode ser apagado.
 - Cards dos canais da Twitch mais simples: saíram a barra de horários e o "Costuma estar ao vivo" (continuam na Kick).
 - Lista de canais oficiais da Twitch atualizada com os parceiros do jogo: entraram yetz, revolta, daniels, kennzy, ookina e surskity11, e saíram faasii e yulla.
+
+### Correções
+- Conexão em tempo real da Twitch que podia ficar aberta durante o descanso (ou depois de desvincular) e duplicar os pontos no histórico.
+- Conexão da Kick "morta" (PC hibernou, roteador caiu) agora é percebida em até ~1,5 min e refeita.
+- A Twitch não "troca" mais de live à toa quando duas lives com saldos parecidos invertem de posição.
+- Depois de renovar o login, os avisos em tempo real da conta voltam a funcionar sem esperar a próxima queda.
+- O aviso "Sem conexão com a internet" não fica mais preso durante o descanso.
+- Arquivos de dados não ficam mais pela metade se o painel fechar no meio de uma gravação; um arquivo quebrado é guardado de lado e o painel abre mesmo assim.
+- Se a Twitch ou a Kick derrubarem a conexão logo depois de aceitar, o painel espera cada vez mais antes de tentar de novo, em vez de tentar a cada poucos segundos.
+- Um canal da Kick que não responde não trava mais a lista inteira.
+- Erro ao abrir o navegador pelo ▶ ou ao conferir o token da Kick não derruba mais o servidor.
+- Menu ⋮ dos cards não fecha mais sozinho quando o saldo muda.
+- Avisos de sucesso aparecem em cor neutra (vermelho só para erro).
+- No celular, o ✕ de remover canal aparece.
+- Sem internet, o painel mostra um aviso em vez de ficar em branco.
 
 ## 31/10/2026
 

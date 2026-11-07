@@ -3,7 +3,7 @@
 Painel local para quem joga jogos idle com várias contas e ganha bônus assistindo lives de streamers parceiros. Ele cuida disso na **Twitch** e na **Kick** por você.
 
 - **Twitch:** mostra quais parceiros estão ao vivo e até 4 contas suas juntam **pontos do canal** neles sozinhas. Com esses pontos você resgata o bônus de XP do jogo.
-- **Kick:** mostra quais parceiros estão ao vivo e abre a live numa janela pequena, com a conta que você escolher, num clique. Os pontos de canal da Kick só sobem assistindo de verdade, então o painel não tenta burlar isso.
+- **Kick:** mostra quais parceiros estão ao vivo e até 4 contas suas juntam **pontos do canal** neles em segundo plano, como na Twitch.
 
 Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além da própria Twitch e da Kick.
 
@@ -20,16 +20,16 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - Mostra o saldo em todos os canais da lista, ao vivo ou offline, quanto subiu desde que o painel abriu e quantos bônus foram pegos.
 
 **Kick**
-- Mostra o status ao vivo e o número de espectadores dos parceiros, pela API oficial da Kick.
-- Cada conta da Kick é um perfil do navegador (Chrome, Brave ou Edge). O botão **▶** abre a live daquele perfil numa janela pequena, e as janelas ficam lado a lado no canto da tela.
-- **▶ Todas** abre a live em todas as contas de uma vez. **✕ Fechar janelas** fecha as janelas que o painel abriu.
+- Mostra o status ao vivo e o número de espectadores dos parceiros (pela API oficial, se você criar o app da Kick, ou canal por canal sem ele).
+- **Pontos do canal:** até 4 contas, cada uma "assiste" até 2 lives por vez em segundo plano, sempre as lives onde ela tem mais pontos. Na Kick os pontos vêm só do tempo assistido.
+- Mesmas travas da Twitch: descanso das 5h às 8h (Brasília), tempos aleatórios e poucas leituras de saldo.
+- O botão **▶** abre a live no navegador, no perfil da conta, para você resgatar as recompensas.
 
 **Painel**
 - Menu lateral com **Visão geral** (resumo de tudo), **Twitch**, **Kick**, **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
 - Avisos no topo quando algo para de funcionar (conta para vincular de novo, Twitch recusando pedidos, conexão caída). No celular, ele vira uma gaveta no botão ☰.
 
 **Geral**
-- Na Kick, uma barrinha de 24 horas em cada canal mostra os horários em que ele costuma estar ao vivo. O painel vai aprendendo enquanto fica aberto.
 - Tem a opção **Iniciar com o Windows**, que abre o painel minimizado quando o PC liga.
 - O botão **Reiniciar servidor** fecha e abre o servidor de novo, para carregar atualizações sem fechar a janela preta.
 - O botão **Hub** leva direto para o hub do jogo.
@@ -39,7 +39,7 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - Windows 10 ou 11.
 - [Node.js](https://nodejs.org) versão 22 ou mais nova (na 20 funciona, mas sem os Momentos e sem o motivo dos pontos no histórico). Baixe a versão **LTS** e vá clicando em "Avançar".
 - Internet: além da Twitch e da Kick, o visual do painel (componentes Web Awesome e fonte Montserrat) carrega da internet.
-- Google Chrome, Brave ou Microsoft Edge. Só é necessário para a parte da Kick. O Edge já vem no Windows. O Firefox não é compatível.
+- Google Chrome, Brave ou Microsoft Edge, só para o botão **▶** abrir as lives no perfil de cada conta. O Edge já vem no Windows. O Firefox não é compatível.
 
 ## Instalação
 
@@ -61,19 +61,22 @@ Não precisa rodar `npm install`: o projeto não tem dependências.
 
 Pronto. As contas juntam pontos sozinhas quando os parceiros estiverem ao vivo.
 
-Para o botão **▶** abrir a live já logada na conta certa: crie um perfil no navegador (Chrome, Brave ou Edge) para cada conta, entre na Twitch com ela e escolha esse perfil em **Configurações → Contas da Twitch no navegador**.
+Para o botão **▶** abrir a live já logada na conta certa: crie um perfil no navegador (Chrome, Brave ou Edge) para cada conta, entre na Twitch com ela e escolha esse perfil em **Configurações → Navegador e perfis**.
 
-### Kick (opcional)
-1. Em **kick.com → Configurações → Desenvolvedor**, crie um app. Em Redirect URL, coloque `http://localhost`.
-2. Cole o **Client ID** e o **Client Secret** na página **Configurações** do painel. Não mostre o Client Secret para ninguém.
-3. No seu navegador (Chrome, Brave ou Edge), crie um perfil para cada conta da Kick e faça login na Kick em cada um. Se tiver mais de um instalado, escolha qual usar no campo **Navegador** do painel.
-4. No painel, marque os perfis que vão ser as suas contas.
-5. Quando um parceiro estiver ao vivo, clique em **▶** ou em **▶ Todas**.
+### Kick
+A Kick não tem login por código: cada conta entra pelo **token** dela, que fica no navegador.
+1. Na página **Kick**, em **Pontos do canal**, clique em **+ Adicionar conta**.
+2. Mostre a barra de favoritos (**Ctrl+Shift+B**) e arraste o botão **⚡ Enviar para o IdleLive** para ela. Só na primeira vez (em cada navegador ou perfil).
+3. Abra **kick.com** no perfil da conta, já logado, e clique no favorito **Enviar para o IdleLive**. O painel abre e pergunta se pode adicionar a conta. Repita para cada conta, até 4.
 
-Dica: na primeira vez, escolha 160p no player da Kick para gastar menos internet e PC.
+Se o favorito não funcionar, dá para fazer à mão: no kick.com aperte **F12** → aba **Application** → **Cookies → https://kick.com**, copie o valor de `session_token` e cole na janela **Adicionar conta**.
+
+O token fica só no seu PC, no `kick.json`. Não mostre ele para ninguém: quem tem o token entra na conta. Se o card mostrar **Token recusado**, pegue um token novo do mesmo jeito e use **Trocar token**.
+
+Opcional: em **Configurações → App da Kick**, cole o Client ID e o Client Secret de um app da Kick (**kick.com → Configurações → Desenvolvedor**, Redirect URL `http://localhost`). Com ele, o painel vê quem está ao vivo num pedido só, em vez de canal por canal.
 
 ### Lista de parceiros
-O painel já vem com os parceiros atuais. Se o jogo adicionar ou remover algum, use o campo **Adicionar** embaixo de cada lista. Para remover, passe o mouse no canal e clique no **✕**.
+O painel já vem com os parceiros atuais. Se o jogo adicionar ou remover algum, use o campo **Adicionar canal** em cima de cada lista. Para remover, clique no **✕** do canal.
 
 ## Seus dados e segurança
 
@@ -81,7 +84,7 @@ Esses arquivos são criados na pasta do projeto e **nunca devem ser enviados par
 
 | Arquivo | O que guarda |
 |---|---|
-| `kick.json` | Client ID e Client Secret do seu app da Kick |
+| `kick.json` | Tokens das contas da Kick, app da Kick e navegador escolhido |
 | `stats.json` | Horários das lives e histórico de pontos por dia |
 | `points.json` | Login das contas de pontos do canal (tokens) |
 
@@ -92,7 +95,7 @@ Eles já estão no `.gitignore`. O painel só aceita conexões do próprio PC (`
 ## Perguntas frequentes
 
 **Pesa no PC?**
-Quase nada. A conta de pontos não baixa o vídeo das lives, só pequenos pedidos de tempos em tempos. O que pesa são as janelas da Kick, porque elas são lives de verdade.
+Quase nada. As contas de pontos não baixam o vídeo das lives, só fazem pequenos pedidos de tempos em tempos.
 
 **E se a internet cair?**
 O painel percebe em até uns 3 minutos e reconecta sozinho quando a internet voltar.
@@ -108,9 +111,7 @@ Use o `iniciar.bat`, que não depende disso.
 
 ## O que ele não faz (de propósito)
 
-- Não cria espectadores falsos e não abre lives escondidas.
-- Não dá play sozinho na Kick. Toda janela é aberta por um clique seu.
-- Não resgata recompensas com os pontos. Ele só junta os pontos e pega o bônus.
+- Não resgata recompensas com os pontos. Ele só junta os pontos e pega o bônus; o resgate é com você, pelo botão **▶**.
 
 ## Para desenvolvedores
 
@@ -122,11 +123,10 @@ public/index.html      o painel (HTML/CSS/JS num arquivo só, com Web Awesome)
 public/favicon.ico     ícone do IdleLive
 src/twitch.js          login por código, tokens e status das lives (GQL, sem login)
 src/points.js          pontos do canal: minutos assistidos, baús, Momentos e conexão em tempo real (PubSub)
-src/kick.js            status das lives pela API oficial da Kick
-src/browser.js         navegadores (Chrome, Brave, Edge), perfis e janelas da Kick
-src/open-window.ps1    abre a janela e posiciona na tela
-src/close-windows.ps1  fecha as janelas abertas pelo painel
-src/win.cs             funções do Windows usadas pelos dois scripts acima
+src/kick.js            API da Kick: lives, números do canal, conta, saldo e token de espectador
+src/kickpoints.js      pontos do canal na Kick: conexão de espectador e saldos
+src/human.js           travas comuns às duas plataformas (descanso, tempos aleatórios)
+src/browser.js         navegadores (Chrome, Brave, Edge), perfis e o botão ▶
 src/stats.js           horários das lives e histórico de pontos
 src/autostart.js       atalho "Iniciar com o Windows"
 src/store.js           leitura e gravação dos arquivos .json

@@ -3,3 +3,5 @@ accounts.json
 kick.json
 stats.json
 points.json
+*.json.tmp
+*.json.quebrado-*

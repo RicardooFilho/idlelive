@@ -84,14 +84,14 @@
   header .actions { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .menu-btn { display: none; }
 
-  .content { padding: 24px 28px 48px; max-width: 1480px; }
+  /* Sem largura máxima: o conteúdo vai até a mesma margem do cabeçalho (alinhado com o botão Hub). */
+  .content { padding: 24px 28px 48px; }
   .page { display: none; flex-direction: column; gap: 24px; }
   .page.active { display: flex; }
   h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
   /* Títulos dos cards centralizados na altura do cabeçalho. */
   wa-card h2[slot="header"] { margin: 0; min-height: 28px; line-height: 1; }
   .meta { font-size: 12px; color: var(--wa-color-text-quiet); }
-  .orange { color: var(--orange); }
 
   /* Resumo (visão geral) */
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
@@ -137,9 +137,11 @@
   /* Canal offline: bolinha apagada e nome mais fraco. */
   .points .off-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wa-color-surface-border); flex: none; }
   .points .row.off .name { color: var(--wa-color-text-quiet); font-weight: 500; }
+  .play-tip { margin: -4px 0 12px; }
   .points-more { display: flex; justify-content: center; margin-top: auto; }
   /* Até 4 contas de pontos lado a lado (2 em telas médias, 1 no celular). */
   .points-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+  @media (min-width: 1500px) { .points-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .points-grid > .points::part(body) { height: 100%; box-sizing: border-box; }
   .points.add::part(body) { align-items: center; justify-content: center; min-height: 200px; }
   .points.add { --wa-panel-border-style: dashed; }
@@ -170,6 +172,16 @@
   .points-table .quiet { color: var(--wa-color-text-quiet); }
   .points-table .gained { color: var(--live); font-weight: 600; }
   .points-wrap { overflow-x: auto; }
+  /* Linha de canal nos cards de pontos: compacta, para o nome do streamer caber inteiro.
+     "Assistindo" vira um ícone e o ganho fica embaixo do saldo. */
+  /* Altura fixa: com ou sem o "+ganho" embaixo do saldo, toda linha (e todo card) fica do mesmo tamanho. */
+  .points-row { gap: 8px; height: 52px; padding: 0; box-sizing: border-box; }
+  .points-row .name { white-space: nowrap; }
+  .points-row .streak { flex: none; margin-left: -4px; }
+  .points-row .watch-icon { flex: none; color: var(--brand-text); font-size: 14px; display: grid; place-items: center; }
+  .points-row .watch-icon.error { color: var(--wa-color-warning-fill-loud, #f5a524); }
+  .points-row .amount { flex: none; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+  .points-row .amount .gained { font-size: 11px; }
   .points .gained { font-size: 12px; font-weight: 600; color: var(--live); font-variant-numeric: tabular-nums; }
 
   /* Canais */
@@ -178,39 +190,21 @@
   .channel .top .name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .channel.offline { opacity: .7; }
   .channel.offline:hover { opacity: 1; }
-  .channel .remove { opacity: 0; transition: opacity .15s; }
+  .channel .remove { opacity: .3; transition: opacity .15s; }
+  @media (hover: none) { .channel .remove { opacity: .6; } }
   .channel:hover .remove { opacity: 1; }
-  .heat { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
-  .heat i { height: 8px; border-radius: 2px; background: color-mix(in srgb, var(--c) calc(var(--p) * 100%), #2c2838); }
-  .heat i.unk { background: #1e1b26; }
-  .heat i.now { outline: 1px solid #fff; outline-offset: 1px; }
-  .heat-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--wa-color-text-quiet); }
-  .usual { font-size: 12px; color: var(--wa-color-text-quiet); }
-
-  /* Kick: botões para assistir */
-  .watch { display: flex; gap: 6px; flex-wrap: nowrap; width: 100%; }
-  .watch wa-button { flex: 1 1 auto; min-width: 0; white-space: nowrap; }
-  .watch wa-button::part(base) { padding-inline: 8px; }
-  .watch wa-button::part(label) { overflow: hidden; text-overflow: ellipsis; }
-  /* 3 ou 4 contas: "Todas" ocupa a linha de cima e as contas viram uma grade (2x2 no card estreito). */
-  .watch.many { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
-  .watch.many .all { grid-column: 1 / -1; }
-  /* Card estreito: com 2 contas, "Todas" também vai para a linha de cima, para os nomes caberem. */
-  .watch-wrap { container-type: inline-size; }
-  @container (max-width: 380px) {
-    .watch:not(.many) { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
-    .watch:not(.many) .all { grid-column: 1 / -1; }
-  }
-  /* Botão de conta: verde no hover e quando aquela conta está assistindo o canal. */
-  .watch wa-button.profile:not([disabled])::part(base) { transition: background .15s, border-color .15s, color .15s; }
-  .watch wa-button.profile:not([disabled]):hover::part(base),
-  .watch wa-button.profile.open::part(base) { background: rgba(83, 252, 24, .12); border-color: var(--kick); color: var(--kick); }
-  .watch wa-button.profile.open::part(base) { font-weight: 700; box-shadow: 0 0 10px rgba(83, 252, 24, .25); }
 
   .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
   .toolbar wa-input { flex: 1; min-width: 200px; max-width: 320px; }
-  .kick-setup { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
-  .kick-setup wa-select { min-width: 180px; }
+  /* Janela de adicionar conta da Kick */
+  .bookmarklet {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; cursor: grab;
+    background: var(--kick); color: #0b1a05; font-weight: 700; text-decoration: none; font-size: 14px;
+  }
+  .bookmarklet:active { cursor: grabbing; }
+  .farm-help h4 { margin: 0; font-size: 14px; }
+  .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; }
+  .steps code { font-size: 12px; }
 
   /* Código para vincular conta da Twitch */
   .code { font: 700 24px/1 ui-monospace, Consolas, monospace; letter-spacing: .14em; color: var(--orange); }
@@ -248,6 +242,7 @@
     background: #c62828; color: #fff; padding: 10px 16px; border-radius: 10px; display: none;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .4); font-size: 14px;
   }
+  .toast.info { background: #2b2d36; border: 1px solid var(--wa-color-surface-border); }
 
   @media (max-width: 860px) {
     .app { grid-template-columns: 1fr; }
@@ -315,17 +310,19 @@
           <h2><wa-icon name="coins"></wa-icon>Pontos do canal
             <wa-button class="help-btn" appearance="plain" size="small" data-action="farm-help" title="Como funciona o farm de pontos"><wa-icon name="circle-info" label="Como funciona"></wa-icon></wa-button></h2>
           <div id="points-link"></div>
+          <div class="meta play-tip" hidden><wa-icon name="play"></wa-icon> abre a live no navegador, na conta certa, para você resgatar as recompensas.</div>
           <div class="points-grid" id="points"></div>
         </div>
         <div>
           <div class="toolbar">
-            <h2 style="margin:0">Canais oficiais</h2>
+            <h2 style="margin:0">Canais parceiros</h2>
             <wa-radio-group orientation="horizontal" value="all" size="small" data-filter="twitch">
               <wa-radio appearance="button" value="all">Todos</wa-radio>
               <wa-radio appearance="button" value="live">Ao vivo</wa-radio>
               <wa-radio appearance="button" value="offline">Offline</wa-radio>
             </wa-radio-group>
-            <wa-input placeholder="Adicionar canal (Enter)" size="small" data-add="twitch"><wa-icon slot="start" name="plus"></wa-icon></wa-input>
+            <wa-input placeholder="Nome do canal" size="small" data-add="twitch"><wa-icon slot="start" name="plus"></wa-icon></wa-input>
+            <wa-button size="small" variant="brand" appearance="outlined" data-action="add-channel" data-platform="twitch">Adicionar</wa-button>
           </div>
           <div class="cards" id="twitch-channels"></div>
         </div>
@@ -333,18 +330,12 @@
 
       <!-- Kick -->
       <section class="page" id="page-kick">
-        <wa-callout variant="warning" id="kick-setup-needed" hidden>
-          <wa-icon slot="icon" name="triangle-exclamation"></wa-icon>
-          <span id="kick-setup-text"></span>
-        </wa-callout>
-        <wa-card>
-          <h2 slot="header"><wa-icon name="user-group"></wa-icon>Contas da Kick</h2>
-          <div class="kick-setup">
-            <wa-select label="Navegador" size="small" id="kick-browser"></wa-select>
-            <wa-checkbox-group label="Perfis usados como contas (até 4)" orientation="horizontal" id="kick-profiles"></wa-checkbox-group>
-          </div>
-          <div class="meta" style="margin-top:10px">Um perfil do navegador por conta, logado na Kick. Cada janela abre pequena, no seu lugar do canto inferior direito.</div>
-        </wa-card>
+        <div>
+          <h2><wa-icon name="coins"></wa-icon>Pontos do canal
+            <wa-button class="help-btn" appearance="plain" size="small" data-action="kick-help" title="Como funciona o farm na Kick"><wa-icon name="circle-info" label="Como funciona"></wa-icon></wa-button></h2>
+          <div class="meta play-tip" hidden><wa-icon name="play"></wa-icon> abre a live no navegador, na conta certa, para você resgatar as recompensas.</div>
+          <div class="points-grid" id="kick-points"></div>
+        </div>
         <div>
           <div class="toolbar">
             <h2 style="margin:0">Canais parceiros</h2>
@@ -353,8 +344,8 @@
               <wa-radio appearance="button" value="live">Ao vivo</wa-radio>
               <wa-radio appearance="button" value="offline">Offline</wa-radio>
             </wa-radio-group>
-            <wa-button size="small" appearance="outlined" variant="danger" id="kick-close"><wa-icon slot="start" name="xmark"></wa-icon><span>Fechar janelas</span></wa-button>
-            <wa-input placeholder="Adicionar canal da Kick (Enter)" size="small" data-add="kick"><wa-icon slot="start" name="plus"></wa-icon></wa-input>
+            <wa-input placeholder="Nome do canal da Kick" size="small" data-add="kick"><wa-icon slot="start" name="plus"></wa-icon></wa-input>
+            <wa-button size="small" variant="brand" appearance="outlined" data-action="add-channel" data-platform="kick">Adicionar</wa-button>
           </div>
           <div class="cards" id="kick-channels"></div>
         </div>
@@ -362,11 +353,11 @@
 
       <!-- Histórico -->
       <section class="page" id="page-historico">
-        <wa-card class="brand-twitch">
-          <h2 slot="header"><wa-icon name="coins"></wa-icon>Pontos do canal por dia</h2>
+        <wa-card>
+          <h2 slot="header"><wa-icon name="coins"></wa-icon>Pontos ganhos por dia</h2>
           <div class="history" id="history"></div>
         </wa-card>
-        <wa-card class="brand-twitch">
+        <wa-card>
           <h2 slot="header"><wa-icon name="chart-pie"></wa-icon>De onde vieram os pontos (últimos 7 dias)</h2>
           <div class="history" id="history-reasons"></div>
         </wa-card>
@@ -384,15 +375,22 @@
               <wa-button variant="brand" appearance="outlined" size="small" data-restart hidden><wa-icon slot="start" name="rotate-right"></wa-icon>Reiniciar</wa-button>
             </div>
           </wa-card>
-          <wa-card class="brand-twitch">
-            <h2 slot="header"><wa-icon family="brands" name="twitch"></wa-icon>Contas da Twitch no navegador</h2>
-            <div class="meta">O botão <wa-icon name="play"></wa-icon> dos pontos abre a live no navegador para você resgatar as recompensas. Para ela abrir já logada na conta certa, escolha o perfil do navegador em que cada conta está logada na Twitch.</div>
+          <wa-card>
+            <h2 slot="header"><wa-icon name="window-maximize"></wa-icon>Navegador e perfis</h2>
+            <div class="meta">O botão <wa-icon name="play"></wa-icon> dos pontos abre a live no navegador para você resgatar as recompensas. Para ela abrir já logada na conta certa, escolha o perfil do navegador em que cada conta está logada. Sem escolher, a live pode abrir logada na conta errada.</div>
+            <div class="setting-row"><span>Navegador</span><wa-select size="small" id="browser-select" style="min-width:220px"></wa-select></div>
+            <div class="meta">Trocar de navegador apaga os perfis escolhidos abaixo, porque cada navegador tem os seus.</div>
+            <wa-divider></wa-divider>
+            <b class="brand-twitch" style="color:var(--brand-text)"><wa-icon family="brands" name="twitch"></wa-icon> Contas da Twitch</b>
             <div id="twitch-profiles"></div>
+            <wa-divider></wa-divider>
+            <b class="brand-kick" style="color:var(--brand-text)"><wa-icon name="k"></wa-icon> Contas da Kick</b>
+            <div id="kick-profiles"></div>
           </wa-card>
           <wa-card>
-            <h2 slot="header"><wa-icon name="k"></wa-icon>App da Kick</h2>
+            <h2 slot="header"><wa-icon name="k"></wa-icon>App da Kick (opcional)</h2>
             <div id="kick-app-status"></div>
-            <div class="meta">Para ver quem está ao vivo na Kick, crie um app em <b>kick.com → Configurações → Desenvolvedor</b> (Redirect URL: <code>http://localhost</code>) e cole os dados. Não mostre o Client Secret para ninguém.</div>
+            <div class="meta">Sem o app, o painel vê quem está ao vivo na Kick perguntando canal por canal (a cada 2 minutos). Com o app, é um pedido só a cada minuto. Para criar: <b>kick.com → Configurações → Desenvolvedor</b> (Redirect URL: <code>http://localhost</code>), depois cole os dados. Não mostre o Client Secret para ninguém.</div>
             <form id="kick-app-form" style="display:flex;flex-direction:column;gap:12px">
               <wa-input label="Client ID" size="small" id="kick-client-id" autocomplete="off"></wa-input>
               <wa-input label="Client Secret" type="password" password-toggle size="small" id="kick-client-secret" autocomplete="off"></wa-input>
@@ -417,7 +415,7 @@
       <h3><wa-icon name="coins"></wa-icon>De onde vêm os pontos</h3>
       <table>
         <tr><td>Tempo assistido</td><td class="num">+10 a cada 5 min</td></tr>
-        <tr><td>Baú de bônus (a cada ~15 min assistidos)</td><td class="num">+50</td></tr>
+        <tr><td>Baú de pontos (a cada ~15 min assistidos)</td><td class="num">+50</td></tr>
         <tr><td>Sequência (assistir lives seguidas do canal)</td><td class="num">+300 a +450</td></tr>
         <tr><td>Momentos (quando o streamer solta um)</td><td class="num">varia</td></tr>
         <tr><td>Raid de um parceiro para outro</td><td class="num">varia</td></tr>
@@ -441,7 +439,7 @@
       <ul>
         <li><b>Descanso diário:</b> das 5h às 8h (Brasília) as contas param, como quem vai dormir. Cada conta dorme e acorda até 20 minutos antes ou depois, num horário que muda todo dia. São 3 horas para quebrar o padrão de 24 horas por dia; isso custa uns 12% dos pontos, porque ainda tem parceiro ao vivo nesse horário.</li>
         <li><b>Sem pressa:</b> baús e Momentos são pegos depois de uma espera aleatória de 5 a 40 segundos, e a troca de live também demora um pouco.</li>
-        <li><b>Contas desencontradas:</b> cada conta começa e troca de live num momento diferente, e os intervalos nunca são exatos.</li>
+        <li><b>Cada conta no seu ritmo:</b> as contas não começam nem trocam de live ao mesmo tempo, e os tempos mudam um pouco a cada vez.</li>
         <li><b>Menos consultas:</b> o saldo das lives assistidas é lido a cada 5–10 minutos e o resto a cada ~30, como um navegador.</li>
       </ul>
     </section>
@@ -452,8 +450,8 @@
     </section>
 
     <section>
-      <h3><wa-icon name="gift"></wa-icon>Resgatar o boost de XP</h3>
-      <p>O painel só junta pontos; o resgate é com você. O botão <wa-icon name="play"></wa-icon> ao lado de cada canal abre a live no navegador. Para abrir já logado na conta certa, escolha o perfil de cada conta em <b>Configurações → Contas da Twitch no navegador</b>.</p>
+      <h3><wa-icon name="gift"></wa-icon>Resgatar o bônus de XP</h3>
+      <p>O painel só junta pontos; o resgate é com você. O botão <wa-icon name="play"></wa-icon> ao lado de cada canal abre a live no navegador. Para abrir já logado na conta certa, escolha o perfil de cada conta em <b>Configurações → Navegador e perfis</b>.</p>
     </section>
 
     <section>
@@ -470,7 +468,7 @@
       <ul>
         <li>Juntar pontos sem assistir de verdade <b>vai contra os termos da Twitch</b>. Punição não é comum, mas pode acontecer, e o risco é o mesmo de qualquer farm de pontos.</li>
         <li>Todas as contas saem do mesmo PC e da mesma internet, então a Twitch consegue ver que elas estão juntas.</li>
-        <li>O painel usa a API interna da Twitch. Se ela mudar algo, aparece um <b>aviso no topo</b> e aquela parte para até ser atualizada.</li>
+        <li>O painel usa um canal da Twitch que não é público. Se a Twitch mudar algo, aparece um <b>aviso no topo</b> e aquela parte para até o painel ser atualizado.</li>
       </ul>
     </section>
 
@@ -480,8 +478,74 @@
     </section>
   </div>
 </wa-dialog>
+<wa-dialog id="kick-add" label="Adicionar conta da Kick" class="brand-kick" light-dismiss>
+  <div class="farm-help">
+    <p>A Kick não tem login por código como a Twitch. A conta entra pelo <b>token</b> dela, que fica no navegador onde você está logado na Kick.</p>
+    <section>
+      <h4>Jeito fácil: favorito</h4>
+      <ol class="steps">
+        <li>Mostre a barra de favoritos do navegador (<b>Ctrl+Shift+B</b>) e <b>arraste</b> este botão para ela (só na primeira vez):
+          <div style="margin:8px 0"><a class="bookmarklet" id="kick-bookmarklet" href="#">⚡ Enviar para o IdleLive</a></div></li>
+        <li>Abra <b>kick.com</b> no perfil do navegador da conta, já logado.</li>
+        <li>Clique no favorito <b>Enviar para o IdleLive</b>. O painel abre e pergunta se pode adicionar a conta.</li>
+      </ol>
+      <p class="meta">Repita os passos 2 e 3 em cada perfil. Também serve para trocar o token de uma conta que já está aqui.</p>
+    </section>
+    <section>
+      <h4>Jeito manual</h4>
+      <ol class="steps">
+        <li>Abra <b>kick.com</b> no navegador, logado na conta que quer adicionar.</li>
+        <li>Aperte <b>F12</b> e vá na aba <b>Application</b> (ou <b>Aplicativo</b>).</li>
+        <li>No menu da esquerda, abra <b>Cookies → https://kick.com</b>.</li>
+        <li>Copie o valor de <code>session_token</code> e cole abaixo.</li>
+      </ol>
+      <p class="meta">Também serve o valor do cabeçalho <code>Authorization</code> de qualquer pedido do kick.com (aba Network). O token fica só no seu PC, no <code>kick.json</code>. Não mostre ele para ninguém: quem tem o token entra na conta.</p>
+    </section>
+    <form id="kick-add-form" style="display:flex;flex-direction:column;gap:12px">
+      <wa-input label="Token da conta" type="password" password-toggle id="kick-token" autocomplete="off"></wa-input>
+      <div><wa-button variant="brand" type="submit" id="kick-add-save">Adicionar</wa-button></div>
+    </form>
+  </div>
+</wa-dialog>
+<wa-dialog id="kick-help" label="Como funciona o farm na Kick" class="brand-kick" light-dismiss>
+  <div class="farm-help">
+    <section>
+      <h3><wa-icon name="eye"></wa-icon>O que o painel faz</h3>
+      <p>Cada conta avisa a Kick, em segundo plano e de tempos em tempos, que está assistindo, do mesmo jeito que o player do site faz. Nenhum vídeo é aberto na tela.</p>
+    </section>
+    <section>
+      <h3><wa-icon name="list-ol"></wa-icon>Quais lives cada conta assiste</h3>
+      <p>Até <b>2 lives por conta</b> ao mesmo tempo (mais que isso a Kick começa a bloquear), sempre as lives onde a conta já tem mais pontos.</p>
+      <p>Na Kick os pontos vêm só do tempo assistido: não tem baú, sequência nem Momentos.</p>
+    </section>
+    <section>
+      <h3><wa-icon name="moon"></wa-icon>Mesmas travas da Twitch</h3>
+      <p>Descanso das 5h às 8h (Brasília), tempos aleatórios, cada conta no seu ritmo e poucas consultas de saldo. A explicação completa está na ajuda (ícone ⓘ) ao lado de <b>Pontos do canal</b>, na página Twitch.</p>
+    </section>
+    <section>
+      <h3><wa-icon name="power-off"></wa-icon>O painel precisa estar aberto</h3>
+      <p>Só farma com o PC ligado e a janela preta aberta (e fora do horário de descanso). Ative <b>Iniciar com o Windows</b> em Configurações para ele abrir sozinho.</p>
+    </section>
+    <section>
+      <h3><wa-icon name="gift"></wa-icon>Resgatar as recompensas</h3>
+      <p>O painel só junta pontos; o resgate é com você. O botão <wa-icon name="play"></wa-icon> ao lado de cada canal abre a live no navegador. Para abrir já logado na conta certa, escolha o perfil de cada conta em <b>Configurações → Navegador e perfis</b>.</p>
+      <p>Para adicionar uma conta, use <b>+ Adicionar conta</b> nos cards acima.</p>
+    </section>
+    <section>
+      <h3><wa-icon name="triangle-exclamation"></wa-icon>Riscos</h3>
+      <ul>
+        <li>Farmar pontos sem assistir de verdade pode ir contra as regras da Kick. Não se conhece uma regra pública dela sobre isso.</li>
+        <li>O mais comum na Kick é bloquear o IP por excesso de pedidos. Se acontecer, aparece um aviso no topo.</li>
+        <li>O token dá acesso à conta. Se você sair da conta no navegador, o token pode parar de valer; aí o card pede um token novo.</li>
+      </ul>
+    </section>
+  </div>
+</wa-dialog>
 <wa-dialog id="points-dialog" label="Pontos do canal" class="brand-twitch" light-dismiss><div class="points-wrap" id="points-all"></div></wa-dialog>
 <div class="toast" id="toast"></div>
+<div id="no-ui" style="position:fixed;inset:0;display:none;place-items:center;padding:24px;font:16px/1.5 system-ui,sans-serif;color:#eee;background:#111;text-align:center">
+  <div><b>O visual do painel não carregou.</b><br>Ele vem da internet: confira a conexão e recarregue a página (F5).<br>O farm continua rodando na janela preta.</div>
+</div>
 
 <script type="module">
   const $ = (id) => document.getElementById(id);
@@ -489,15 +553,15 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   let state = null;
   const filters = { twitch: 'all', kick: 'all' };
-  // Cliques em "assistir" aparecem verdes na hora, antes da janela abrir de verdade.
-  const pendingWatch = new Map(); // perfil -> { channel, until }
 
   const fmt = (n) => n.toLocaleString('pt-BR');
   const sortChannels = (list) => [...list].sort((a, b) => b.live - a.live || b.viewers - a.viewers || a.name.localeCompare(b.name));
 
   // Só troca o HTML quando muda, para não fechar menus abertos nem piscar a cada atualização.
+  // Com um menu (⋮) ou seletor aberto ali dentro, espera ele fechar: trocar o HTML fecharia o menu.
   function setHTML(el, html) {
     if (el._html === html) return;
+    if (el.querySelector('wa-dropdown[open], wa-select[open]')) return;
     el._html = html;
     el.innerHTML = html;
   }
@@ -516,7 +580,13 @@
       setServerStatus(false);
       return;
     }
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      toast('O servidor respondeu algo inesperado. Tente de novo em alguns segundos.');
+      return;
+    }
     if (!res.ok) {
       toast(data.error || 'Algo deu errado');
       return;
@@ -524,6 +594,7 @@
     state = data;
     setServerStatus(true);
     render();
+    return true;
   }
 
   function setServerStatus(up) {
@@ -531,45 +602,14 @@
     $('server-status').lastElementChild.textContent = up ? 'Servidor rodando' : 'Servidor fora do ar';
   }
 
-  function toast(msg) {
+  // type: 'error' (vermelho) ou 'info' (sucesso e dicas).
+  function toast(msg, type = 'error') {
     const el = $('toast');
     el.textContent = msg;
+    el.classList.toggle('info', type === 'info');
     el.style.display = 'block';
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => (el.style.display = 'none'), 4000);
-  }
-
-  // ---------- Horários ----------
-
-  // Faixas de horário em que o canal fica ao vivo em pelo menos 30% das vezes, ex.: "19h–23h".
-  function usualRanges(hours) {
-    const on = hours.map((p) => p !== null && p >= 0.3);
-    if (on.every(Boolean)) return 'o dia todo';
-    const ranges = [];
-    for (let h = 0; h < 24; h++) {
-      if (!on[h] || (h > 0 && on[h - 1])) continue;
-      let end = h;
-      while (end < 24 && on[end]) end++;
-      ranges.push([h, end]);
-    }
-    // Junta a faixa que vira a meia-noite (ex.: 22h–2h).
-    if (ranges.length > 1 && ranges[0][0] === 0 && ranges.at(-1)[1] === 24) ranges[0][0] = ranges.pop()[0];
-    return ranges.map(([s, e]) => `${s}h–${e % 24}h`).join(', ');
-  }
-
-  function hoursHtml(hours, color) {
-    if (!hours) return '';
-    const now = new Date().getHours();
-    const cells = hours.map((p, h) => `<i class="${p === null ? 'unk' : ''} ${h === now ? 'now' : ''}" style="--p:${p ?? 0};--c:${color}"
-      title="${h}h: ${p === null ? 'ainda sem dados' : `ao vivo ${Math.round(p * 100)}% das vezes`}"></i>`).join('');
-    const known = hours.filter((p) => p !== null).length;
-    // Mostra o que já sabe desde a primeira hora observada; avisa que ainda está aprendendo até cobrir metade do dia.
-    const ranges = usualRanges(hours);
-    const text = known === 0 ? 'Aprendendo os horários…'
-      : `${ranges ? `Costuma estar ao vivo: ${ranges}` : 'Ainda sem horário certo'}${known < 12 ? ' · ainda aprendendo' : ''}`;
-    return `<div class="heat">${cells}</div>
-      <div class="heat-scale"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span></div>
-      <div class="usual">${text}</div>`;
   }
 
   const viewersBadge = (c) => c.live
@@ -581,7 +621,7 @@
   function render() {
     const twitchLive = state.channels.filter((c) => c.live);
     const kick = state.kick;
-    const kickLive = kick.configured ? kick.channels.filter((c) => c.live) : [];
+    const kickLive = kick.channels.filter((c) => c.live);
 
     $$('[data-count="twitch"]').forEach((b) => { b.textContent = `${twitchLive.length} ao vivo`; b.hidden = !twitchLive.length; });
     $$('[data-count="kick"]').forEach((b) => { b.textContent = `${kickLive.length} ao vivo`; b.hidden = !kickLive.length; });
@@ -592,6 +632,14 @@
     renderTwitch();
     renderPoints();
     renderKick();
+    renderKickPoints();
+    // Dica do ▶ só enquanto o jogador ainda não usou e já tem conta.
+    let tipSeen = false;
+    try {
+      tipSeen = localStorage.getItem('playTipSeen') === '1';
+    } catch {}
+    const hasAccounts = (state.points?.accounts?.length ?? 0) + (state.kick.points?.accounts?.length ?? 0) > 0;
+    $$('.play-tip').forEach((t) => (t.hidden = tipSeen || !hasAccounts));
     renderHistory();
     renderAlerts();
     renderConfig();
@@ -599,17 +647,14 @@
 
   function renderOverview(twitchLive, kickLive) {
     const k = state.kick;
-    const browserName = k.browsers?.find((b) => b.id === k.browser)?.name;
     setHTML($('kpis'), `
-      ${pointsKpi()}
-      <wa-card class="kpi brand-kick"><span class="label"><wa-icon name="k"></wa-icon>Contas Kick</span>
-        <span class="value">${k.profiles.length}<small>/${state.maxAccounts}</small></span>
-        <span class="hint"><wa-badge variant="${k.openWindows ? 'success' : 'neutral'}" pill>${k.openWindows ?? 0} janela${k.openWindows === 1 ? '' : 's'} aberta${k.openWindows === 1 ? '' : 's'}</wa-badge>${browserName ? ` · ${esc(browserName)}` : ''}</span></wa-card>
+      ${pointsKpi('twitch', state.points?.accounts)}
+      ${pointsKpi('kick', k.points?.accounts)}
       <wa-card class="kpi brand-twitch"><span class="label"><wa-icon family="brands" name="twitch"></wa-icon>Twitch ao vivo</span>
         <span class="value">${twitchLive.length}<small>/${state.channels.length}</small></span>
         <wa-progress-bar value="${state.channels.length ? Math.round((twitchLive.length / state.channels.length) * 100) : 0}" style="--track-height:6px"></wa-progress-bar></wa-card>
       <wa-card class="kpi brand-kick"><span class="label"><wa-icon name="k"></wa-icon>Kick ao vivo</span>
-        <span class="value">${k.configured ? kickLive.length : '–'}<small>/${k.channels.length}</small></span>
+        <span class="value">${kickLive.length}<small>/${k.channels.length}</small></span>
         <wa-progress-bar value="${k.channels.length ? Math.round((kickLive.length / k.channels.length) * 100) : 0}" style="--track-height:6px"></wa-progress-bar></wa-card>`);
 
     const live = [...twitchLive.map((c) => ({ ...c, p: 'twitch' })), ...kickLive.map((c) => ({ ...c, p: 'kick' }))].sort((a, b) => b.viewers - a.viewers);
@@ -623,13 +668,16 @@
     $('live-now').classList.toggle('more', $('live-now').scrollHeight > $('live-now').clientHeight + 4);
 
     // Uma linha por conta: o que ela está assistindo e quanto ganhou.
-    const accounts = state.points?.accounts;
-    setHTML($('points-overview'), !accounts ? '<div class="empty">Reinicie o servidor para usar os pontos do canal.</div>'
-      : !accounts.length ? '<div class="empty">Vincule uma conta de pontos na página Twitch.</div>'
+    const accounts = [...(state.points?.accounts ?? []).map((a) => ({ ...a, p: 'twitch' })), ...(k.points?.accounts ?? []).map((a) => ({ ...a, p: 'kick' }))];
+    setHTML($('points-overview'), !accounts.length ? `<div class="empty">Nenhuma conta juntando pontos ainda.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <wa-button size="small" class="brand-twitch" variant="brand" data-action="go-twitch-link"><wa-icon slot="start" family="brands" name="twitch"></wa-icon>Vincular conta da Twitch</wa-button>
+        <wa-button size="small" class="brand-kick" variant="brand" data-action="go-kick-add"><wa-icon slot="start" name="k"></wa-icon>Adicionar conta da Kick</wa-button>
+      </div>`
       : accounts.map((a) => `
-        <div class="row"><wa-avatar initials="${esc((a.login?.[0] || '?').toUpperCase())}" style="--size:28px"></wa-avatar>
+        <div class="row"><span class="platform ${a.p}">${a.p === 'twitch' ? 'T' : 'K'}</span>
           <span class="name">${esc(a.login)}</span>
-          ${a.needsRelink ? '<wa-badge variant="danger" pill>vincular de novo</wa-badge>'
+          ${a.needsRelink ? `<wa-badge variant="danger" pill>${a.p === 'twitch' ? 'Vincule de novo' : 'Token recusado'}</wa-badge>`
             : a.resting ? `<span class="meta">descansando até ${esc(a.restUntil ?? '08:00')}</span>`
             : a.watching.length ? `<span class="meta">${a.watching.map(esc).join(', ')}</span>` : '<span class="meta">esperando live</span>'}
           ${accountGained(a) ? `<span class="gained">+${fmt(accountGained(a))}</span>` : ''}
@@ -638,18 +686,16 @@
 
   const accountGained = (a) => a.channels.reduce((sum, c) => sum + (c.gained ?? 0), 0);
 
-  function pointsKpi() {
-    const accounts = state.points?.accounts ?? [];
-    if (!accounts.length) {
-      return `<wa-card class="kpi brand-twitch"><span class="label"><wa-icon name="coins"></wa-icon>Pontos do canal</span>
-        <span class="value">–</span><span class="hint">Nenhuma conta vinculada</span></wa-card>`;
-    }
+  // Resumo de pontos de uma plataforma na Visão geral.
+  function pointsKpi(platform, accounts = []) {
+    const head = `<wa-card class="kpi brand-${platform}"><span class="label">${platform === 'twitch' ? '<wa-icon family="brands" name="twitch"></wa-icon>Pontos Twitch' : '<wa-icon name="k"></wa-icon>Pontos Kick'}</span>`;
+    if (!accounts.length) return `${head}<span class="value">–</span><span class="hint">Nenhuma conta vinculada</span></wa-card>`;
     const gained = accounts.reduce((sum, a) => sum + accountGained(a), 0);
     const relink = accounts.filter((a) => a.needsRelink).length;
-    return `<wa-card class="kpi brand-twitch"><span class="label"><wa-icon name="coins"></wa-icon>Pontos do canal</span>
+    return `${head}
       <span class="value">+${fmt(gained)}</span>
       <span class="hint">${accounts.length} conta${accounts.length === 1 ? '' : 's'} · desde que o painel abriu
-        ${relink ? `<wa-badge variant="danger" pill>${relink} vincular de novo</wa-badge>` : ''}</span></wa-card>`;
+        ${relink ? `<wa-badge variant="danger" pill>${relink} ${platform === 'twitch' ? 'Vincule de novo' : 'Token recusado'}</wa-badge>` : ''}</span></wa-card>`;
   }
 
   // Código para vincular a conta de pontos.
@@ -665,7 +711,53 @@
            <wa-button size="small" appearance="outlined" data-action="${cancelAction}">Cancelar</wa-button>
          </div></wa-callout>`;
 
-  let dialogLogin = null; // conta aberta na janela "Ver todos"
+  let dialogAccount = null; // { platform, key }: conta aberta na janela "Ver todos"
+
+  // Identificador da conta nas ações: login na Twitch, id na Kick.
+  const accountKey = (platform, a) => (platform === 'twitch' ? a.login : String(a.id));
+
+  // Card de uma conta de pontos (Twitch ou Kick).
+  function pointsCard(platform, a) {
+    const key = esc(accountKey(platform, a));
+    const status = a.needsRelink ? `<wa-badge variant="danger" pill>${platform === 'twitch' ? 'Vincule de novo' : 'Token recusado'}</wa-badge>`
+      : a.resting ? `<wa-badge variant="neutral" pill title="Descanso diário, das 5h às 8h (Brasília)"><wa-icon slot="start" name="moon"></wa-icon>Descansando até ${esc(a.restUntil ?? '08:00')}</wa-badge>`
+      : a.watching.length ? '<wa-badge variant="success" pill>Assistindo</wa-badge>'
+      : '<wa-badge variant="neutral" pill>Esperando live</wa-badge>';
+    const relink = platform === 'twitch'
+      ? { action: 'points-link', icon: 'link', text: 'Vincular de novo' }
+      : { action: 'kick-add', icon: 'key', text: 'Trocar token' };
+    return `
+      <wa-card class="points">
+        <div class="account"><div class="head">
+          <wa-avatar initials="${esc((a.login?.[0] || '?').toUpperCase())}"></wa-avatar>
+          <div class="who"><span class="login">${esc(a.login ?? '')}</span>${status}</div>
+          <wa-dropdown>
+            <wa-button slot="trigger" appearance="plain" size="small"><wa-icon name="ellipsis-vertical" label="Mais opções"></wa-icon></wa-button>
+            <wa-dropdown-item data-action="${relink.action}"><wa-icon slot="icon" name="${relink.icon}"></wa-icon>${relink.text}</wa-dropdown-item>
+            <wa-dropdown-item variant="danger" data-action="points-unlink" data-platform="${platform}" data-key="${key}" data-login="${esc(a.login)}"><wa-icon slot="icon" name="link-slash"></wa-icon>${platform === 'twitch' ? 'Desvincular conta' : 'Remover conta'}</wa-dropdown-item>
+          </wa-dropdown>
+        </div></div>
+        ${a.needsRelink ? `<div><wa-button variant="brand" size="small" data-action="${relink.action}"><wa-icon slot="start" name="${relink.icon}"></wa-icon>${relink.text}</wa-button></div>` : ''}
+        ${pointsRows(platform, a, POINTS_PREVIEW)}
+        ${a.channels.length > POINTS_PREVIEW ? `<div class="points-more"><wa-button size="small" appearance="outlined" variant="brand" data-action="points-expand" data-platform="${platform}" data-key="${key}">
+          <wa-icon slot="start" name="up-right-and-down-left-from-center"></wa-icon>Ver todos os ${a.channels.length} canais</wa-button></div>` : ''}
+      </wa-card>`;
+  }
+
+  // Abre ou atualiza a janela "Ver todos" da conta escolhida.
+  function renderPointsDialog() {
+    if (!dialogAccount) return;
+    const { platform, key } = dialogAccount;
+    const list = platform === 'twitch' ? state.points?.accounts : state.kick.points?.accounts;
+    const open = list?.find((a) => accountKey(platform, a) === key);
+    if (!open) {
+      $('points-dialog').open = false;
+      return;
+    }
+    $('points-dialog').label = `Pontos do canal · ${open.login}${platform === 'kick' ? ' (Kick)' : ''}`;
+    $('points-dialog').className = `brand-${platform}`;
+    renderPointsTable(platform, open);
+  }
 
   function renderPoints() {
     const p = state.points;
@@ -674,48 +766,33 @@
       return setHTML($('points'), '<div class="empty">Reinicie o servidor para usar os pontos do canal.</div>');
     }
     setHTML($('points-link'), p.pendingLink ? `<div style="margin-bottom:14px">${linkCallout(p.pendingLink, 'points-cancel')}</div>` : '');
-
-    const cards = p.accounts.map((a) => {
-      const status = a.needsRelink ? '<wa-badge variant="danger" pill>Vincule de novo</wa-badge>'
-        : a.resting ? `<wa-badge variant="neutral" pill title="Descanso diário, das 5h às 8h (Brasília)"><wa-icon slot="start" name="moon"></wa-icon>Descansando até ${esc(a.restUntil ?? '08:00')}</wa-badge>`
-        : a.watching.length ? '<wa-badge variant="success" pill>Assistindo</wa-badge>'
-        : '<wa-badge variant="neutral" pill>Esperando live</wa-badge>';
-      return `
-        <wa-card class="points">
-          <div class="account"><div class="head">
-            <wa-avatar initials="${esc((a.login?.[0] || '?').toUpperCase())}"></wa-avatar>
-            <div class="who"><span class="login">${esc(a.login ?? '')}</span>${status}</div>
-            <wa-dropdown>
-              <wa-button slot="trigger" appearance="plain" size="small"><wa-icon name="ellipsis-vertical" label="Mais opções"></wa-icon></wa-button>
-              <wa-dropdown-item data-action="points-link"><wa-icon slot="icon" name="link"></wa-icon>Vincular de novo</wa-dropdown-item>
-              <wa-dropdown-item variant="danger" data-action="points-unlink" data-login="${esc(a.login)}"><wa-icon slot="icon" name="link-slash"></wa-icon>Desvincular</wa-dropdown-item>
-            </wa-dropdown>
-          </div></div>
-          ${a.needsRelink ? '<div><wa-button variant="brand" size="small" data-action="points-link"><wa-icon slot="start" name="link"></wa-icon>Vincular de novo</wa-button></div>' : ''}
-          ${pointsRows(a, POINTS_PREVIEW)}
-          ${a.channels.length > POINTS_PREVIEW ? `<div class="points-more"><wa-button size="small" appearance="outlined" variant="brand" data-action="points-expand" data-login="${esc(a.login)}">
-            <wa-icon slot="start" name="up-right-and-down-left-from-center"></wa-icon>Ver todos os ${a.channels.length} canais</wa-button></div>` : ''}
-        </wa-card>`;
-    });
+    const cards = p.accounts.map((a) => pointsCard('twitch', a));
     for (let i = p.accounts.length; i < p.max; i++) {
       cards.push(`<wa-card class="points add"><wa-button variant="brand" data-action="points-link" ${p.pendingLink && !p.pendingLink.error ? 'disabled' : ''}>
         <wa-icon slot="start" name="plus"></wa-icon>Vincular conta</wa-button><span class="meta">Conta ${i + 1} de ${p.max}</span></wa-card>`);
     }
     setHTML($('points'), cards.join(''));
+    renderPointsDialog();
+  }
 
-    const open = p.accounts.find((a) => a.login === dialogLogin);
-    if (!open) $('points-dialog').open = false;
-    else {
-      $('points-dialog').label = `Pontos do canal · ${open.login}`;
-      renderPointsTable(open);
+  function renderKickPoints() {
+    const p = state.kick.points;
+    if (!p?.accounts) return setHTML($('kick-points'), '<div class="empty">Reinicie o servidor para usar os pontos da Kick.</div>');
+    const cards = p.accounts.map((a) => pointsCard('kick', a));
+    for (let i = p.accounts.length; i < p.max; i++) {
+      cards.push(`<wa-card class="points add"><wa-button variant="brand" data-action="kick-add">
+        <wa-icon slot="start" name="plus"></wa-icon>Adicionar conta</wa-button><span class="meta">Conta ${i + 1} de ${p.max}</span></wa-card>`);
     }
+    setHTML($('kick-points'), cards.join(''));
+    renderPointsDialog();
   }
 
   // Tabela da janela "Ver todos": todos os canais, com mais detalhes.
-  function renderPointsTable(p) {
-    const viewers = new Map(state.channels.map((c) => [c.name, c.viewers]));
+  function renderPointsTable(platform, p) {
+    const twitch = platform === 'twitch';
+    const viewers = new Map((twitch ? state.channels : state.kick.channels).map((c) => [c.name, c.viewers]));
     setHTML($('points-all'), `<table class="points-table">
-      <tr><th>Canal</th><th>Situação</th><th class="num">Espectadores</th><th class="num">Saldo</th><th class="num" title="Desde que o painel abriu">Ganho</th><th class="num" title="Desde que o painel abriu">Baús pegos</th><th class="num" title="Desde que o painel abriu">Momentos</th><th></th></tr>
+      <tr><th>Canal</th><th>Situação</th><th class="num">Espectadores</th><th class="num">Saldo</th><th class="num" title="Desde que o painel abriu">Ganho</th>${twitch ? '<th class="num" title="Desde que o painel abriu">Baús pegos</th><th class="num" title="Desde que o painel abriu">Momentos</th>' : ''}<th></th></tr>
       ${sortPoints(p.channels).map((c) => `<tr class="${c.live ? '' : 'off'}">
         <td class="name">${esc(c.name)}${streakMark(c)}</td>
         <td>${c.watching ? `<wa-tag size="small" variant="${c.error ? 'warning' : 'brand'}" appearance="filled-outlined" title="${esc(c.error ? `Não está contando: ${c.error}` : 'Ganhando pontos por tempo assistido')}">
@@ -724,9 +801,9 @@
         <td class="num ${c.live ? '' : 'quiet'}">${c.live ? fmt(viewers.get(c.name) ?? 0) : '–'}</td>
         <td class="num"><b>${c.balance === null ? '–' : fmt(c.balance)}</b></td>
         <td class="num ${c.gained ? 'gained' : 'quiet'}">${c.gained ? `+${fmt(c.gained)}` : '–'}</td>
-        <td class="num ${c.claims ? '' : 'quiet'}">${c.claims || '–'}</td>
-        <td class="num ${c.moments ? '' : 'quiet'}">${c.moments || '–'}</td>
-        <td>${playButton(p, c)}</td>
+        ${twitch ? `<td class="num ${c.claims ? '' : 'quiet'}">${c.claims || '–'}</td>
+        <td class="num ${c.moments ? '' : 'quiet'}">${c.moments || '–'}</td>` : ''}
+        <td>${playButton(platform, p, c)}</td>
       </tr>`).join('')}
     </table>`);
   }
@@ -739,85 +816,39 @@
   const streakMark = (c) => c.streak ? '<span class="streak" title="Sequência garantida nesta live"><wa-icon name="check"></wa-icon></span>' : '';
 
   // ▶: abre a live no navegador, no perfil da conta, para resgatar recompensas.
-  const playButton = (account, c) => `<wa-button class="play" appearance="plain" size="small" data-action="points-open" data-login="${esc(account.login)}" data-channel="${esc(c.name)}"
+  const playButton = (platform, account, c) => `<wa-button class="play" appearance="plain" size="small" data-action="points-open" data-platform="${platform}" data-key="${esc(accountKey(platform, account))}" data-channel="${esc(c.name)}"
     title="Abrir ${esc(c.name)} com a conta ${esc(account.login)}"><wa-icon name="play" label="Abrir live"></wa-icon></wa-button>`;
 
-  function pointsRows(account, limit = Infinity) {
+  function pointsRows(platform, account, limit = Infinity) {
     const channels = sortPoints(account.channels).slice(0, limit);
     return `<div>${channels.length ? channels.map((c) => `
-        <div class="row ${c.live ? '' : 'off'}">${c.live ? '<span class="live-dot"></span>' : '<span class="off-dot"></span>'}<span class="name">${esc(c.name)}${streakMark(c)}</span>
-          ${c.watching ? `<wa-tag size="small" variant="${c.error ? 'warning' : 'brand'}" appearance="filled-outlined" title="${esc(c.error ? `Não está contando: ${c.error}` : 'Ganhando pontos por tempo assistido')}">
-            <wa-icon slot="start" name="${c.error ? 'triangle-exclamation' : 'eye'}"></wa-icon>assistindo</wa-tag>` : ''}
-          ${c.gained ? `<span class="gained">+${fmt(c.gained)}</span>` : ''}
-          <span class="balance" ${c.balance === null ? 'title="Lendo o saldo…"' : ''}>${c.balance === null ? '–' : fmt(c.balance)}</span>
-          ${playButton(account, c)}
+        <div class="row points-row ${c.live ? '' : 'off'}">${c.live ? '<span class="live-dot"></span>' : '<span class="off-dot"></span>'}<span class="name" title="${esc(c.name)}">${esc(c.name)}</span>${streakMark(c)}
+          ${c.watching ? `<span class="watch-icon ${c.error ? 'error' : ''}" title="${esc(c.error ? `Assistindo, mas não está contando: ${c.error}` : 'Assistindo: ganhando pontos por tempo assistido')}">
+            <wa-icon name="${c.error ? 'triangle-exclamation' : 'eye'}" label="assistindo"></wa-icon></span>` : ''}
+          <span class="amount">
+            <span class="balance" ${c.balance === null ? 'title="Lendo o saldo…"' : ''}>${c.balance === null ? '–' : fmt(c.balance)}</span>
+            ${c.gained ? `<span class="gained" title="Ganho desde que o painel abriu">+${fmt(c.gained)}</span>` : ''}
+          </span>
+          ${playButton(platform, account, c)}
         </div>`).join('') : '<div class="empty">Nenhum canal na lista.</div>'}</div>`;
   }
 
-  function renderTwitch() {
-    const channels = sortChannels(state.channels).filter((c) => filters.twitch === 'all' || (filters.twitch === 'live') === c.live);
-    setHTML($('twitch-channels'), channels.map((c) => `
+  // Cards da lista de canais parceiros: o mesmo desenho na Twitch e na Kick.
+  function channelCards(platform, list) {
+    const channels = sortChannels(list).filter((c) => filters[platform] === 'all' || (filters[platform] === 'live') === c.live);
+    return channels.map((c) => `
       <wa-card class="channel ${c.live ? '' : 'offline'}">
-        <div class="top">${c.live ? '<span class="live-dot"></span>' : ''}<span class="name">${esc(c.name)}</span>${viewersBadge(c)}
-          <wa-button class="remove" appearance="plain" size="small" data-action="remove-twitch" data-channel="${esc(c.name)}"><wa-icon name="xmark" label="Remover canal"></wa-icon></wa-button></div>
-      </wa-card>`).join('') || '<div class="empty">Nenhum canal aqui.</div>');
+        <div class="top">${c.live ? '<span class="live-dot"></span>' : ''}<span class="name" title="${esc(c.name)}">${esc(c.name)}</span>${viewersBadge(c)}
+          <wa-button class="remove" appearance="plain" size="small" data-action="remove-${platform}" data-channel="${esc(c.name)}"><wa-icon name="xmark" label="Remover canal"></wa-icon></wa-button></div>
+      </wa-card>`).join('') || '<div class="empty">Nenhum canal aqui.</div>';
+  }
+
+  function renderTwitch() {
+    setHTML($('twitch-channels'), channelCards('twitch', state.channels));
   }
 
   function renderKick() {
-    const k = state.kick;
-
-    const setupMsg = !(k.browserFound ?? k.chromeFound) ? 'Nenhum navegador compatível encontrado. Instale o Chrome, o Brave ou o Edge.'
-      : !k.configured ? 'Para ver quem está ao vivo, configure o app da Kick em Configurações.'
-      : k.error ? `Erro na API da Kick: ${k.error}`
-      : k.profiles.length === 0 ? 'Marque os perfis do navegador que vão ser as contas da Kick.'
-      : '';
-    $('kick-setup-needed').hidden = !setupMsg;
-    $('kick-setup-text').textContent = setupMsg;
-
-    const browsers = k.browsers ?? [];
-    setHTML($('kick-browser'), browsers.map((b) => `<wa-option value="${esc(b.id)}">${esc(b.name)}</wa-option>`).join('')
-      || `<wa-option value="">${k.browsers ? 'Nenhum encontrado' : 'Reinicie o painel'}</wa-option>`);
-    $('kick-browser').value = k.browser ?? '';
-    $('kick-browser').disabled = browsers.length < 2;
-
-    const selected = new Set(k.profiles.map((p) => p.dir));
-    setHTML($('kick-profiles'), k.availableProfiles.map((p) =>
-      `<wa-checkbox value="${esc(p.dir)}" ${selected.has(p.dir) ? 'checked' : ''}>${esc(p.name)}</wa-checkbox>`).join('')
-      || '<span class="meta">Nenhum perfil encontrado neste navegador.</span>');
-    $$('#kick-profiles wa-checkbox').forEach((c) => (c.checked = selected.has(c.value)));
-
-    $('kick-close').disabled = !k.openWindows;
-    $('kick-close').querySelector('span').textContent = k.openWindows ? `Fechar janelas (${k.openWindows})` : 'Fechar janelas';
-
-    const watching = { ...(k.watching ?? {}) };
-    for (const [profile, w] of pendingWatch) {
-      if (w.until < Date.now() || watching[profile] === w.channel) pendingWatch.delete(profile);
-      else watching[profile] = w.channel;
-    }
-
-    const profiles = k.profiles;
-    const channels = sortChannels(k.channels).filter((c) => filters.kick === 'all' || (filters.kick === 'live') === c.live);
-    setHTML($('kick-channels'), channels.map((c) => {
-      const off = k.configured && !c.live ? 'disabled' : '';
-      const buttons = !profiles.length ? '' : `<div class="watch-wrap">
-        <div class="watch ${profiles.length > 2 ? 'many' : ''}" role="group" aria-label="Assistir">
-          ${profiles.length > 1 ? `<wa-button class="all" size="small" variant="${off ? 'neutral' : 'brand'}" ${off} data-action="watch" data-channel="${esc(c.name)}">
-            <wa-icon slot="start" name="play"></wa-icon>Todas</wa-button>` : ''}
-          ${profiles.map((p) => {
-            const open = watching[p.dir] === c.name;
-            return `<wa-button class="profile ${open ? 'open' : ''}" size="small" appearance="outlined" ${off}
-              title="${esc(open ? `${p.name} está assistindo` : `Assistir com ${p.name}`)}" data-action="watch" data-channel="${esc(c.name)}" data-profile="${esc(p.dir)}">
-              ${profiles.length === 1 ? '<wa-icon slot="start" name="play"></wa-icon>' : ''}${esc(p.name)}</wa-button>`;
-          }).join('')}
-        </div></div>`;
-      return `
-        <wa-card class="channel ${c.live || !k.configured ? '' : 'offline'}">
-          <div class="top">${c.live ? '<span class="live-dot"></span>' : ''}<span class="name">${esc(c.name)}</span>${k.configured ? viewersBadge(c) : ''}
-            <wa-button class="remove" appearance="plain" size="small" data-action="remove-kick" data-channel="${esc(c.name)}"><wa-icon name="xmark" label="Remover canal"></wa-icon></wa-button></div>
-          ${k.configured ? hoursHtml(c.hours, '#53fc18') : ''}
-          ${buttons}
-        </wa-card>`;
-    }).join('') || '<div class="empty">Nenhum canal aqui.</div>');
+    setHTML($('kick-channels'), channelCards('kick', state.kick.channels));
   }
 
   function renderAlerts() {
@@ -852,7 +883,7 @@
     // Contas vinculadas primeiro, depois as que só aparecem no histórico (desvinculadas).
     const logins = [...new Set([...(state.points?.accounts ?? []).map((a) => a.login), ...days.flatMap((d) => Object.keys(d.accounts))])];
     if (!days.length || !logins.length) {
-      setHTML($('history'), '<div class="empty">O histórico aparece depois que as contas ganharem os primeiros pontos com o painel aberto.</div>');
+      setHTML($('history'), '<div class="empty">O histórico aparece quando as contas (Twitch ou Kick) ganharem os primeiros pontos com o painel aberto.</div>');
       setHTML($('history-reasons'), '');
       return;
     }
@@ -866,7 +897,7 @@
         const total = logins.reduce((t, l) => t + sumPoints(d.accounts[l]), 0);
         return `<tr><td>${dayLabel(d.day)}</td>${cells.join('')}<td class="num total">+${fmt(total)}</td></tr>`;
       }).join('')}
-    </table><div class="meta" style="margin-top:8px">Passe o mouse num valor para ver de onde vieram os pontos.</div>`);
+    </table><div class="meta" style="margin-top:8px">Toque ou passe o mouse num valor para ver de onde vieram os pontos. O resumo dos últimos 7 dias está logo abaixo.</div>`);
 
     // Soma dos últimos 7 dias, por motivo e por conta.
     const week = {};
@@ -891,54 +922,46 @@
     </table>`);
   }
 
+  // Seletor de perfil do navegador de uma conta (para o ▶).
+  function profileSelects(platform, accounts, profiles) {
+    return accounts.map((a) => `<div class="setting-row"><span><b>${esc(a.login)}</b></span>
+      <wa-select size="small" data-profile-platform="${platform}" data-key="${esc(accountKey(platform, a))}" style="min-width:220px">
+        <wa-option value="none">Qualquer perfil (o último que usei)</wa-option>
+        ${profiles.map((p) => `<wa-option value="${esc(p.dir)}">${esc(p.name)}</wa-option>`).join('')}
+      </wa-select></div>`).join('');
+  }
+
   function renderConfig() {
-    const accounts = state.points?.accounts ?? [];
-    const profiles = state.kick.availableProfiles ?? [];
-    setHTML($('twitch-profiles'), !accounts.length ? '<div class="empty">Vincule uma conta de pontos na página Twitch.</div>'
-      : accounts.map((a) => `<div class="setting-row"><span><b>${esc(a.login)}</b></span>
-          <wa-select size="small" data-points-profile="${esc(a.login)}" style="min-width:220px">
-            <wa-option value="none">Último perfil usado</wa-option>
-            ${profiles.map((p) => `<wa-option value="${esc(p.dir)}">${esc(p.name)}</wa-option>`).join('')}
-          </wa-select></div>`).join(''));
-    for (const a of accounts) {
-      const select = document.querySelector(`[data-points-profile="${CSS.escape(a.login)}"]`);
-      if (select && select.value !== (a.profile ?? 'none')) select.value = a.profile ?? 'none';
+    const k = state.kick;
+    const browsers = k.browsers ?? [];
+    setHTML($('browser-select'), browsers.map((b) => `<wa-option value="${esc(b.id)}">${esc(b.name)}</wa-option>`).join('')
+      || '<wa-option value="">Nenhum encontrado</wa-option>');
+    $('browser-select').value = k.browser ?? '';
+    $('browser-select').disabled = browsers.length < 2;
+
+    const profiles = k.availableProfiles ?? [];
+    const twitch = state.points?.accounts ?? [];
+    const kickAccounts = k.points?.accounts ?? [];
+    setHTML($('twitch-profiles'), twitch.length ? profileSelects('twitch', twitch, profiles) : '<div class="empty">Vincule uma conta de pontos na página Twitch.</div>');
+    setHTML($('kick-profiles'), kickAccounts.length ? profileSelects('kick', kickAccounts, profiles) : '<div class="empty">Adicione uma conta na página Kick.</div>');
+    for (const [platform, list] of [['twitch', twitch], ['kick', kickAccounts]]) {
+      for (const a of list) {
+        const select = document.querySelector(`[data-profile-platform="${platform}"][data-key="${CSS.escape(accountKey(platform, a))}"]`);
+        if (select && select.value !== (a.profile ?? 'none')) select.value = a.profile ?? 'none';
+      }
     }
 
-    const k = state.kick;
-    setHTML($('kick-app-status'), k.configured && !k.error
+    setHTML($('kick-app-status'), k.appConfigured && !k.error
       ? '<wa-callout variant="success" size="small"><wa-icon slot="icon" name="circle-check"></wa-icon>Conectado à API da Kick.</wa-callout>'
-      : k.error ? `<wa-callout variant="danger" size="small"><wa-icon slot="icon" name="circle-exclamation"></wa-icon>Erro na API da Kick: ${esc(k.error)}</wa-callout>`
-      : '<wa-callout variant="warning" size="small"><wa-icon slot="icon" name="triangle-exclamation"></wa-icon>App da Kick ainda não configurado.</wa-callout>');
+      : k.appConfigured && k.error ? `<wa-callout variant="danger" size="small"><wa-icon slot="icon" name="circle-exclamation"></wa-icon>Erro na API da Kick: ${esc(k.error)}</wa-callout>`
+      : '<wa-callout variant="neutral" size="small"><wa-icon slot="icon" name="circle-info"></wa-icon>Sem app, o painel funciona do mesmo jeito, só vê as lives um canal de cada vez. Você pode ignorar esta parte.</wa-callout>');
   }
 
   // ---------- Ações ----------
 
-  function watchKick(channel, profile) {
-    const k = state.kick;
-    for (const p of profile ? [profile] : k.profiles.map((x) => x.dir)) pendingWatch.set(p, { channel, until: Date.now() + 15000 });
-    const s = window.screen;
-    api('POST', 'kick/watch', {
-      channel,
-      profile,
-      // devicePixelRatio = escala do Windows (com o zoom do painel em 100%).
-      screen: { left: s.availLeft ?? 0, top: s.availTop ?? 0, width: s.availWidth, height: s.availHeight, scale: window.devicePixelRatio },
-    });
-  }
-
-  function toggleProfile(dir, on) {
-    const current = state.kick.profiles.map((p) => p.dir);
-    if (on && current.length >= state.maxAccounts) {
-      toast(`Máximo de ${state.maxAccounts} contas`);
-      render();
-      return;
-    }
-    api('PUT', 'kick/profiles', { profiles: on ? [...current, dir] : current.filter((d) => d !== dir) });
-  }
-
   // Pede para o servidor reiniciar e recarrega a página quando ele voltar.
   async function restartServer() {
-    if (!confirm('Reiniciar o servidor? A conta de pontos para por alguns segundos e volta sozinha.')) return;
+    if (!confirm('Reiniciar o servidor? As contas de pontos param por alguns segundos e voltam sozinhas.')) return;
     $$('[data-restart]').forEach((b) => (b.loading = true));
     clearInterval(poller);
     await fetch('/api/restart', { method: 'POST' }).catch(() => {});
@@ -949,7 +972,7 @@
       await new Promise((r) => setTimeout(r, 1000));
     }
     $$('[data-restart]').forEach((b) => (b.loading = false));
-    toast('O servidor não voltou. Confira a janela preta do painel.');
+    toast('O servidor não voltou. Veja a janela preta (a que abriu com o iniciar.bat) e abra o iniciar.bat de novo se ela estiver fechada.');
   }
 
   document.addEventListener('click', (e) => {
@@ -960,28 +983,83 @@
       return;
     }
     if (e.target.closest('[data-restart]')) return restartServer();
+    const detail = e.target.closest('.history td[title]');
+    if (detail) return toast(detail.title, 'info');
 
     const el = e.target.closest('[data-action]');
     if (!el || el.disabled) return;
-    const { action, channel, profile, login } = el.dataset;
+    const { action, channel, login, platform, key } = el.dataset;
+    // Rotas das contas: /api/points/<login> na Twitch, /api/kick/accounts/<id> na Kick.
+    const accountPath = platform === 'kick' ? `kick/accounts/${encodeURIComponent(key)}` : `points/${encodeURIComponent(key)}`;
     if (action === 'points-link') api('POST', 'points/link');
+    if (action === 'go-twitch-link') {
+      show('twitch');
+      api('POST', 'points/link');
+    }
+    if (action === 'go-kick-add') {
+      show('kick');
+      $('kick-token').value = '';
+      $('kick-add').open = true;
+    }
+    if (action === 'add-channel') addChannel(platform);
     if (action === 'farm-help') $('farm-help').open = true;
     if (action === 'points-expand') {
-      dialogLogin = login;
+      dialogAccount = { platform, key };
       render();
       $('points-dialog').open = true;
     }
+    if (action === 'kick-help') $('kick-help').open = true;
+    if (action === 'kick-add') {
+      $('kick-token').value = '';
+      $('kick-add').open = true;
+    }
     if (action === 'points-cancel') api('DELETE', 'points/link');
-    if (action === 'points-open') api('POST', `points/${encodeURIComponent(login)}/open`, { channel });
-    if (action === 'points-unlink' && confirm(`Desvincular ${login}? Ela para de juntar pontos.`)) api('DELETE', `points/${encodeURIComponent(login)}`);
+    if (action === 'points-open') {
+      api('POST', `${accountPath}/open`, { channel });
+      // Já usou o ▶: a dica some.
+      try {
+        localStorage.setItem('playTipSeen', '1');
+      } catch {}
+      $$('.play-tip').forEach((t) => (t.hidden = true));
+    }
+    if (action === 'points-unlink' && confirm(`${platform === 'kick' ? 'Remover' : 'Desvincular'} ${login}? Ela para de juntar pontos. O histórico dela continua guardado.`)) api('DELETE', accountPath);
     if (action === 'remove-twitch' && confirm(`Remover ${channel} da lista de canais oficiais?`)) api('DELETE', `channels/${encodeURIComponent(channel)}`);
     if (action === 'remove-kick' && confirm(`Remover ${channel} da lista da Kick?`)) api('DELETE', `kick/channels/${encodeURIComponent(channel)}`);
-    if (action === 'watch') watchKick(channel, profile);
   });
 
-  $('kick-close').addEventListener('click', () => {
-    pendingWatch.clear();
-    api('DELETE', 'kick/watch');
+  // Favorito "Enviar para o IdleLive": roda no kick.com, lê o session_token (o próprio site lê ele para fazer os pedidos)
+  // e abre o painel com o token depois do #, que não é enviado a nenhum servidor.
+  const bookmarklet = `javascript:(()=>{if(!/(^|\\.)kick\\.com$/.test(location.hostname)){alert('Abra o kick.com, logado na conta, e clique de novo neste favorito.');return}`
+    + `const m=document.cookie.match(/(?:^|;\\s*)session_token=([^;]+)/);`
+    + `if(!m){alert('Não achei o login da Kick nesta página. Entre na sua conta no kick.com e tente de novo. Se continuar, use o jeito manual do painel.');return}`
+    + `window.open('${location.origin}/#kick-token='+encodeURIComponent(decodeURIComponent(m[1])),'_blank')})()`;
+  $('kick-bookmarklet').setAttribute('href', bookmarklet);
+  $('kick-bookmarklet').addEventListener('click', (e) => {
+    e.preventDefault();
+    toast('Arraste este botão para a barra de favoritos; o clique é no kick.com.', 'info');
+  });
+
+  // Token que chegou pelo favorito: pergunta antes de adicionar (outro site poderia abrir este endereço).
+  async function addKickFromBookmark(token) {
+    if (!confirm('Adicionar a conta da Kick que veio do favorito "Enviar para o IdleLive"?')) return;
+    const before = new Set((state?.kick.points?.accounts ?? []).map((a) => String(a.id)));
+    if (!(await api('POST', 'kick/accounts', { token }))) return;
+    const added = state.kick.points?.accounts.find((a) => !before.has(String(a.id)));
+    toast(added ? `Conta ${added.login} adicionada` : 'Token da conta atualizado', 'info');
+  }
+
+  // Adicionar (ou trocar o token de) uma conta da Kick.
+  $('kick-add-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = $('kick-token').value.trim();
+    if (!token) return toast('Cole o token da conta');
+    $('kick-add-save').loading = true;
+    const ok = await api('POST', 'kick/accounts', { token });
+    $('kick-add-save').loading = false;
+    if (ok) {
+      $('kick-token').value = '';
+      $('kick-add').open = false;
+    }
   });
 
   document.addEventListener('change', (e) => {
@@ -991,14 +1069,15 @@
       filters[t.dataset.filter] = t.value;
       render();
     }
-    if (t.matches('#kick-profiles wa-checkbox')) toggleProfile(t.value, t.checked);
-    if (t.matches('[data-points-profile]')) {
-      const login = t.dataset.pointsProfile;
-      const current = state.points?.accounts.find((a) => a.login === login)?.profile ?? 'none';
-      if (t.value !== current) api('PUT', `points/${encodeURIComponent(login)}/profile`, { profile: t.value === 'none' ? null : t.value });
+    if (t.matches('[data-profile-platform]')) {
+      const { profilePlatform: platform, key } = t.dataset;
+      const list = platform === 'twitch' ? state.points?.accounts : state.kick.points?.accounts;
+      const current = list?.find((a) => accountKey(platform, a) === key)?.profile ?? 'none';
+      const path = platform === 'kick' ? `kick/accounts/${encodeURIComponent(key)}` : `points/${encodeURIComponent(key)}`;
+      if (t.value !== current) api('PUT', `${path}/profile`, { profile: t.value === 'none' ? null : t.value });
     }
-    if (t.matches('#kick-browser') && t.value && t.value !== state.kick.browser) {
-      if (state.kick.profiles.length && !confirm('Trocar de navegador desmarca as contas da Kick (os perfis são de cada navegador) e fecha as janelas abertas. Continuar?')) {
+    if (t.matches('#browser-select') && t.value && t.value !== state.kick.browser) {
+      if (!confirm('Trocar de navegador apaga os perfis escolhidos para as contas (os perfis são de cada navegador). Continuar?')) {
         t.value = state.kick.browser;
         return;
       }
@@ -1006,31 +1085,48 @@
     }
   });
 
-  // Adicionar canal: digita e aperta Enter.
+  // Adicionar canal: botão "Adicionar" ou Enter no campo. O texto só some se der certo.
+  async function addChannel(platform) {
+    const input = document.querySelector(`[data-add="${platform}"]`);
+    const name = input.value.trim();
+    if (!name) return toast('Digite o nome do canal');
+    if (await api('POST', platform === 'kick' ? 'kick/channels' : 'channels', { name })) {
+      input.value = '';
+      toast(`Canal ${name} adicionado`, 'info');
+    }
+  }
+
   document.addEventListener('keydown', (e) => {
     const input = e.target.closest?.('[data-add]');
-    if (!input || e.key !== 'Enter') return;
-    const name = input.value.trim();
-    if (!name) return;
-    input.value = '';
-    api('POST', input.dataset.add === 'kick' ? 'kick/channels' : 'channels', { name });
+    if (input && e.key === 'Enter') addChannel(input.dataset.add);
   });
 
-  $('kick-app-form').addEventListener('submit', (e) => {
+  $('kick-app-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    api('PUT', 'kick/app', { clientId: $('kick-client-id').value, clientSecret: $('kick-client-secret').value });
-    $('kick-client-secret').value = '';
+    const clientId = $('kick-client-id').value.trim();
+    const clientSecret = $('kick-client-secret').value.trim();
+    if (!clientId || !clientSecret) return toast('Preencha o Client ID e o Client Secret');
+    if (await api('PUT', 'kick/app', { clientId, clientSecret })) {
+      $('kick-client-secret').value = '';
+      toast('App da Kick salvo', 'info');
+    }
   });
 
   // ---------- Navegação ----------
 
   const titles = {
     visao: ['Visão geral', 'Tudo o que está acontecendo agora'],
-    twitch: ['Twitch', 'Pontos do canal nas lives dos canais oficiais'],
-    kick: ['Kick', 'Abra as lives dos parceiros com as suas contas'],
-    historico: ['Histórico', 'Pontos do canal ganhos por dia e de onde vieram'],
-    config: ['Configurações', 'Inicialização, servidor, navegador e app da Kick'],
+    twitch: ['Twitch', 'Pontos do canal nas lives dos parceiros'],
+    kick: ['Kick', 'Pontos do canal nas lives dos parceiros'],
+    historico: ['Histórico', 'Pontos ganhos por dia, na Twitch e na Kick, e de onde vieram'],
+    config: ['Configurações', 'Iniciar com o Windows, reiniciar o servidor, navegador e app da Kick'],
   };
+  let bookmarkToken = null;
+  if (location.hash.startsWith('#kick-token=')) {
+    bookmarkToken = decodeURIComponent(location.hash.slice('#kick-token='.length));
+    history.replaceState(null, '', '#kick');
+  }
+
   const drawer = $('drawer');
   function show(target = location.hash.slice(1)) {
     const page = titles[target] ? target : 'visao';
@@ -1042,12 +1138,21 @@
   }
   show();
 
-  // No celular, a sidebar vira uma gaveta.
-  drawer.append($('nav').cloneNode(true));
+  // No celular, a sidebar vira uma gaveta (cópia do menu, sem repetir o id).
+  const navCopy = $('nav').cloneNode(true);
+  navCopy.removeAttribute('id');
+  drawer.append(navCopy);
+  // Endereço mudado à mão (ou pelo voltar do navegador): mostra a página certa.
+  window.addEventListener('hashchange', () => show());
+
+  // Sem os componentes depois de alguns segundos = o visual não veio da internet.
+  setTimeout(() => {
+    if (!customElements.get('wa-card')) $('no-ui').style.display = 'grid';
+  }, 8000);
   $('menu-btn').addEventListener('click', () => (drawer.open = true));
 
   $('server-host').textContent = location.host;
-  api('GET', 'state');
+  api('GET', 'state').then(() => bookmarkToken && addKickFromBookmark(bookmarkToken));
   const poller = setInterval(() => api('GET', 'state'), 5000);
 </script>
 </body>

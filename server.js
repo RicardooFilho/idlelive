@@ -1,16 +1,16 @@
-// Painel local + orquestração: mantém cada conta nos chats dos canais oficiais que estão ao vivo.
+// Painel local + orquestração: status das lives da Twitch e da Kick, pontos do canal e janelas da Kick.
 // Uso: npm start  →  http://localhost:3000
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config, accounts, kick, saveConfig, saveAccounts, saveKick, normalizeChannel, MAX_ACCOUNTS } from './src/store.js';
-import { startDeviceFlow, waitDeviceToken, refreshToken, validate, revoke, fetchLive } from './src/twitch.js';
+import { config, kick, saveConfig, saveKick, normalizeChannel, MAX_ACCOUNTS } from './src/store.js';
+import { fetchLive } from './src/twitch.js';
 import { fetchKickLive, resetKickToken } from './src/kick.js';
 import { installedBrowsers, browserName, listProfiles, openWatchWindow, closeWatchWindows, openWindowCount, openWindowList } from './src/browser.js';
-import { ChatConnection } from './src/chat.js';
-import { recordMinute, boostHistory, todayBoostMinutes, liveHours } from './src/stats.js';
+import { recordMinute, liveHours } from './src/stats.js';
 import { autostartEnabled, setAutostart } from './src/autostart.js';
+import { PointsMiner } from './src/points.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const LIVE_INTERVAL = 60 * 1000;
@@ -24,87 +24,26 @@ const FAVICON_FILE = path.join(PUBLIC_DIR, 'favicon.ico');
 
 const log = (msg) => console.log(`[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`);
 
-if (!config.clientId || config.clientId.startsWith('COLE')) {
-  console.log('Coloque o Client ID do seu app em config.json');
-  process.exit(1);
-}
-const { clientId } = config;
+let live = new Map(); // canal -> { viewers, userId, streamId }
+let liveOk = false; // a última checagem das lives da Twitch deu certo?
+const miner = new PointsMiner({ log });
 
-const connections = new Map(); // login -> ChatConnection
-let live = new Map(); // canal -> { viewers }
-let pendingLink = null; // { userCode, uri, expiresAt, error, cancelled }
+// ---------- Twitch ----------
 
-// ---------- Contas e tokens ----------
-
-function wantedChannels(account) {
-  const base = account.mode === 'custom' ? account.channels : config.channels;
-  return new Set(base.filter((c) => live.has(c)));
-}
-
-function syncAll() {
-  for (const account of accounts) connections.get(account.login)?.setChannels(wantedChannels(account));
-}
-
-function startConnection(account) {
-  connections.get(account.login)?.close();
-  const conn = new ChatConnection(account.login, {
-    getToken: () => account.accessToken,
-    onAuthFailed: () => ensureFreshToken(account, true).catch((err) => log(`${account.login}: erro ao renovar token (${err.message})`)),
-    log,
-  });
-  connections.set(account.login, conn);
-  conn.setChannels(wantedChannels(account));
-}
-
-// Renova o token se estiver perto de expirar (ou se `force`). Retorna false se a conta precisa ser vinculada de novo.
-// O refresh token só pode ser usado uma vez, então chamadas simultâneas compartilham a mesma renovação.
-const refreshing = new Map(); // account -> Promise
-function ensureFreshToken(account, force = false) {
-  if (!refreshing.has(account)) {
-    refreshing.set(account, checkToken(account, force).finally(() => refreshing.delete(account)));
-  }
-  return refreshing.get(account);
-}
-
-async function checkToken(account, force) {
-  const info = force ? null : await validate(account.accessToken);
-  if (info && info.expires_in > TOKEN_INTERVAL / 1000 + 300) return true;
-
-  const tokens = await refreshToken(clientId, account.refreshToken);
-  if (!tokens) {
-    log(`${account.login}: não deu para renovar o token, vincule a conta de novo no painel`);
-    account.needsRelink = true;
-    saveAccounts();
-    connections.get(account.login)?.close();
-    connections.delete(account.login);
-    return false;
-  }
-  account.accessToken = tokens.access_token;
-  account.refreshToken = tokens.refresh_token;
-  account.needsRelink = false;
-  saveAccounts();
-  log(`${account.login}: token renovado`);
-  return true;
-}
-
-async function maintainTokens() {
-  for (const account of accounts) {
-    if (!account.needsRelink) await ensureFreshToken(account).catch((err) => log(`Erro ao checar token: ${err.message}`));
-  }
+function syncPoints() {
+  miner.setLive(config.channels.filter((c) => live.has(c)).map((name) => ({ name, channelId: live.get(name).userId, broadcastId: live.get(name).streamId })), config.channels);
 }
 
 async function updateLive() {
-  const account = accounts.find((a) => !a.needsRelink);
-  if (!account || config.channels.length === 0) {
-    live = new Map();
-  } else {
-    let result = await fetchLive(clientId, account.accessToken, config.channels);
-    if (!result && (await ensureFreshToken(account, true))) {
-      result = await fetchLive(clientId, account.accessToken, config.channels);
-    }
-    if (result) live = result;
+  try {
+    live = await fetchLive(config.channels);
+    liveOk = true;
+  } catch (err) {
+    liveOk = false;
+    throw err;
+  } finally {
+    syncPoints();
   }
-  syncAll();
 }
 
 const safeUpdateLive = () => updateLive().catch((err) => log(`Erro ao checar lives: ${err.message}`));
@@ -249,44 +188,11 @@ async function handleKick(req, res, action, id) {
   send(res, 404, { error: 'Rota não encontrada' });
 }
 
-async function startLink() {
-  if (pendingLink && !pendingLink.error) throw new Error('Já existe um vínculo em andamento');
-  const flow = await startDeviceFlow(clientId);
-  const link = { userCode: flow.user_code, uri: flow.verification_uri, expiresAt: Date.now() + flow.expires_in * 1000 };
-  pendingLink = link;
-
-  waitDeviceToken(clientId, flow, () => link.cancelled)
-    .then(async (tokens) => {
-      const info = await validate(tokens.access_token);
-      let account = accounts.find((a) => a.userId === info.user_id);
-      if (!account) {
-        if (accounts.length >= MAX_ACCOUNTS) throw new Error(`Limite de ${MAX_ACCOUNTS} contas atingido`);
-        account = { login: info.login, userId: info.user_id, mode: 'all', channels: [] };
-        accounts.push(account);
-      }
-      Object.assign(account, {
-        login: info.login,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        needsRelink: false,
-      });
-      saveAccounts();
-      log(`${account.login}: conta vinculada`);
-      if (pendingLink === link) pendingLink = null;
-      startConnection(account);
-      safeUpdateLive();
-    })
-    .catch((err) => {
-      if (pendingLink === link) pendingLink = link.cancelled ? null : { ...link, error: err.message };
-    });
-}
-
 // ---------- HTTP ----------
 
 function state() {
   return {
     maxAccounts: MAX_ACCOUNTS,
-    pendingLink: pendingLink && { userCode: pendingLink.userCode, uri: pendingLink.uri, error: pendingLink.error },
     autostart: autostartEnabled(),
     canRestart: CAN_RESTART,
     channels: config.channels.map((name) => ({
@@ -295,29 +201,16 @@ function state() {
       viewers: live.get(name)?.viewers ?? 0,
       hours: liveHours('twitch', name),
     })),
-    accounts: accounts.map((a) => {
-      const conn = connections.get(a.login);
-      return {
-        login: a.login,
-        mode: a.mode,
-        channels: a.channels,
-        needsRelink: !!a.needsRelink,
-        connected: !!conn?.connected,
-        joined: conn ? [...conn.joined].sort() : [],
-        boostToday: todayBoostMinutes(a.login),
-      };
-    }),
-    history: boostHistory(),
+    points: miner.state(),
     kick: kickState(),
   };
 }
 
-// A cada minuto: anota o boost de cada conta e quais canais estão ao vivo (para o histórico e os horários).
+// A cada minuto: anota quais canais estão ao vivo (para os horários).
 function recordStats() {
-  const twitchOk = accounts.some((a) => !a.needsRelink) && config.channels.length > 0;
+  const twitchOk = liveOk && config.channels.length > 0;
   const kickOk = kickConfigured() && !kickError && config.kickChannels.length > 0;
   recordMinute({
-    accounts: accounts.map((a) => ({ login: a.login, chats: connections.get(a.login)?.joined.size ?? 0 })),
     twitchLive: twitchOk ? config.channels.filter((c) => live.has(c)) : null,
     kickLive: kickOk ? config.kickChannels.filter((c) => kickLive.has(c)) : null,
   });
@@ -357,39 +250,13 @@ async function handleApi(req, res, url) {
     return send(res, 200, state());
   }
 
-  if (req.method === 'POST' && resource === 'link') {
-    await startLink();
+  // Contas de pontos do canal: /api/points/link (vincular) e /api/points/<login> (desvincular).
+  if (resource === 'points') {
+    if (req.method === 'POST' && id === 'link') await miner.startLink();
+    else if (req.method === 'DELETE' && id === 'link') miner.cancelLink();
+    else if (req.method === 'DELETE' && id) miner.unlink(id);
+    else return send(res, 404, { error: 'Rota não encontrada' });
     return send(res, 200, state());
-  }
-
-  if (req.method === 'DELETE' && resource === 'link') {
-    if (pendingLink) pendingLink.cancelled = true;
-    pendingLink = null;
-    return send(res, 200, state());
-  }
-
-  if (resource === 'accounts' && id) {
-    const account = accounts.find((a) => a.login === id);
-    if (!account) return send(res, 404, { error: 'Conta não encontrada' });
-
-    if (req.method === 'PUT') {
-      const { mode, channels } = await readBody(req);
-      if (mode === 'all' || mode === 'custom') account.mode = mode;
-      if (Array.isArray(channels)) account.channels = channels.map(normalizeChannel).filter((c) => config.channels.includes(c));
-      saveAccounts();
-      syncAll();
-      return send(res, 200, state());
-    }
-
-    if (req.method === 'DELETE') {
-      connections.get(account.login)?.close();
-      connections.delete(account.login);
-      accounts.splice(accounts.indexOf(account), 1);
-      saveAccounts();
-      revoke(clientId, account.accessToken);
-      log(`${account.login}: conta desvinculada`);
-      return send(res, 200, state());
-    }
   }
 
   if (resource === 'channels') {
@@ -406,11 +273,9 @@ async function handleApi(req, res, url) {
 
     if (req.method === 'DELETE' && id) {
       config.channels = config.channels.filter((c) => c !== id);
-      for (const account of accounts) account.channels = account.channels.filter((c) => c !== id);
       live.delete(id);
       saveConfig();
-      saveAccounts();
-      syncAll();
+      syncPoints();
       return send(res, 200, state());
     }
   }
@@ -438,13 +303,13 @@ const server = http.createServer(async (req, res) => {
 
 // ---------- Início ----------
 
-await maintainTokens();
-for (const account of accounts) if (!account.needsRelink) startConnection(account);
+await miner.ensureFresh().catch((err) => log(`Pontos: erro ao checar token (${err.message})`));
 await safeUpdateLive();
 await updateKickLive();
+miner.start();
 setInterval(safeUpdateLive, LIVE_INTERVAL);
 setInterval(updateKickLive, LIVE_INTERVAL);
-setInterval(maintainTokens, TOKEN_INTERVAL);
+setInterval(() => miner.ensureFresh().catch((err) => log(`Pontos: erro ao checar token (${err.message})`)), TOKEN_INTERVAL);
 setInterval(() => {
   try {
     recordStats();

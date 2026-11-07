@@ -2,6 +2,18 @@
 
 Mudanças do IdleLive, da mais recente para a mais antiga.
 
+## 07/11/2026
+
+### Novidades
+- **Pontos do canal na Twitch:** até 4 contas (vinculadas na página Twitch, cada uma no seu card) e cada uma assiste até 2 lives dos canais oficiais por vez (primeiro uns minutos de cada live nova para manter a sequência, depois as que têm mais pontos naquela conta), ganha os pontos por tempo assistido e pega o bônus sozinha. O card mostra o saldo em todos os canais da lista (os offline também, atualizados a cada 10 minutos), quanto subiu desde que o painel abriu e quantos bônus foram pegos. O card mostra 5 canais, e o botão **Ver todos** abre uma janela com a tabela completa (situação, espectadores, saldo, ganho e baús). O botão **?** ao lado de "Pontos do canal" explica como o farm funciona. Baseado no Twitch Channel Points Miner v2.
+
+### Mudanças
+- **Saem as contas do chat da Twitch:** agora o bônus de XP do jogo vem de resgatar com pontos do canal, então ficar no chat não serve mais. Saíram os cards das contas, o "+% de XP", o "Boost hoje" e a página **Histórico**. Na Visão geral, o lugar do "Boost hoje" agora mostra os pontos do canal.
+- A lista de quem está ao vivo na Twitch funciona **sem nenhuma conta vinculada**.
+- O `accounts.json` não é mais usado e pode ser apagado.
+- Cards dos canais da Twitch mais simples: saíram a barra de horários e o "Costuma estar ao vivo" (continuam na Kick).
+- Lista de canais oficiais da Twitch atualizada com os parceiros do jogo: entraram yetz, revolta, daniels, kennzy, ookina e surskity11.
+
 ## 31/10/2026
 
 ### Novidades

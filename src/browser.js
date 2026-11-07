@@ -53,6 +53,15 @@ function runScript(name, args) {
   });
 }
 
+// Abre o endereço numa aba normal do navegador, no perfil (conta) escolhido. Sem perfil, no último perfil usado.
+export function openInProfile(browserId, profileDir, url) {
+  const browser = BROWSERS[browserId];
+  const exe = browser && findExe(browser);
+  if (!exe) throw new Error(`${browserName(browserId)} não encontrado neste PC`);
+  const args = profileDir ? [`--profile-directory=${profileDir}`, url] : [url];
+  spawn(exe, args, { detached: true, stdio: 'ignore' }).unref();
+}
+
 // Uma janela por vez: o script identifica a janela nova comparando antes/depois.
 let queue = Promise.resolve();
 const enqueue = (task) => (queue = queue.then(task));

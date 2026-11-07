@@ -13,6 +13,10 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - A cada minuto vê quais parceiros estão ao vivo e quantas pessoas estão assistindo. Isso funciona sem vincular conta.
 - Vincula até 4 contas com o login oficial da Twitch, por código. Ele nunca pede a sua senha, e renova o login sozinho.
 - **Pontos do canal:** cada conta junta pontos nos canais oficiais ao vivo. Ela "assiste" até 2 lives por vez (o máximo que a Twitch conta por conta), escolhidas pelos saldos dela, e pega o bônus sozinha. Primeiro ela assiste uns 7 minutos de cada live nova, para manter a sequência (watch streak, que dá de 300 a 450 pontos extras). No resto do tempo, fica nas lives onde já tem mais pontos.
+- Age como uma pessoa: descansa das 5h às 8h (Brasília, uns 12% a menos de pontos), pega baús e Momentos depois de alguns segundos, e cada conta age num momento diferente.
+- Pega os **Momentos** dos canais oficiais e o baú assim que a Twitch avisa.
+- Entra nas **raids** de um canal oficial para outro canal oficial, se a conta estava assistindo quem fez a raid.
+- O botão **▶** ao lado de cada canal abre a live no navegador, na conta certa, para você resgatar as recompensas.
 - Mostra o saldo em todos os canais da lista, ao vivo ou offline, quanto subiu desde que o painel abriu e quantos bônus foram pegos.
 
 **Kick**
@@ -21,7 +25,8 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - **▶ Todas** abre a live em todas as contas de uma vez. **✕ Fechar janelas** fecha as janelas que o painel abriu.
 
 **Painel**
-- Menu lateral com **Visão geral** (resumo de tudo), **Twitch**, **Kick** e **Configurações**. No celular, ele vira uma gaveta no botão ☰.
+- Menu lateral com **Visão geral** (resumo de tudo), **Twitch**, **Kick**, **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
+- Avisos no topo quando algo para de funcionar (conta para vincular de novo, Twitch recusando pedidos, conexão caída). No celular, ele vira uma gaveta no botão ☰.
 
 **Geral**
 - Na Kick, uma barrinha de 24 horas em cada canal mostra os horários em que ele costuma estar ao vivo. O painel vai aprendendo enquanto fica aberto.
@@ -32,7 +37,7 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 ## Do que você precisa
 
 - Windows 10 ou 11.
-- [Node.js](https://nodejs.org) versão 20 ou mais nova. Baixe a versão **LTS** e vá clicando em "Avançar".
+- [Node.js](https://nodejs.org) versão 22 ou mais nova (na 20 funciona, mas sem os Momentos e sem o motivo dos pontos no histórico). Baixe a versão **LTS** e vá clicando em "Avançar".
 - Internet: além da Twitch e da Kick, o visual do painel (componentes Web Awesome e fonte Montserrat) carrega da internet.
 - Google Chrome, Brave ou Microsoft Edge. Só é necessário para a parte da Kick. O Edge já vem no Windows. O Firefox não é compatível.
 
@@ -56,6 +61,8 @@ Não precisa rodar `npm install`: o projeto não tem dependências.
 
 Pronto. As contas juntam pontos sozinhas quando os parceiros estiverem ao vivo.
 
+Para o botão **▶** abrir a live já logada na conta certa: crie um perfil no navegador (Chrome, Brave ou Edge) para cada conta, entre na Twitch com ela e escolha esse perfil em **Configurações → Contas da Twitch no navegador**.
+
 ### Kick (opcional)
 1. Em **kick.com → Configurações → Desenvolvedor**, crie um app. Em Redirect URL, coloque `http://localhost`.
 2. Cole o **Client ID** e o **Client Secret** na página **Configurações** do painel. Não mostre o Client Secret para ninguém.
@@ -75,7 +82,7 @@ Esses arquivos são criados na pasta do projeto e **nunca devem ser enviados par
 | Arquivo | O que guarda |
 |---|---|
 | `kick.json` | Client ID e Client Secret do seu app da Kick |
-| `stats.json` | Horários em que cada canal costuma estar ao vivo |
+| `stats.json` | Horários das lives e histórico de pontos por dia |
 | `points.json` | Login das contas de pontos do canal (tokens) |
 
 Se você usava uma versão antiga, o `accounts.json` (contas do chat) não é mais usado e pode ser apagado.
@@ -114,13 +121,13 @@ server.js              servidor HTTP do painel + orquestração
 public/index.html      o painel (HTML/CSS/JS num arquivo só, com Web Awesome)
 public/favicon.ico     ícone do IdleLive
 src/twitch.js          login por código, tokens e status das lives (GQL, sem login)
-src/points.js          pontos do canal: minutos assistidos e bônus (API interna da Twitch)
+src/points.js          pontos do canal: minutos assistidos, baús, Momentos e conexão em tempo real (PubSub)
 src/kick.js            status das lives pela API oficial da Kick
 src/browser.js         navegadores (Chrome, Brave, Edge), perfis e janelas da Kick
 src/open-window.ps1    abre a janela e posiciona na tela
 src/close-windows.ps1  fecha as janelas abertas pelo painel
 src/win.cs             funções do Windows usadas pelos dois scripts acima
-src/stats.js           horários das lives
+src/stats.js           horários das lives e histórico de pontos
 src/autostart.js       atalho "Iniciar com o Windows"
 src/store.js           leitura e gravação dos arquivos .json
 config.json            listas de canais

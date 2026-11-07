@@ -2,6 +2,10 @@
 // Tudo usa o Client ID do app de TV da Twitch, porque a API interna (GQL) só aceita os apps da própria Twitch.
 const ID_URL = 'https://id.twitch.tv/oauth2';
 export const GQL_URL = 'https://gql.twitch.tv/gql';
+
+// Falha de rede (sem internet, DNS, conexão recusada…), e não uma resposta da Twitch.
+// O fetch do Node lança TypeError("fetch failed") com o motivo em `cause`.
+export const isNetworkError = (err) => err instanceof TypeError && /fetch failed/i.test(err.message);
 export const TV_CLIENT_ID = 'ue6666qo983tsx6so1t0vnawi233wa';
 const STREAM_INFO_HASH = '198492e0857f6aedead9665c81c5a06d67b25b58034649687124083ff288597d';
 

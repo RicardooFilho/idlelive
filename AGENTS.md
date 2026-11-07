@@ -19,7 +19,7 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 
 ## Código
 
-- Node.js 20+, ES modules, **sem dependências**. Não adicione pacotes do npm. Use `fetch`, `node:tls`, `node:http`, etc.
+- Node.js 20+, ES modules, **sem dependências**. Não adicione pacotes do npm. Use `fetch`, `node:tls`, `node:http`, `WebSocket` etc. O `WebSocket` global só existe no Node 22+: sem ele, a conexão em tempo real (`PubSub` em `src/points.js`) fica desligada e o resto continua funcionando.
 - O painel é um arquivo só (`public/index.html`), sem framework e sem build. Os componentes são do **Web Awesome 3.14.0** (`<wa-button>`, `<wa-card>`…) e a fonte é Montserrat, ambos via CDN com versão fixa. Não troque por React/Tailwind nem adicione etapa de build.
 - Cores: roxo (`--twitch`) na página Twitch, verde (`--kick`) na Kick e laranja (`--orange`, #fc5e03) no resto. A cor "brand" do Web Awesome é trocada por seção no CSS. Use `variant="brand"` em vez de cores fixas.
 - O painel atualiza a cada 5 s. Use `setHTML()`, que só troca o HTML quando ele muda, para não fechar menus abertos nem piscar.
@@ -33,6 +33,8 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 - O refresh token só pode ser usado **uma vez**. Renovações simultâneas devem compartilhar a mesma promessa (`ensureFresh` em `src/points.js`).
 - Erro de rede ao renovar **não** pode marcar a conta como `needsRelink`. Só respostas 400/401 marcam.
 - Tudo da Twitch usa o Client ID do app de TV (`TV_CLIENT_ID` em `src/twitch.js`), porque a API interna (GQL) só aceita os apps da própria Twitch. O status das lives vem da GQL **sem login**, em lotes. As consultas usam hashes fixos (em `src/twitch.js` e `HASHES` em `src/points.js`); se a Twitch trocar algum, o log mostra `PersistedQueryNotFound`.
+- Momentos, baús na hora e o motivo dos pontos chegam pelo PubSub da Twitch (`wss://pubsub-edge.twitch.tv/v1`), com **uma conexão por conta**, como um navegador logado. Não junte contas numa conexão só. Raids só são seguidas de um canal oficial para outro, e só pelas contas que assistiam a origem. Sem ele, o histórico anota a diferença de saldo como `OTHER`.
+- O farm imita uma pessoa para diminuir o risco de punição: descanso diário (`REST`, 5h–8h de Brasília, com variação por conta e por dia), esperas aleatórias antes de pegar baú/Momento e de trocar de live, intervalos com variação e poucas leituras de saldo (`CHECK_*`). Não volte para tempos exatos nem consultas a cada minuto.
 - A Twitch só conta tempo assistido em 2 lives ao mesmo tempo, por conta. Cada conta (`PointsAccount`) escolhe as suas pelos próprios saldos.
 
 ## Testes

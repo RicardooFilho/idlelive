@@ -5,14 +5,24 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 ## 07/11/2026
 
 ### Novidades
-- **Pontos do canal na Twitch:** até 4 contas (vinculadas na página Twitch, cada uma no seu card) e cada uma assiste até 2 lives dos canais oficiais por vez (primeiro uns minutos de cada live nova para manter a sequência, depois as que têm mais pontos naquela conta), ganha os pontos por tempo assistido e pega o bônus sozinha. O card mostra o saldo em todos os canais da lista (os offline também, atualizados a cada 10 minutos), quanto subiu desde que o painel abriu e quantos bônus foram pegos. O card mostra 5 canais, e o botão **Ver todos** abre uma janela com a tabela completa (situação, espectadores, saldo, ganho e baús). O botão **?** ao lado de "Pontos do canal" explica como o farm funciona. Baseado no Twitch Channel Points Miner v2.
+- **Pontos do canal na Twitch:** até 4 contas (vinculadas na página Twitch, cada uma no seu card) e cada uma assiste até 2 lives dos canais oficiais por vez (primeiro uns minutos de cada live nova para manter a sequência, depois as que têm mais pontos naquela conta), ganha os pontos por tempo assistido e pega o bônus sozinha. O card mostra o saldo em todos os canais da lista (os offline também, atualizados a cada 10 minutos), quanto subiu desde que o painel abriu e quantos bônus foram pegos. O card mostra 5 canais, e o botão **Ver todos** abre uma janela com a tabela completa (situação, espectadores, saldo, ganho e baús). O ícone ⓘ ao lado de "Pontos do canal" abre uma janela explicando o farm: de onde vêm os pontos, quais lives cada conta assiste, como resgatar o boost, o histórico e os riscos. Baseado no Twitch Channel Points Miner v2.
+
+- **Descanso diário:** das 5h às 8h (horário de Brasília) as contas de pontos param, como quem vai dormir. São 3 horas, para quebrar o padrão de 24 horas por dia perdendo só uns 12% dos pontos. Cada conta dorme e acorda até 20 minutos antes ou depois, num horário que muda todo dia. O card mostra "Descansando até…".
+- **Farm mais parecido com uma pessoa:** baús e Momentos são pegos depois de uma espera aleatória de 5 a 40 segundos; as contas começam e trocam de live em momentos diferentes; os intervalos variam um pouco; e o saldo é lido bem menos vezes (a cada 5–10 min nas lives assistidas e a cada ~30 min no resto, em vez de todo minuto).
+- **Sequência garantida:** um ✓ verde ao lado do canal mostra que a conta já garantiu a sequência (watch streak) da live atual.
+- **Momentos:** quando um canal oficial ao vivo solta um Momento, todas as contas de pontos pegam na hora.
+- **Raids entre parceiros:** quando um canal oficial faz raid para outro canal oficial, as contas que estavam assistindo entram junto e ficam uns minutos na live que recebeu. Raid para canal fora da lista é ignorada.
+- **Baú na hora:** a Twitch avisa em tempo real quando o baú aparece, e o painel pega sem esperar a checagem de cada minuto.
+- **Histórico de pontos:** a página **Histórico** voltou, agora com os pontos ganhos por conta e por dia, e uma tabela de onde vieram os pontos nos últimos 7 dias (tempo assistido, baús, sequências, raids, Momentos).
+- **Avisos no topo do painel** quando algo para de funcionar: conta que precisa ser vinculada de novo, a Twitch recusando os pedidos, a conexão em tempo real caída ou falha ao ver quem está ao vivo. Se o problema for a internet, aparece um aviso só, "Sem conexão com a internet", em vez de um por conta.
+- **Botão ▶ nos pontos:** abre a live no navegador para você resgatar as recompensas. Em **Configurações → Contas da Twitch no navegador**, escolha o perfil do navegador de cada conta para ela abrir já logada.
 
 ### Mudanças
 - **Saem as contas do chat da Twitch:** agora o bônus de XP do jogo vem de resgatar com pontos do canal, então ficar no chat não serve mais. Saíram os cards das contas, o "+% de XP", o "Boost hoje" e a página **Histórico**. Na Visão geral, o lugar do "Boost hoje" agora mostra os pontos do canal.
 - A lista de quem está ao vivo na Twitch funciona **sem nenhuma conta vinculada**.
 - O `accounts.json` não é mais usado e pode ser apagado.
 - Cards dos canais da Twitch mais simples: saíram a barra de horários e o "Costuma estar ao vivo" (continuam na Kick).
-- Lista de canais oficiais da Twitch atualizada com os parceiros do jogo: entraram yetz, revolta, daniels, kennzy, ookina e surskity11.
+- Lista de canais oficiais da Twitch atualizada com os parceiros do jogo: entraram yetz, revolta, daniels, kennzy, ookina e surskity11, e saíram faasii e yulla.
 
 ## 31/10/2026
 

@@ -5,10 +5,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config, kick, saveConfig, saveKick, normalizeChannel, MAX_ACCOUNTS } from './src/store.js';
-import { fetchLive } from './src/twitch.js';
+import { fetchLive, isNetworkError } from './src/twitch.js';
 import { fetchKickLive, resetKickToken } from './src/kick.js';
-import { installedBrowsers, browserName, listProfiles, openWatchWindow, closeWatchWindows, openWindowCount, openWindowList } from './src/browser.js';
-import { recordMinute, liveHours } from './src/stats.js';
+import { installedBrowsers, browserName, listProfiles, openWatchWindow, closeWatchWindows, openWindowCount, openWindowList, openInProfile } from './src/browser.js';
+import { recordMinute, liveHours, pointsHistory } from './src/stats.js';
 import { autostartEnabled, setAutostart } from './src/autostart.js';
 import { PointsMiner } from './src/points.js';
 
@@ -26,6 +26,8 @@ const log = (msg) => console.log(`[${new Date().toLocaleTimeString('pt-BR')}] ${
 
 let live = new Map(); // canal -> { viewers, userId, streamId }
 let liveOk = false; // a última checagem das lives da Twitch deu certo?
+let liveError = null; // mensagem da última falha, para o aviso no painel
+let liveOffline = false; // a última falha foi falta de internet?
 const miner = new PointsMiner({ log });
 
 // ---------- Twitch ----------
@@ -38,8 +40,12 @@ async function updateLive() {
   try {
     live = await fetchLive(config.channels);
     liveOk = true;
+    liveError = null;
+    liveOffline = false;
   } catch (err) {
     liveOk = false;
+    liveError = err.message;
+    liveOffline = isNetworkError(err);
     throw err;
   } finally {
     syncPoints();
@@ -202,8 +208,23 @@ function state() {
       hours: liveHours('twitch', name),
     })),
     points: miner.state(),
+    pointsHistory: pointsHistory(),
+    alerts: alerts(),
     kick: kickState(),
   };
+}
+
+// Problemas para mostrar no topo do painel: [{ variant: 'danger' | 'warning', text }].
+// Sem internet vira um aviso só, em vez de um por conta dizendo que a Twitch recusou.
+function alerts() {
+  const offline = liveOffline || miner.offline;
+  const list = [];
+  if (offline) {
+    list.push({ variant: 'warning', text: 'Sem conexão com a internet. Os pontos não contam enquanto ela estiver fora; o painel volta sozinho quando ela voltar.' });
+  } else if (liveError) {
+    list.push({ variant: 'danger', text: `Não deu para ver quem está ao vivo na Twitch: ${liveError}` });
+  }
+  return [...list, ...miner.alerts({ offline })];
 }
 
 // A cada minuto: anota quais canais estão ao vivo (para os horários).
@@ -250,11 +271,22 @@ async function handleApi(req, res, url) {
     return send(res, 200, state());
   }
 
-  // Contas de pontos do canal: /api/points/link (vincular) e /api/points/<login> (desvincular).
+  // Contas de pontos do canal: /api/points/link (vincular), /api/points/<login> (desvincular),
+  // /api/points/<login>/profile (perfil do navegador) e /api/points/<login>/open (abrir uma live nesse perfil).
   if (resource === 'points') {
+    const sub = rawSub && decodeURIComponent(rawSub);
     if (req.method === 'POST' && id === 'link') await miner.startLink();
     else if (req.method === 'DELETE' && id === 'link') miner.cancelLink();
-    else if (req.method === 'DELETE' && id) miner.unlink(id);
+    else if (req.method === 'PUT' && sub === 'profile') {
+      const { profile } = await readBody(req);
+      if (profile && !listProfiles(currentBrowser()).some((p) => p.dir === profile)) return send(res, 400, { error: 'Perfil não encontrado' });
+      miner.setProfile(id, profile);
+    } else if (req.method === 'POST' && sub === 'open') {
+      const channel = normalizeChannel((await readBody(req)).channel ?? '');
+      if (!config.channels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
+      openInProfile(currentBrowser(), miner.profileOf(id), `https://www.twitch.tv/${channel}`);
+      log(`Pontos (${id}): abrindo #${channel} no navegador`);
+    } else if (req.method === 'DELETE' && id && !sub) miner.unlink(id);
     else return send(res, 404, { error: 'Rota não encontrada' });
     return send(res, 200, state());
   }

@@ -137,7 +137,7 @@ src/autostart.js       atalho "Iniciar com o Windows"
 src/store.js           leitura e gravação dos arquivos .json
 test/*.test.js         testes automatizados (node:test, sem dependências)
 scripts/check.js       confere a sintaxe de todos os .js
-.github/workflows/     CI: sintaxe e testes no Node 20 e 22 a cada push
+.github/workflows/     CI: sintaxe e testes no Node 20, 22 e 24 a cada push
 config.json            listas de canais
 ```
 

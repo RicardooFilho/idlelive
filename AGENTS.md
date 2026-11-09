@@ -46,7 +46,7 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 
 ## Testes
 
-- Antes de terminar, rode `npm run check` (sintaxe de todos os `.js`) e `npm test` (testes em `test/*.test.js`, com `node:test` e `node:assert`, sem pacotes do npm). O GitHub Actions (`.github/workflows/ci.yml`) roda os dois no Node 20 e no 22 a cada push e pull request; o código precisa passar nos dois.
+- Antes de terminar, rode `npm run check` (sintaxe de todos os `.js`) e `npm test` (testes em `test/*.test.js`, com `node:test` e `node:assert`, sem pacotes do npm). O GitHub Actions (`.github/workflows/ci.yml`) roda os dois no Node 20, 22 e 24 a cada push e pull request; o código precisa passar em todos.
 - Mudou lógica em `src/`? Crie ou ajuste o teste do módulo (um arquivo por módulo, ex.: `test/human.test.js`). Os testes cobrem lógica, não as APIs da Twitch e da Kick: mudanças de hash, endpoint ou bloqueio só aparecem no painel (🐞).
 - Testes **nunca** usam internet nem os arquivos de dados reais: troque `globalThis.fetch` por uma função falsa e defina `IDLELIVE_DATA_DIR` com uma pasta temporária **antes** de importar módulos que leem arquivos (`store.js`, `events.js`, `stats.js`). Não abra WebSocket de verdade.
 - O painel (`public/index.html`) não tem testes: teste ele no navegador.

@@ -46,7 +46,10 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 
 ## Testes
 
-- Não há testes automatizados. Rode `node --check` nos arquivos alterados e teste o painel no navegador.
+- Antes de terminar, rode `npm run check` (sintaxe de todos os `.js`) e `npm test` (testes em `test/*.test.js`, com `node:test` e `node:assert`, sem pacotes do npm). O GitHub Actions (`.github/workflows/ci.yml`) roda os dois no Node 20 e no 22 a cada push e pull request; o código precisa passar nos dois.
+- Mudou lógica em `src/`? Crie ou ajuste o teste do módulo (um arquivo por módulo, ex.: `test/human.test.js`). Os testes cobrem lógica, não as APIs da Twitch e da Kick: mudanças de hash, endpoint ou bloqueio só aparecem no painel (🐞).
+- Testes **nunca** usam internet nem os arquivos de dados reais: troque `globalThis.fetch` por uma função falsa e defina `IDLELIVE_DATA_DIR` com uma pasta temporária **antes** de importar módulos que leem arquivos (`store.js`, `events.js`, `stats.js`). Não abra WebSocket de verdade.
+- O painel (`public/index.html`) não tem testes: teste ele no navegador.
 - **Não rode uma segunda instância com as contas reais** enquanto o painel do usuário estiver aberto: as duas renovariam o mesmo refresh token e uma derrubaria a outra. Para testar, copie o projeto para outra pasta **sem** `points.json` e rode com outra porta (`PORT=3005 node server.js`).
 - Mudanças no servidor só valem depois de reiniciar o painel. O `index.html` é lido a cada acesso, então a página nova pode rodar com o servidor antigo. Escreva o front-end tolerando campos que ainda não existem (`?.`, `?? 0`).
 - O botão "Reiniciar servidor" faz o processo sair com o código 75, e o `iniciar.bat` (que define `IDLELIVE_LAUNCHER=1`) abre o servidor de novo. Fora do `.bat` o botão fica escondido. Se mudar o `iniciar.bat`, mantenha esse laço.

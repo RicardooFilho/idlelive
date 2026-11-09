@@ -16,6 +16,7 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - Age como uma pessoa: descansa das 5h às 8h (Brasília, uns 12% a menos de pontos), pega baús e Momentos depois de alguns segundos, e cada conta age num momento diferente.
 - Pega os **Momentos** dos canais oficiais e o baú assim que a Twitch avisa.
 - Entra nas **raids** de um canal oficial para outro canal oficial, se a conta estava assistindo quem fez a raid.
+- **Segue todos os canais da lista**, um por vez a cada 3 a 10 minutos (só uma vez por canal: se você deixar de seguir, a conta não segue de novo).
 - O botão **▶** ao lado de cada canal abre a live no navegador, na conta certa, para você resgatar as recompensas.
 - Mostra o saldo em todos os canais da lista, ao vivo ou offline, quanto subiu desde que o painel abriu e quantos bônus foram pegos.
 
@@ -23,11 +24,12 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - Mostra o status ao vivo e o número de espectadores dos parceiros (pela API oficial, se você criar o app da Kick, ou canal por canal sem ele).
 - **Pontos do canal:** até 4 contas, cada uma "assiste" até 2 lives por vez em segundo plano, sempre as lives onde ela tem mais pontos. Na Kick os pontos vêm só do tempo assistido.
 - Mesmas travas da Twitch: descanso das 5h às 8h (Brasília), tempos aleatórios e poucas leituras de saldo.
+- **Segue todos os canais da lista** aos poucos, como na Twitch.
 - O botão **▶** abre a live no navegador, no perfil da conta, para você resgatar as recompensas.
 
 **Painel**
 - Menu lateral com **Visão geral** (resumo de tudo), **Twitch**, **Kick**, **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
-- No topo, o ícone de inseto 🐞 lista os erros da Twitch e da Kick, e o de presente 🎁 lista os baús, Momentos e raids, dos últimos 30 dias.
+- No topo, o ícone de inseto 🐞 lista os erros da Twitch e da Kick, e o de presente 🎁 lista os baús, Momentos, raids e follows, dos últimos 30 dias.
 - Avisos no topo quando algo para de funcionar (conta para vincular de novo, Twitch recusando pedidos, conexão caída). No celular, ele vira uma gaveta no botão ☰.
 
 **Geral**
@@ -133,9 +135,14 @@ src/stats.js           horários das lives e histórico de pontos
 src/events.js          erros e baús/Momentos/raids dos últimos 30 dias (eventos.jsonl)
 src/autostart.js       atalho "Iniciar com o Windows"
 src/store.js           leitura e gravação dos arquivos .json
+test/*.test.js         testes automatizados (node:test, sem dependências)
+scripts/check.js       confere a sintaxe de todos os .js
+.github/workflows/     CI: sintaxe e testes no Node 20 e 22 a cada push
 config.json            listas de canais
 ```
 
 Para trocar a porta, defina `PORT` antes de iniciar (ex.: `set PORT=3005`).
+
+Para conferir o código: `npm run check` (sintaxe de todos os arquivos) e `npm test` (testes). Os testes não usam internet nem as suas contas: os arquivos de dados ficam numa pasta temporária (`IDLELIVE_DATA_DIR`). O GitHub Actions roda os dois a cada push e pull request.
 
 Veja o [CHANGELOG.md](CHANGELOG.md) para o histórico de mudanças e o [AGENTS.md](AGENTS.md) para as regras do projeto.

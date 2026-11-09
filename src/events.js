@@ -4,9 +4,9 @@
 // Fica no disco para não sumir ao reiniciar e guarda só os últimos 30 dias (os mais velhos saem sozinhos).
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { DATA_DIR } from './store.js';
 
-const FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'eventos.jsonl');
+const FILE = path.join(DATA_DIR, 'eventos.jsonl');
 const KEEP_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_EVENTS = 3000; // teto de segurança, caso algum erro se repita muito
 const REPEAT_MS = 10 * 60 * 1000; // o mesmo erro da mesma conta só entra de novo depois disso

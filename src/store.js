@@ -4,9 +4,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CONFIG_FILE = path.join(ROOT, 'config.json');
-const KICK_FILE = path.join(ROOT, 'kick.json');
-const POINTS_FILE = path.join(ROOT, 'points.json');
+// Pasta dos arquivos de dados. Os testes trocam por uma pasta temporária, para nunca tocar nas contas reais.
+export const DATA_DIR = process.env.IDLELIVE_DATA_DIR ? path.resolve(process.env.IDLELIVE_DATA_DIR) : ROOT;
+const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+const KICK_FILE = path.join(DATA_DIR, 'kick.json');
+const POINTS_FILE = path.join(DATA_DIR, 'points.json');
 
 export const MAX_ACCOUNTS = 4; // contas de pontos da Twitch e perfis da Kick
 

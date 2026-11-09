@@ -2,10 +2,9 @@
 // - em que horas cada canal costuma estar ao vivo (a cada minuto);
 // - pontos do canal ganhos por conta e por dia, separados pelo motivo.
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { readJson, writeJson } from './store.js';
+import { readJson, writeJson, DATA_DIR } from './store.js';
 
-const STATS_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'stats.json');
+const STATS_FILE = path.join(DATA_DIR, 'stats.json');
 // Precisa de umas horas de observação antes de dizer "costuma estar ao vivo".
 const MIN_OBSERVED_HOUR = 20; // minutos observados naquela hora do dia
 const KEEP_DAYS = 60;

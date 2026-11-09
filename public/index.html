@@ -112,6 +112,10 @@
   .platform.kick { background: var(--kick); color: #0b1a05; }
   .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px var(--live); flex: none; }
   #page-kick .live-dot { background: var(--kick); box-shadow: 0 0 8px var(--kick); }
+  /* Bolinha piscando: a conta ainda não segue o canal (o follow automático vai chegar nele). */
+  .unfollowed { animation: follow-blink 1.1s ease-in-out infinite; }
+  @keyframes follow-blink { 50% { opacity: .2; } }
+  @media (prefers-reduced-motion: reduce) { .unfollowed { animation: none; opacity: .4; } }
   .empty { color: var(--wa-color-text-quiet); font-size: 13px; padding: 8px 0; }
 
   /* Ao vivo agora: rola sem mostrar a barra, com um degradê embaixo indicando que tem mais. */
@@ -306,8 +310,8 @@
       <div class="actions">
         <wa-button class="events-btn bad" appearance="plain" size="small" data-action="events" data-kind="bad" title="Erros da Twitch e da Kick">
           <wa-icon name="bug" label="Erros"></wa-icon><span class="events-count" data-events-count="bad" hidden></span></wa-button>
-        <wa-button class="events-btn good" appearance="plain" size="small" data-action="events" data-kind="good" title="Baús, Momentos e raids">
-          <wa-icon name="gift" label="Baús, Momentos e raids"></wa-icon><span class="events-count" data-events-count="good" hidden></span></wa-button>
+        <wa-button class="events-btn good" appearance="plain" size="small" data-action="events" data-kind="good" title="Baús, Momentos, raids e follows">
+          <wa-icon name="gift" label="Baús, Momentos, raids e follows"></wa-icon><span class="events-count" data-events-count="good" hidden></span></wa-button>
         <wa-switch size="small" data-autostart>Iniciar com o Windows</wa-switch>
         <wa-button variant="brand" appearance="outlined" size="small" data-restart hidden><wa-icon slot="start" name="rotate-right"></wa-icon>Reiniciar servidor</wa-button>
         <wa-button variant="brand" size="small" href="https://pokeidle-gg.pages.dev/#hunt" target="_blank"><wa-icon slot="end" name="arrow-up-right-from-square"></wa-icon>Hub</wa-button>
@@ -851,10 +855,15 @@
   const playButton = (platform, account, c) => `<wa-button class="play" appearance="plain" size="small" data-action="points-open" data-platform="${platform}" data-key="${esc(accountKey(platform, account))}" data-channel="${esc(c.name)}"
     title="Abrir ${esc(c.name)} com a conta ${esc(account.login)}"><wa-icon name="play" label="Abrir live"></wa-icon></wa-button>`;
 
+  // Bolinha do canal: verde ao vivo, apagada offline; pisca se a conta ainda não segue o canal.
+  // `followed === false` (e não `!followed`) para o painel novo não piscar tudo com o servidor antigo.
+  const UNFOLLOWED_TIP = 'Ainda não segue este canal (o follow automático vai chegar nele)';
+  const statusDot = (live, unfollowed) => `<span class="${live ? 'live-dot' : 'off-dot'} ${unfollowed ? 'unfollowed' : ''}"${unfollowed ? ` title="${UNFOLLOWED_TIP}"` : ''}></span>`;
+
   function pointsRows(platform, account, limit = Infinity) {
     const channels = sortPoints(account.channels).slice(0, limit);
     return `<div>${channels.length ? channels.map((c) => `
-        <div class="row points-row ${c.live ? '' : 'off'}">${c.live ? '<span class="live-dot"></span>' : '<span class="off-dot"></span>'}<span class="name" title="${esc(c.name)}">${esc(c.name)}</span>${streakMark(c)}
+        <div class="row points-row ${c.live ? '' : 'off'}">${statusDot(c.live, c.followed === false)}<span class="name" title="${esc(c.name)}">${esc(c.name)}</span>${streakMark(c)}
           ${c.watching ? `<span class="watch-icon ${c.error ? 'error' : ''}" title="${esc(c.error ? `Assistindo, mas não está contando: ${c.error}` : 'Assistindo: ganhando pontos por tempo assistido')}">
             <wa-icon name="${c.error ? 'triangle-exclamation' : 'eye'}" label="assistindo"></wa-icon></span>` : ''}
           <span class="amount">
@@ -868,9 +877,12 @@
   // Cards da lista de canais parceiros: o mesmo desenho na Twitch e na Kick.
   function channelCards(platform, list) {
     const channels = sortChannels(list).filter((c) => filters[platform] === 'all' || (filters[platform] === 'live') === c.live);
+    // Canais que alguma conta (ativa) desta plataforma ainda não segue.
+    const accounts = (platform === 'twitch' ? state.points?.accounts : state.kick.points?.accounts) ?? [];
+    const unfollowed = new Set(accounts.filter((a) => !a.needsRelink).flatMap((a) => a.channels.filter((c) => c.followed === false).map((c) => c.name)));
     return channels.map((c) => `
       <wa-card class="channel ${c.live ? '' : 'offline'}">
-        <div class="top">${c.live ? '<span class="live-dot"></span>' : ''}<span class="name" title="${esc(c.name)}">${esc(c.name)}</span>${viewersBadge(c)}
+        <div class="top">${c.live ? statusDot(true, unfollowed.has(c.name)) : ''}<span class="name" title="${esc(c.name)}">${esc(c.name)}</span>${viewersBadge(c)}
           <wa-button class="remove" appearance="plain" size="small" data-action="remove-${platform}" data-channel="${esc(c.name)}"><wa-icon name="xmark" label="Remover canal"></wa-icon></wa-button></div>
       </wa-card>`).join('') || '<div class="empty">Nenhum canal aqui.</div>';
   }
@@ -889,7 +901,7 @@
   let eventsSeenBefore = 0; // o que era novo quando a lista abriu (fica destacado)
   const EVENTS_INFO = {
     bad: { title: 'Erros da Twitch e da Kick', intro: 'Erros que as plataformas devolveram nos últimos 30 dias. O mesmo erro da mesma conta só aparece de novo depois de 10 minutos.', empty: 'Nenhum erro nos últimos 30 dias.' },
-    good: { title: 'Baús, Momentos e raids', intro: 'O que as contas da Twitch pegaram nos últimos 30 dias.', empty: 'Nenhum baú, Momento ou raid ainda.' },
+    good: { title: 'Baús, Momentos, raids e follows', intro: 'O que as contas pegaram e os canais que elas seguiram nos últimos 30 dias.', empty: 'Nenhum baú, Momento, raid ou follow ainda.' },
   };
 
   // Quando cada lista foi vista pela última vez (guardado no navegador, para o contador de novos).
@@ -907,7 +919,7 @@
   };
 
   const eventIcon = (e) => e.kind === 'bad' ? 'triangle-exclamation'
-    : /^baú/i.test(e.text) ? 'gift' : /^momento/i.test(e.text) ? 'star' : /raid/i.test(e.text) ? 'people-group' : 'circle-check';
+    : /^baú/i.test(e.text) ? 'gift' : /^momento/i.test(e.text) ? 'star' : /raid/i.test(e.text) ? 'people-group' : /^seguiu/i.test(e.text) ? 'heart' : 'circle-check';
 
   function renderEvents() {
     const events = state.events ?? { good: [], bad: [] };

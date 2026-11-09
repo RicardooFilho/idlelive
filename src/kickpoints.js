@@ -3,11 +3,11 @@
 // espectador que o player do site abre e manda o aviso de "assistindo" de tempos em tempos.
 // Mesmas travas da Twitch (human.js): descanso diário, tempos aleatórios e poucas leituras de saldo.
 import { kick, saveKick, MAX_ACCOUNTS } from './store.js';
-import { fetchKickUser, fetchKickPoints, fetchViewerToken, cleanKickToken } from './kick.js';
+import { fetchKickUser, fetchKickPoints, fetchViewerToken, followKickChannel, cleanKickToken } from './kick.js';
 import { isNetworkError } from './twitch.js';
 import { recordPoints } from './stats.js';
 import { addEvent } from './events.js';
-import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK } from './human.js';
+import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK, FOLLOW_DELAY, FOLLOW_GAP } from './human.js';
 
 const MAX_WATCH = 2; // lives por conta ao mesmo tempo (mais que isso a Kick começa a bloquear)
 const LOOP = 20 * 1000;
@@ -142,7 +142,7 @@ class KickWatch {
 }
 
 // Uma conta da Kick: escolhe as próprias lives pelos próprios saldos.
-class KickAccount {
+export class KickAccount {
   constructor(account, { log }) {
     this.account = account; // objeto salvo em kick.json: { id, username, token, profile, needsRelink }
     this.baseLog = log;
@@ -150,6 +150,9 @@ class KickAccount {
     this.all = [];
     this.channels = new Map(); // canal -> { balance, startBalance, nextCheck }
     this.watches = new Map(); // canal -> KickWatch
+    this.followFailed = new Set(); // canais em que o follow falhou nesta sessão (tenta de novo quando o painel reiniciar)
+    this.nextFollow = 0;
+    this.followBusy = false;
     this.stopped = false;
     this.wasResting = false;
     this.checking = false;
@@ -196,7 +199,11 @@ class KickAccount {
   async start() {
     await sleep(random(START_DELAY));
     if (this.stopped) return;
-    const check = () => this.checkBalances().catch((err) => this.report('bad', `erro ao ler saldos (${err.message})`));
+    this.nextFollow = Date.now() + random(FOLLOW_DELAY);
+    const check = () => {
+      this.checkBalances().catch((err) => this.report('bad', `erro ao ler saldos (${err.message})`));
+      this.followNext();
+    };
     check();
     this.timer = setInterval(check, CHECK_TICK);
     this.loop();
@@ -294,6 +301,32 @@ class KickAccount {
     }
   }
 
+  // Segue os canais da lista, um por vez e com intervalos aleatórios, até seguir todos (inclusive os que a conta
+  // quase nunca assiste). Ordem: lives assistidas, depois as outras ao vivo, depois as offline.
+  // Cada canal seguido fica anotado em kick.json: se a pessoa deixar de seguir depois, a conta não segue de novo.
+  async followNext() {
+    if (!this.farming || this.followBusy || Date.now() < this.nextFollow) return;
+    const followed = this.account.followed ?? [];
+    const rank = (slug) => (this.watches.has(slug) ? 0 : this.live.some((l) => l.slug === slug) ? 1 : 2);
+    const slug = this.all.filter((s) => !followed.includes(s) && !this.followFailed.has(s)).sort((a, b) => rank(a) - rank(b))[0];
+    if (!slug) return;
+    this.followBusy = true;
+    try {
+      const now = await followKickChannel(slug, this.account.token);
+      this.account.followed = [...(this.account.followed ?? []), slug];
+      saveKick();
+      if (now) this.report('good', `seguiu #${slug}`, slug);
+    } catch (err) {
+      if (err.status === 401) return this.markRelink();
+      if (isNetworkError(err)) return; // sem internet: tenta o mesmo canal na próxima vez
+      this.followFailed.add(slug);
+      this.report('bad', `não deu para seguir #${slug} (${err.message})`, slug);
+    } finally {
+      this.followBusy = false;
+      this.nextFollow = Date.now() + random(FOLLOW_GAP);
+    }
+  }
+
   // Lê os saldos que estão na hora (poucos por vez): lives assistidas a cada 5–10 min, o resto a cada ~30.
   async checkBalances() {
     if (!this.farming || this.checking) return;
@@ -365,6 +398,7 @@ class KickAccount {
           balance: c.balance,
           gained: c.balance === null ? 0 : Math.max(0, c.balance - c.startBalance),
           error: this.watches.get(slug)?.error ?? null,
+          followed: (this.account.followed ?? []).includes(slug),
         };
       }),
     };

@@ -6,6 +6,9 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const random = ([min, max]) => min + Math.random() * (max - min);
 
 export const SWITCH_DELAY = [5 * 1000, 45 * 1000]; // espera antes de trocar de live
+// Seguir os canais da lista: um por vez, com um intervalo aleatório entre um e outro, como quem vai clicando aos poucos.
+export const FOLLOW_DELAY = [1 * 60 * 1000, 5 * 60 * 1000]; // espera antes do primeiro follow, depois de a conta começar
+export const FOLLOW_GAP = [3 * 60 * 1000, 10 * 60 * 1000]; // intervalo entre um follow e o próximo
 export const START_DELAY = [0, 90 * 1000]; // cada conta começa num momento diferente
 export const CHECK_OTHERS = [25 * 60 * 1000, 35 * 60 * 1000]; // saldo das lives que a conta não está assistindo
 export const CHECK_TICK = 60 * 1000; // de quanto em quanto tempo vê se algum saldo precisa ser lido

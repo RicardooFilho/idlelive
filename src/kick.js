@@ -57,8 +57,8 @@ class KickError extends Error {
   }
 }
 
-async function siteGet(path, token) {
-  const res = await fetch(`${SITE_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+async function siteGet(path, token, method = 'GET') {
+  const res = await fetch(`${SITE_URL}${path}`, { method, headers: token ? { Authorization: `Bearer ${token}` } : {} });
   if (res.status === 401) throw new KickError('token da Kick recusado', 401);
   if (res.status === 403) throw new KickError('a Kick bloqueou o pedido', 403);
   if (!res.ok) throw new KickError(`a Kick respondeu ${res.status}`, res.status);
@@ -87,6 +87,21 @@ export async function fetchKickUser(token) {
 export async function fetchKickPoints(slug, token) {
   const data = await siteGet(`/v2/channels/${encodeURIComponent(slug)}/points`, token);
   return data?.data?.points ?? data?.points ?? 0;
+}
+
+// Segue o canal com a conta. Se ela já segue, não faz nada (para não trocar nada que a pessoa ajustou).
+// Retorna true se seguiu agora, false se já seguia.
+export async function followKickChannel(slug, token) {
+  const path = `/v2/channels/${encodeURIComponent(slug)}`;
+  const me = await siteGet(`${path}/me`, token).catch((err) => {
+    if (err.status === 401) throw err;
+    return null; // sem a resposta, tenta seguir mesmo assim
+  });
+  if (me?.is_following) return false;
+  const res = await fetch(`${SITE_URL}${path}/follow`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+  if (res.status === 401) throw new KickError('token da Kick recusado', 401);
+  if (!res.ok) throw new KickError(`a Kick respondeu ${res.status}`, res.status);
+  return true;
 }
 
 // Token da conexão de espectador (websockets.kick.com), ligado à conta e ao canal.

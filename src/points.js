@@ -6,7 +6,7 @@ import { startDeviceFlow, waitDeviceToken, refreshToken, validate, revoke, isNet
 import { pointsAccounts, savePoints, MAX_ACCOUNTS } from './store.js';
 import { recordPoints } from './stats.js';
 import { addEvent } from './events.js';
-import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK } from './human.js';
+import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK, FOLLOW_DELAY, FOLLOW_GAP } from './human.js';
 
 const SCOPES = 'channel_read chat:read user_blocks_edit user_blocks_read user_follows_edit user_read';
 const TV_UA = 'Mozilla/5.0 (Linux; Android 7.1; Smart Box C1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36';
@@ -18,6 +18,7 @@ const HASHES = {
   ClaimCommunityPoints: '46aaeebe02c99afdf4fc97c7c0cba964124bf6b0af229395f1f6d1feed05b3d0',
   CommunityMomentCallout_Claim: 'e2d67415aead910f7f9ceb45a77b750a1e1d9622c936d832328a0689e054db62',
   JoinRaid: 'c6a332a86d1087fbbb1a8623aa01bd1313d2386e7c63be60fdb2d1901f01a4ae',
+  FollowButton_FollowUser: '800e7346bdf7e5278a3c1d3f21b2b56e2639928f86815677a7126b093b2fdd08',
 };
 
 const MAX_WATCH = 2; // a Twitch só conta tempo assistido em 2 lives ao mesmo tempo, por conta
@@ -179,7 +180,7 @@ class PubSub {
 }
 
 // Uma conta de pontos: escolhe as próprias lives pelos próprios saldos.
-class PointsAccount {
+export class PointsAccount {
   constructor(account, { log, channelNames }) {
     this.account = account; // objeto salvo em points.json
     this.baseLog = log;
@@ -191,6 +192,9 @@ class PointsAccount {
     this.all = []; // todos os canais oficiais, ao vivo ou não
     this.channels = new Map(); // canal -> { balance, startBalance, claims, moments, watchedMs, broadcastId, error, nextCheck }
     this.claiming = new Set(); // baús e Momentos esperando para serem pegos
+    this.followFailed = new Set(); // canais em que o follow falhou nesta sessão (tenta de novo quando o painel reiniciar)
+    this.nextFollow = 0;
+    this.followBusy = false;
     this.wasResting = false;
     this.checking = false;
     this.watching = [];
@@ -245,7 +249,11 @@ class PointsAccount {
     await sleep(random(START_DELAY));
     if (this.stopped) return;
     if (this.active && !this.resting) this.pubsub.start();
-    const check = () => this.checkBonuses().catch((err) => this.report('bad', `erro ao checar bônus (${err.message})`));
+    this.nextFollow = Date.now() + random(FOLLOW_DELAY);
+    const check = () => {
+      this.checkBonuses().catch((err) => this.report('bad', `erro ao checar bônus (${err.message})`));
+      this.followNext();
+    };
     check();
     this.timer = setInterval(check, CHECK_TICK);
     this.watchLoop();
@@ -566,6 +574,43 @@ class PointsAccount {
     }
   }
 
+  // Segue os canais da lista, um por vez e com intervalos aleatórios, até seguir todos (inclusive os que a conta
+  // quase nunca assiste). Ordem: lives assistidas, depois as outras ao vivo, depois as offline.
+  // Cada canal seguido fica anotado em points.json: se a pessoa deixar de seguir depois, a conta não segue de novo.
+  async followNext() {
+    if (!this.farming || this.followBusy || Date.now() < this.nextFollow) return;
+    const followed = this.account.followed ?? [];
+    const rank = (name) => (this.watching.includes(name) ? 0 : this.live.some((l) => l.name === name) ? 1 : 2);
+    // O follow precisa do id do canal, que vem da lista de lives ou da leitura de saldo; sem ele, o canal espera.
+    const name = this.all
+      .filter((n) => !followed.includes(n) && !this.followFailed.has(n) && this.channelId(n))
+      .sort((a, b) => rank(a) - rank(b))[0];
+    if (!name) return;
+    this.followBusy = true;
+    try {
+      const data = await this.gql('FollowButton_FollowUser', { input: { targetID: this.channelId(name), disableNotifications: false } });
+      const code = data.followUser?.error?.code;
+      if (code) throw new Error(code);
+      this.account.followed = [...(this.account.followed ?? []), name];
+      savePoints();
+      this.report('good', `seguiu #${name}`, name);
+    } catch (err) {
+      if (!this.active || isNetworkError(err)) return; // sem internet: tenta o mesmo canal na próxima vez
+      this.followFailed.add(name);
+      this.report('bad', `não deu para seguir #${name} (${err.message})`, name);
+    } finally {
+      this.followBusy = false;
+      this.nextFollow = Date.now() + random(FOLLOW_GAP);
+    }
+  }
+
+  channelId(name) {
+    const live = this.live.find((l) => l.name === name)?.channelId;
+    if (live) return live;
+    for (const [id, n] of this.channelNames) if (n === name) return id;
+    return null;
+  }
+
   // Raid de um canal oficial: só entra se ela vai para outro canal oficial e se a conta estava assistindo quem fez a raid.
   async joinRaid(fromId, raid) {
     const from = this.channelNames.get(fromId);
@@ -656,6 +701,7 @@ class PointsAccount {
           // Sequência da live atual já garantida (só faz sentido com o canal ao vivo).
           streak: live.has(name) && !!c.broadcastId && (this.account.streakDone ?? []).includes(c.broadcastId),
           error: c.error,
+          followed: (this.account.followed ?? []).includes(name),
         };
       }),
     };

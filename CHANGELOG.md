@@ -8,6 +8,9 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 - **Follow automático:** cada conta (Twitch e Kick) segue todos os canais da lista, inclusive os que ela quase nunca assiste. Segue um por vez, a cada 3 a 10 minutos (tempo aleatório, como uma pessoa), começando pelas lives que está assistindo. Cada canal só é seguido uma vez por conta: se você deixar de seguir depois, a conta não segue de novo. Os follows aparecem na lista do ícone de **presente** 🎁.
 - **Bolinha piscando = ainda não segue:** nos cards de pontos, a bolinha do canal pisca enquanto aquela conta não segue o canal. Nos cards de "Canais parceiros", a bolinha verde pisca se alguma conta ainda não segue.
 
+### Correções
+- **Pontos de follow da Kick no Histórico:** o bônus que a Kick dá ao seguir um canal agora aparece no Histórico como **Follow**. Antes ele era contado como tempo assistido ou, se o saldo do canal ainda não tinha sido lido, nem entrava.
+
 ## 07/11/2026
 
 ### Novidades

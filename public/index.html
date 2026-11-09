@@ -972,13 +972,14 @@
       <wa-icon slot="icon" name="${a.variant === 'danger' ? 'circle-exclamation' : 'triangle-exclamation'}"></wa-icon>${esc(a.text)}</wa-callout>`).join(''));
   }
 
-  // Motivos dos pontos (reason_code da Twitch). Os que não estão aqui aparecem com o código.
+  // Motivos dos pontos (reason_code da Twitch; FOLLOW é o bônus de follow da Kick). Os que não estão aqui aparecem com o código.
   const REASONS = {
     WATCH: 'Tempo assistido',
     CLAIM: 'Baús',
     WATCH_STREAK: 'Sequências',
     RAID: 'Raids',
     COMMUNITY_MOMENT: 'Momentos',
+    FOLLOW: 'Follow',
     OTHER: 'Sem detalhe',
   };
   const reasonName = (code) => REASONS[code] ?? code.toLowerCase().replaceAll('_', ' ');

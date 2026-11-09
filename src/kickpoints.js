@@ -7,7 +7,7 @@ import { fetchKickUser, fetchKickPoints, fetchViewerToken, followKickChannel, cl
 import { isNetworkError } from './twitch.js';
 import { recordPoints } from './stats.js';
 import { addEvent } from './events.js';
-import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK, FOLLOW_DELAY, FOLLOW_GAP } from './human.js';
+import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK, FOLLOW_DELAY, FOLLOW_GAP, FOLLOW_CHECK } from './human.js';
 
 const MAX_WATCH = 2; // lives por conta ao mesmo tempo (mais que isso a Kick começa a bloquear)
 const LOOP = 20 * 1000;
@@ -15,6 +15,7 @@ const CHECK_WATCHING = [5 * 60 * 1000, 10 * 60 * 1000];
 const TRACK_EVERY = [9.5 * 1000, 12.5 * 1000]; // aviso de "assistindo", como o player
 const HANDSHAKE_EVERY = [25 * 1000, 35 * 1000]; // "ainda estou neste canal" + ping
 const FAILS_ALERT = 3;
+const FOLLOW_CHECKS = 3; // leituras logo depois do follow em que a diferença de saldo conta como bônus de follow
 const SILENCE_LIMIT = 90 * 1000; // sem nada da Kick nesse tempo, a conexão está "morta" (PC hibernou, roteador caiu)
 const STABLE_AFTER = 60 * 1000; // a espera entre reconexões só volta ao mínimo depois de a conexão ficar de pé esse tempo
 
@@ -312,10 +313,21 @@ export class KickAccount {
     if (!slug) return;
     this.followBusy = true;
     try {
+      // Saldo de antes do follow, para o bônus de follow não virar o saldo inicial (e sumir do histórico).
+      if (this.channel(slug).balance === null) {
+        await this.checkChannel(slug);
+        if (!this.active) return;
+      }
       const now = await followKickChannel(slug, this.account.token);
       this.account.followed = [...(this.account.followed ?? []), slug];
       saveKick();
-      if (now) this.report('good', `seguiu #${slug}`, slug);
+      if (now) {
+        this.report('good', `seguiu #${slug}`, slug);
+        // Lê o saldo logo depois: a diferença das próximas leituras vai para o histórico como follow.
+        const ch = this.channel(slug);
+        ch.followChecks = FOLLOW_CHECKS;
+        ch.nextCheck = Date.now() + random(FOLLOW_CHECK);
+      }
     } catch (err) {
       if (err.status === 401) return this.markRelink();
       if (isNetworkError(err)) return; // sem internet: tenta o mesmo canal na próxima vez
@@ -365,8 +377,15 @@ export class KickAccount {
       }
       return;
     }
-    // A Kick não avisa o motivo dos pontos: o histórico anota a diferença de saldo como tempo assistido.
-    if (ch.balance !== null && balance > ch.balance) recordPoints(`${this.account.username} (Kick)`, 'WATCH', balance - ch.balance);
+    // A Kick não avisa o motivo dos pontos: o histórico anota a diferença de saldo como tempo assistido,
+    // ou como follow se a conta acabou de seguir o canal (o bônus pode demorar, então vale por algumas leituras).
+    const gain = ch.balance === null ? 0 : balance - ch.balance;
+    const reason = ch.followChecks > 0 ? 'FOLLOW' : 'WATCH';
+    if (gain > 0) recordPoints(`${this.account.username} (Kick)`, reason, gain);
+    if (ch.followChecks > 0) {
+      ch.followChecks = gain > 0 ? 0 : ch.followChecks - 1;
+      if (ch.followChecks > 0) ch.nextCheck = Date.now() + random(FOLLOW_CHECK); // o bônus ainda não caiu: olha de novo logo
+    }
     ch.balance = balance;
     ch.startBalance ??= balance;
   }

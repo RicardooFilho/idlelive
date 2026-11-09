@@ -11,6 +11,7 @@ after(() => fs.rmSync(dataDir, { recursive: true, force: true }));
 
 const { KickAccount } = await import('../src/kickpoints.js');
 const { recentEvents } = await import('../src/events.js');
+const { pointsHistory } = await import('../src/stats.js');
 
 // Nenhum teste fala com a Kick: o fetch falso responde pelo endereço (ver `respond`).
 const realFetch = globalThis.fetch;
@@ -141,6 +142,43 @@ test('followNext: sem internet tenta o mesmo canal na próxima vez', async () =>
   acc.nextFollow = 0;
   await acc.followNext();
   assert.deepEqual(posts, ['assistido', 'assistido']);
+});
+
+// Pontos de follow anotados no histórico de hoje para a conta de teste.
+const followPoints = () => pointsHistory(1)[0]?.accounts?.['kconta (Kick)']?.FOLLOW?.points ?? 0;
+
+test('followNext: bônus de follow entra no histórico como FOLLOW, mesmo sem saldo lido antes', async () => {
+  const acc = followSetup();
+  let balance = 100;
+  respond = (url, options) => {
+    if (options.method === 'POST') balance += 50; // a Kick dá o bônus ao seguir
+    return json(url.endsWith('/points') ? { data: { points: balance } } : {});
+  };
+  const before = followPoints();
+  acc.nextFollow = 0;
+  await acc.followNext();
+  assert.equal(acc.channel('assistido').balance, 100); // leu o saldo antes do follow
+  assert.ok(acc.channel('assistido').nextCheck > Date.now()); // e marcou uma leitura logo depois
+  await acc.checkChannel('assistido');
+  assert.equal(followPoints() - before, 50);
+  // Depois do bônus, o que sobe volta a ser tempo assistido.
+  balance += 10;
+  await acc.checkChannel('assistido');
+  assert.equal(followPoints() - before, 50);
+});
+
+test('followNext: bônus atrasado ainda conta como follow nas leituras seguintes', async () => {
+  const acc = followSetup();
+  let balance = 0;
+  respond = (url) => json(url.endsWith('/points') ? { points: balance } : {});
+  const before = followPoints();
+  acc.nextFollow = 0;
+  await acc.followNext();
+  await acc.checkChannel('assistido'); // bônus ainda não caiu
+  assert.ok(acc.channel('assistido').nextCheck <= Date.now() + 90 * 1000); // olha de novo logo
+  balance = 30;
+  await acc.checkChannel('assistido');
+  assert.equal(followPoints() - before, 30);
 });
 
 test('followNext: não segue no descanso, sem token ou com outro follow em andamento', async () => {

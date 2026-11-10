@@ -488,6 +488,11 @@
               <span>Reiniciar o servidor para carregar atualizações. As contas de pontos param por alguns segundos e voltam sozinhas.</span>
               <wa-button variant="brand" appearance="outlined" size="small" data-restart hidden><wa-icon slot="start" name="rotate-right"></wa-icon>Reiniciar</wa-button>
             </div>
+            <wa-divider></wa-divider>
+            <div class="setting-row">
+              <span id="update-status">Versão</span>
+              <wa-button variant="brand" appearance="outlined" size="small" data-action="update-check"><wa-icon slot="start" name="arrows-rotate"></wa-icon>Procurar atualização</wa-button>
+            </div>
           </wa-card>
           <wa-card>
             <h2 slot="header"><wa-icon name="window-maximize"></wa-icon>Navegador e perfis</h2>
@@ -1259,8 +1264,26 @@
   });
 
   function renderAlerts() {
-    setHTML($('alerts'), (state.alerts ?? []).map((a) => `<wa-callout variant="${esc(a.variant)}" size="small">
+    setHTML($('alerts'), updateCallout() + (state.alerts ?? []).map((a) => `<wa-callout variant="${esc(a.variant)}" size="small">
       <wa-icon slot="icon" name="${a.variant === 'danger' ? 'circle-exclamation' : 'triangle-exclamation'}"></wa-icon>${esc(a.text)}</wa-callout>`).join(''));
+  }
+
+  // Aviso de versão nova no topo. O servidor antigo não manda "update", então sem ele não mostra nada.
+  function updateCallout() {
+    const u = state.update;
+    if (u?.installed) {
+      return `<wa-callout variant="success" size="small"><wa-icon slot="icon" name="circle-check"></wa-icon>
+        Versão ${esc(u.installed)} instalada. Feche a janela preta e abra o <b>iniciar.bat</b> de novo para usar a versão nova.</wa-callout>`;
+    }
+    if (!u?.available) return '';
+    const notes = `<wa-button size="small" appearance="outlined" href="${esc(u.url)}" target="_blank">Ver novidades</wa-button>`;
+    return `<wa-callout variant="brand" size="small"><wa-icon slot="icon" name="circle-up"></wa-icon>
+      <div class="link-box">
+        <div>Saiu a versão <b>${esc(u.latest)}</b> do IdleLive (a sua é a ${esc(u.current)}).
+          ${u.canInstall ? '' : '<div class="meta">Esta pasta usa git: atualize com <code>git pull</code> ou baixe o <b>IdleLive.zip</b> da release.</div>'}</div>
+        ${notes}
+        ${u.canInstall ? `<wa-button size="small" variant="brand" data-action="update-install" ${u.installing ? 'loading' : ''}><wa-icon slot="start" name="download"></wa-icon>Atualizar agora</wa-button>` : ''}
+      </div></wa-callout>`;
   }
 
   // Motivos dos pontos (reason_code da Twitch; FOLLOW é o bônus de follow da Kick). Os que não estão aqui aparecem com o código.
@@ -1359,6 +1382,15 @@
       }
     }
 
+    const u = state.update;
+    setHTML($('update-status'), !u ? 'Reinicie o servidor para ver a versão.'
+      : `Versão <b>${esc(u.current)}</b>. ${u.installed ? `A ${esc(u.installed)} já foi instalada: feche a janela preta e abra o iniciar.bat de novo.`
+        : u.available ? `Saiu a ${esc(u.latest)}: use o aviso no topo para atualizar.`
+        : u.error ? `Não deu para procurar agora: ${esc(u.error.replace(/^não deu para procurar atualização /, ''))}`
+        : u.checkedAt ? 'É a mais nova.' : 'O painel procura versão nova sozinho a cada 6 horas.'}
+        <div class="meta">A atualização troca só os arquivos do programa. As suas contas, canais e histórico continuam.</div>`);
+    $$('[data-action="update-check"]').forEach((b) => (b.loading = !!u?.checking));
+
     setHTML($('kick-app-status'), k.appConfigured && !k.error
       ? '<wa-callout variant="success" size="small"><wa-icon slot="icon" name="circle-check"></wa-icon>Conectado à API da Kick.</wa-callout>'
       : k.appConfigured && k.error ? `<wa-callout variant="danger" size="small"><wa-icon slot="icon" name="circle-exclamation"></wa-icon>Erro na API da Kick: ${esc(k.error)}</wa-callout>`
@@ -1367,20 +1399,51 @@
 
   // ---------- Ações ----------
 
-  // Pede para o servidor reiniciar e recarrega a página quando ele voltar.
-  async function restartServer() {
-    if (!confirm('Reiniciar o servidor? As contas de pontos param por alguns segundos e voltam sozinhas.')) return;
-    $$('[data-restart]').forEach((b) => (b.loading = true));
-    clearInterval(poller);
-    await fetch('/api/restart', { method: 'POST' }).catch(() => {});
+  // Espera o servidor voltar depois de reiniciar e recarrega a página (que pode ser a da versão nova).
+  async function waitForServer() {
     await new Promise((r) => setTimeout(r, 1500));
     for (let i = 0; i < 60; i++) {
       const ok = await fetch('/api/state').then((r) => r.ok, () => false);
       if (ok) return location.reload();
       await new Promise((r) => setTimeout(r, 1000));
     }
-    $$('[data-restart]').forEach((b) => (b.loading = false));
     toast('O servidor não voltou. Veja a janela preta (a que abriu com o iniciar.bat) e abra o iniciar.bat de novo se ela estiver fechada.');
+  }
+
+  // Pede para o servidor reiniciar e recarrega a página quando ele voltar.
+  async function restartServer() {
+    if (!confirm('Reiniciar o servidor? As contas de pontos param por alguns segundos e voltam sozinhas.')) return;
+    $$('[data-restart]').forEach((b) => (b.loading = true));
+    clearInterval(poller);
+    await fetch('/api/restart', { method: 'POST' }).catch(() => {});
+    await waitForServer();
+    $$('[data-restart]').forEach((b) => (b.loading = false));
+  }
+
+  // Baixa a versão nova do GitHub. Com o iniciar.bat, o servidor reinicia sozinho e a página recarrega.
+  async function installUpdate() {
+    const u = state.update;
+    if (!confirm(`Atualizar o IdleLive para a versão ${u.latest}? As contas de pontos param por alguns segundos e voltam sozinhas. Suas contas e canais continuam.`)) return;
+    $$('[data-action="update-install"]').forEach((b) => (b.loading = true));
+    clearInterval(poller);
+    let data;
+    try {
+      const res = await fetch('/api/update', { method: 'POST' });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+    } catch (err) {
+      toast(err.message || 'Não deu para atualizar. Tente de novo em alguns minutos.');
+      $$('[data-action="update-install"]').forEach((b) => (b.loading = false));
+      poller = setInterval(() => api('GET', 'state'), 5000);
+      return;
+    }
+    if (data.updated.restart) {
+      toast(`Versão ${data.updated.version} instalada. Reiniciando…`, 'info');
+      return waitForServer();
+    }
+    state = data;
+    render();
+    poller = setInterval(() => api('GET', 'state'), 5000);
   }
 
   // Botão do meio (scroll) no ▶ também abre a live, para abrir várias seguidas como links em abas novas.
@@ -1415,6 +1478,8 @@
     const accountPath = platform === 'kick' ? `kick/accounts/${encodeURIComponent(key)}` : `points/${encodeURIComponent(key)}`;
     if (action === 'points-link') api('POST', 'points/link');
     if (action === 'events') openEvents(el.dataset.kind);
+    if (action === 'update-install') installUpdate();
+    if (action === 'update-check') api('POST', 'update/check').then((ok) => ok && toast(state.update?.available ? `Saiu a versão ${state.update.latest}.` : state.update?.error ? 'Não deu para procurar agora. Tente mais tarde.' : 'Você já está na versão mais nova.', state.update?.error ? 'error' : 'info'));
     if (action === 'go-twitch-link') {
       show('twitch');
       api('POST', 'points/link');
@@ -1560,7 +1625,7 @@
     lolidle: ['LoLdle', 'Contas da Twitch no chat das lives dos parceiros'],
     'lolidle-kick': ['LoLdle', 'Kick'],
     historico: ['Histórico', 'Pontos ganhos por dia, na Twitch e na Kick, e de onde vieram'],
-    config: ['Configurações', 'Iniciar com o Windows, reiniciar o servidor, navegador e app da Kick'],
+    config: ['Configurações', 'Iniciar com o Windows, reiniciar, atualizar, navegador e app da Kick'],
   };
   let bookmarkToken = null;
   if (location.hash.startsWith('#kick-token=')) {
@@ -1595,7 +1660,7 @@
 
   $('server-host').textContent = location.host;
   api('GET', 'state').then(() => bookmarkToken && addKickFromBookmark(bookmarkToken));
-  const poller = setInterval(() => api('GET', 'state'), 5000);
+  let poller = setInterval(() => api('GET', 'state'), 5000);
 </script>
 </body>
 </html>

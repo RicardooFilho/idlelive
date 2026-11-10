@@ -1,3 +1,11 @@
 # Scripts do Windows precisam de CRLF (o cmd se perde com "goto" em .bat só com LF).
 *.bat text eol=crlf
 *.ps1 text eol=crlf
+# Fora do zip da release (e do download do atualizador): só serve para quem programa.
+/.github export-ignore
+/test export-ignore
+/scripts export-ignore
+/AGENTS.md export-ignore
+/CLAUDE.md export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore

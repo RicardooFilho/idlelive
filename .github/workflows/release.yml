@@ -1,0 +1,43 @@
+# Publica uma release quando uma tag "v<versão>" é enviada (ex.: git tag v1.2.0 && git push origin v1.2.0).
+# O painel dos jogadores procura a release mais nova e se atualiza sozinho por ela.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Sintaxe
+        run: npm run check
+      - name: Testes
+        run: npm test
+      # O painel compara a versão do package.json com a tag: as duas precisam bater.
+      - name: Confere a versão
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "A tag $GITHUB_REF_NAME não bate com a versão do package.json ($VERSION)"
+            exit 1
+          fi
+      - name: Monta o zip e o texto
+        run: |
+          git archive --format=zip --prefix=IdleLive/ -o IdleLive.zip HEAD
+          PREV=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          SINCE=$([ -n "$PREV" ] && git log -1 --format=%cs "$PREV" || true)
+          node scripts/release-notes.js $SINCE > notas.md
+      - name: Publica
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" IdleLive.zip --title "IdleLive ${GITHUB_REF_NAME#v}" --notes-file notas.md

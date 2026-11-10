@@ -15,6 +15,7 @@ import { KickMiner } from './src/kickpoints.js';
 import { LolIdleMiner } from './src/lolidle.js';
 import { sleep } from './src/human.js';
 import { addEvent, recentEvents } from './src/events.js';
+import { Updater } from './src/update.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const LIVE_INTERVAL = 60 * 1000;
@@ -35,6 +36,7 @@ let liveOffline = false; // a última falha foi falta de internet?
 const miner = new PointsMiner({ log });
 const kickMiner = new KickMiner({ log });
 const lolMiner = new LolIdleMiner({ log });
+const updater = new Updater({ log });
 
 // ---------- Twitch ----------
 
@@ -251,6 +253,7 @@ function state() {
     maxAccounts: MAX_ACCOUNTS,
     autostart: autostartEnabled(),
     canRestart: CAN_RESTART,
+    update: updater.state(),
     channels: config.channels.map((name) => ({
       name,
       live: live.has(name),
@@ -316,6 +319,28 @@ async function handleApi(req, res, url) {
     log('Reiniciando o servidor…');
     // O iniciar.bat abre o servidor de novo quando ele sai com esse código.
     setTimeout(() => process.exit(RESTART_CODE), 300);
+    return;
+  }
+
+  // Atualização: /api/update/check (procurar agora) e /api/update (baixar e instalar a versão nova).
+  if (req.method === 'POST' && resource === 'update') {
+    if (id === 'check') {
+      await updater.check();
+      return send(res, 200, state());
+    }
+    let result;
+    try {
+      result = await updater.install();
+    } catch (err) {
+      return send(res, 400, { error: `Não deu para atualizar: ${err.message}` });
+    }
+    // Com o iniciar.bat trocado, o cmd que roda ele pode se perder: o jogador fecha a janela e abre de novo.
+    const restart = CAN_RESTART && !result.launcherChanged;
+    send(res, 200, { ...state(), updated: { ...result, restart } });
+    if (restart) {
+      log('Reiniciando para usar a versão nova…');
+      setTimeout(() => process.exit(RESTART_CODE), 300);
+    }
     return;
   }
 
@@ -440,6 +465,7 @@ await updateKickLive();
 miner.start();
 kickMiner.start();
 lolMiner.start();
+updater.start();
 setInterval(safeUpdateLive, LIVE_INTERVAL);
 setInterval(updateKickLive, LIVE_INTERVAL);
 setInterval(() => miner.ensureFresh().catch((err) => log(`Pontos: erro ao checar token (${err.message})`)), TOKEN_INTERVAL);

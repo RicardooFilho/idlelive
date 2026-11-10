@@ -5,6 +5,9 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 ## 10/11/2026
 
 ### Novidades
+- **Atualização pelo painel:** o painel procura versão nova no GitHub a cada 6 horas e mostra um aviso no topo. O botão **Atualizar agora** baixa a versão nova, troca os arquivos do programa e reinicia sozinho, sem precisar de git. Suas contas, canais e histórico continuam. Em **Configurações** aparece a versão atual e o botão **Procurar atualização**.
+- **Download pelo IdleLive.zip:** cada versão sai como release no GitHub, com o zip pronto para extrair.
+- O `iniciar.bat` avisa quando o Node.js não está instalado e abre o site para baixar.
 - **LoLdle:** vincule até 4 contas da Twitch em **LoLdle → Twitch**: cada conta entra em silêncio no chat dos 47 canais parceiros que estiverem ao vivo e sai quando a live acaba. É assim que o jogo dá o bônus de XP. Não manda mensagem e não assiste a live; pode ser a mesma conta do Pokeidle. O card de cada conta mostra em quais chats ela está agora.
 
 ### Mudanças

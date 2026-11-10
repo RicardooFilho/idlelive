@@ -37,6 +37,7 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - Tem a opção **Iniciar com o Windows**, que abre o painel minimizado quando o PC liga.
 - O botão **Reiniciar servidor** fecha e abre o servidor de novo, para carregar atualizações sem fechar a janela preta.
 - O botão **Hub** leva direto para o hub do jogo.
+- Avisa quando sai versão nova e se atualiza com um clique (veja [Atualizar](#atualizar)).
 
 ## Do que você precisa
 
@@ -47,13 +48,21 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 
 ## Instalação
 
-1. Baixe o projeto: botão verde **Code → Download ZIP** aqui no GitHub. Depois extraia numa pasta.
-   Se você usa git: `git clone https://github.com/RicardooFilho/idlelive.git`
+1. Baixe o **IdleLive.zip** da [release mais nova](https://github.com/RicardooFilho/idlelive/releases/latest) e extraia numa pasta (por exemplo, em Documentos).
 2. Dê dois cliques em **`iniciar.bat`**.
    Vai abrir uma janela preta (o servidor) e o painel no navegador, em http://localhost:3000.
    Deixe a janela preta aberta. Pode minimizar.
+   Se o Node.js não estiver instalado, o `iniciar.bat` avisa e abre o site para baixar.
 
 Não precisa rodar `npm install`: o projeto não tem dependências.
+
+## Atualizar
+
+O painel procura versão nova sozinho (a cada 6 horas) e mostra um aviso no topo quando sai uma. Clique em **Atualizar agora**: ele baixa a versão nova do GitHub, troca os arquivos do programa e reinicia sozinho. Suas contas, canais e histórico continuam. Também dá para procurar na hora em **Configurações → Procurar atualização**.
+
+A atualização não mexe no `config.json`, então canais que entrarem na lista de parceiros numa versão nova precisam ser adicionados à mão (campo **Adicionar canal**).
+
+**Baixou com `git clone` ou pelo "Download ZIP" do botão verde?** Faça a troca uma vez só: baixe o **IdleLive.zip** da release, extraia numa pasta nova e copie da pasta antiga para a nova os arquivos da tabela em [Seus dados e segurança](#seus-dados-e-segurança) e o `config.json`. Depois disso, as atualizações são pelo botão. Numa pasta com git o painel só avisa da versão nova, sem instalar, para não bagunçar o repositório.
 
 ## Primeiros passos
 
@@ -145,14 +154,25 @@ src/stats.js           horários das lives e histórico de pontos
 src/events.js          erros e baús/Momentos/raids dos últimos 30 dias (eventos.jsonl)
 src/autostart.js       atalho "Iniciar com o Windows"
 src/store.js           leitura e gravação dos arquivos .json
+src/update.js          atualizador: procura a release nova no GitHub e troca os arquivos
 test/*.test.js         testes automatizados (node:test, sem dependências)
 scripts/check.js       confere a sintaxe de todos os .js
-.github/workflows/     CI: sintaxe e testes no Node 20, 22 e 24 a cada push
+scripts/release-notes.js  texto da release, tirado do CHANGELOG.md
+.github/workflows/     CI (sintaxe e testes no Node 20, 22 e 24 a cada push) e release (a cada tag v*)
 config.json            listas de canais
 ```
 
 Para trocar a porta, defina `PORT` antes de iniciar (ex.: `set PORT=3005`).
 
 Para conferir o código: `npm run check` (sintaxe de todos os arquivos) e `npm test` (testes). Os testes não usam internet nem as suas contas: os arquivos de dados ficam numa pasta temporária (`IDLELIVE_DATA_DIR`). O GitHub Actions roda os dois a cada push e pull request.
+
+**Publicar uma versão:** suba o `version` do `package.json` (ex.: `1.1.0`), faça o commit e envie a tag com o mesmo número:
+
+```
+git tag v1.1.0
+git push origin main v1.1.0
+```
+
+O GitHub Actions roda os testes, monta o `IdleLive.zip` (sem `test/`, `scripts/`, `.github/` e os arquivos de agente, marcados com `export-ignore` no `.gitattributes`) e publica a release com as seções do CHANGELOG desde a anterior. Os painéis dos jogadores veem a versão nova em até 6 horas.
 
 Veja o [CHANGELOG.md](CHANGELOG.md) para o histórico de mudanças e o [AGENTS.md](AGENTS.md) para as regras do projeto.

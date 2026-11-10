@@ -231,7 +231,7 @@ export class KickAccount {
   markRelink() {
     if (this.account.needsRelink) return;
     this.netFails = 0;
-    this.report('bad', 'o token foi recusado; cole um token novo na página Kick');
+    this.report('bad', 'o token foi recusado; cole um token novo em Pokeidle → Kick');
     this.account.needsRelink = true;
     saveKick();
     for (const w of this.watches.values()) w.stop();
@@ -392,7 +392,7 @@ export class KickAccount {
 
   alerts({ offline = false } = {}) {
     const who = this.account.username;
-    if (this.account.needsRelink) return [{ variant: 'danger', text: `O token da conta ${who} da Kick foi recusado. Cole um token novo na página Kick.` }];
+    if (this.account.needsRelink) return [{ variant: 'danger', text: `O token da conta ${who} da Kick foi recusado. Cole um token novo em Pokeidle → Kick.` }];
     if (offline) return [];
     if (this.siteFails >= FAILS_ALERT) return [{ variant: 'danger', text: `A Kick está recusando os pedidos da conta ${who}: ${this.siteError}. Os pontos dela podem não estar contando.` }];
     return [];

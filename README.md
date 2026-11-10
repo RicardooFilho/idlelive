@@ -29,7 +29,7 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - O botão **▶** abre a live no navegador, no perfil da conta, para você resgatar as recompensas.
 
 **Painel**
-- Menu lateral com **Visão geral** (resumo de tudo), **Twitch**, **Kick**, **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
+- Menu lateral com **Visão geral** (resumo de tudo), os jogos (**Pokeidle** e **LoLdle**, cada um com as abas **Twitch** e **Kick**), **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
 - No topo, o ícone de inseto 🐞 lista os erros da Twitch e da Kick, e o de presente 🎁 lista os baús, Momentos, raids, follows e resgates, dos últimos 30 dias.
 - Avisos no topo quando algo para de funcionar (conta para vincular de novo, Twitch recusando pedidos, conexão caída). No celular, ele vira uma gaveta no botão ☰.
 
@@ -58,7 +58,7 @@ Não precisa rodar `npm install`: o projeto não tem dependências.
 ## Primeiros passos
 
 ### Twitch
-1. Na página **Twitch**, em **Pontos do canal**, clique em **+ Vincular conta**.
+1. Em **Pokeidle → Twitch**, em **Pontos do canal**, clique em **+ Vincular conta**.
 2. Vai aparecer um link e um código. Abra o link **numa janela anônima**, para não confirmar na conta errada.
 3. Entre na conta da Twitch que vai juntar os pontos e confirme o código.
 4. Repita para cada conta, até 4.
@@ -69,13 +69,19 @@ Para o botão **▶** abrir a live já logada na conta certa: crie um perfil no 
 
 ### Kick
 A Kick não tem login por código: cada conta entra pelo **token** dela, que fica no navegador.
-1. Na página **Kick**, em **Pontos do canal**, clique em **+ Adicionar conta**.
+1. Em **Pokeidle → Kick**, em **Pontos do canal**, clique em **+ Adicionar conta**.
 2. Mostre a barra de favoritos (**Ctrl+Shift+B**) e arraste o botão **⚡ Enviar para o IdleLive** para ela. Só na primeira vez (em cada navegador ou perfil).
 3. Abra **kick.com** no perfil da conta, já logado, e clique no favorito **Enviar para o IdleLive**. O painel abre e pergunta se pode adicionar a conta. Repita para cada conta, até 4.
 
 Se o favorito não funcionar, dá para fazer à mão: no kick.com aperte **F12** → aba **Application** → **Cookies → https://kick.com**, copie o valor de `session_token` e cole na janela **Adicionar conta**.
 
 O token fica só no seu PC, no `kick.json`. Não mostre ele para ninguém: quem tem o token entra na conta. Se o card mostrar **Token recusado**, pegue um token novo do mesmo jeito e use **Trocar token**.
+
+### LoLdle
+O bônus do LoLdle vem de estar no **chat** das lives dos parceiros da Twitch.
+1. Em **LoLdle → Twitch**, clique em **+ Vincular conta** e confirme o código, como no Pokeidle. Pode ser a mesma conta do Pokeidle.
+2. As contas entram em silêncio no chat dos canais ao vivo e saem quando a live acaba. Não mandam mensagem.
+3. No jogo, ligue a conta da Twitch (Bônus da Twitch) para ele te encontrar no chat.
 
 Opcional: em **Configurações → App da Kick**, cole o Client ID e o Client Secret de um app da Kick (**kick.com → Configurações → Desenvolvedor**, Redirect URL `http://localhost`). Com ele, o painel vê quem está ao vivo num pedido só, em vez de canal por canal.
 
@@ -91,6 +97,7 @@ Esses arquivos são criados na pasta do projeto e **nunca devem ser enviados par
 | `kick.json` | Tokens das contas da Kick, app da Kick e navegador escolhido |
 | `stats.json` | Horários das lives e histórico de pontos por dia |
 | `points.json` | Login das contas de pontos do canal (tokens) |
+| `lolidle.json` | Login das contas do LoLdle, que ficam no chat (tokens) |
 | `eventos.jsonl` | Erros e baús/Momentos/raids dos últimos 30 dias (as listas do topo) |
 
 Se você usava uma versão antiga, o `accounts.json` (contas do chat) não é mais usado e pode ser apagado.
@@ -130,6 +137,8 @@ src/twitch.js          login por código, tokens e status das lives (GQL, sem lo
 src/points.js          pontos do canal: minutos assistidos, baús, Momentos e conexão em tempo real (PubSub)
 src/kick.js            API da Kick: lives, números do canal, conta, saldo e token de espectador
 src/kickpoints.js      pontos do canal na Kick: conexão de espectador e saldos
+src/lolidle.js         LoLdle: contas da Twitch no chat das lives dos parceiros
+src/chat.js            conexão de chat da Twitch (IRC), sem mandar mensagem
 src/human.js           travas comuns às duas plataformas (descanso, tempos aleatórios)
 src/browser.js         navegadores (Chrome, Brave, Edge), perfis e o botão ▶
 src/stats.js           horários das lives e histórico de pontos

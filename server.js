@@ -12,6 +12,7 @@ import { recordMinute, pointsHistory } from './src/stats.js';
 import { autostartEnabled, setAutostart } from './src/autostart.js';
 import { PointsMiner } from './src/points.js';
 import { KickMiner } from './src/kickpoints.js';
+import { LolIdleMiner } from './src/lolidle.js';
 import { sleep } from './src/human.js';
 import { addEvent, recentEvents } from './src/events.js';
 
@@ -33,16 +34,19 @@ let liveError = null; // mensagem da última falha, para o aviso no painel
 let liveOffline = false; // a última falha foi falta de internet?
 const miner = new PointsMiner({ log });
 const kickMiner = new KickMiner({ log });
+const lolMiner = new LolIdleMiner({ log });
 
 // ---------- Twitch ----------
 
 function syncPoints() {
   miner.setLive(config.channels.filter((c) => live.has(c)).map((name) => ({ name, channelId: live.get(name).userId, broadcastId: live.get(name).streamId })), config.channels);
+  lolMiner.setLive(config.lolidleChannels, live);
 }
 
 async function updateLive() {
   try {
-    live = await fetchLive(config.channels);
+    // Uma consulta só para os canais do Pokeidle e do LoLdle (um canal pode estar nas duas listas).
+    live = await fetchLive([...new Set([...config.channels, ...config.lolidleChannels])]);
     liveOk = true;
     liveError = null;
     liveOffline = false;
@@ -257,6 +261,10 @@ function state() {
     alerts: alerts(),
     events: recentEvents(),
     kick: kickState(),
+    lolidle: {
+      ...lolMiner.state(),
+      channels: config.lolidleChannels.map((name) => ({ name, live: live.has(name), viewers: live.get(name)?.viewers ?? 0 })),
+    },
   };
 }
 
@@ -356,6 +364,31 @@ async function handleApi(req, res, url) {
     return send(res, 200, state());
   }
 
+  // LoLdle: /api/lolidle/link (vincular), /api/lolidle/<login> (desvincular)
+  // e /api/lolidle/channels[/<canal>] (adicionar e remover canais).
+  if (resource === 'lolidle') {
+    if (id === 'channels') {
+      if (req.method === 'POST') {
+        const name = normalizeChannel((await readBody(req)).name ?? '');
+        if (!/^\w{3,25}$/.test(name)) return send(res, 400, { error: 'Nome de canal inválido' });
+        if (!config.lolidleChannels.includes(name)) {
+          config.lolidleChannels.push(name);
+          saveConfig();
+          await safeUpdateLive();
+        }
+      } else if (req.method === 'DELETE' && rawSub) {
+        const name = decodeURIComponent(rawSub);
+        config.lolidleChannels = config.lolidleChannels.filter((c) => c !== name);
+        saveConfig();
+        syncPoints();
+      } else return send(res, 404, { error: 'Rota não encontrada' });
+    } else if (req.method === 'POST' && id === 'link') await lolMiner.startLink();
+    else if (req.method === 'DELETE' && id === 'link') lolMiner.cancelLink();
+    else if (req.method === 'DELETE' && id) lolMiner.unlink(id);
+    else return send(res, 404, { error: 'Rota não encontrada' });
+    return send(res, 200, state());
+  }
+
   if (resource === 'channels') {
     if (req.method === 'POST') {
       const name = normalizeChannel((await readBody(req)).name ?? '');
@@ -401,13 +434,16 @@ const server = http.createServer(async (req, res) => {
 // ---------- Início ----------
 
 await miner.ensureFresh().catch((err) => log(`Pontos: erro ao checar token (${err.message})`));
+await lolMiner.ensureFresh();
 await safeUpdateLive();
 await updateKickLive();
 miner.start();
 kickMiner.start();
+lolMiner.start();
 setInterval(safeUpdateLive, LIVE_INTERVAL);
 setInterval(updateKickLive, LIVE_INTERVAL);
 setInterval(() => miner.ensureFresh().catch((err) => log(`Pontos: erro ao checar token (${err.message})`)), TOKEN_INTERVAL);
+setInterval(() => lolMiner.ensureFresh(), TOKEN_INTERVAL);
 setInterval(() => {
   try {
     recordStats();

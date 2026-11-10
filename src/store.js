@@ -9,6 +9,7 @@ export const DATA_DIR = process.env.IDLELIVE_DATA_DIR ? path.resolve(process.env
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const KICK_FILE = path.join(DATA_DIR, 'kick.json');
 const POINTS_FILE = path.join(DATA_DIR, 'points.json');
+const LOLIDLE_FILE = path.join(DATA_DIR, 'lolidle.json');
 
 export const MAX_ACCOUNTS = 4; // contas de pontos da Twitch e perfis da Kick
 
@@ -36,6 +37,7 @@ export function writeJson(file, data, space = 2) {
 export const config = readJson(CONFIG_FILE, {});
 config.channels ??= [];
 config.kickChannels ??= [];
+config.lolidleChannels ??= []; // canais da Twitch do LoLdle (só presença no chat)
 
 // { clientId, clientSecret, browser: 'chrome' | 'brave' | 'edge', accounts: [{ id, username, token, profile, needsRelink }] }
 // App da Kick (opcional), navegador do botão ▶ e as contas da Kick que juntam pontos (login pelo token da conta).
@@ -48,7 +50,13 @@ kick.accounts ??= [];
 const savedPoints = readJson(POINTS_FILE, []);
 export const pointsAccounts = Array.isArray(savedPoints) ? savedPoints : savedPoints.accessToken ? [savedPoints] : [];
 
+// { accounts: [{ id, login, userId, accessToken, refreshToken, needsRelink }] }
+// Contas da Twitch que ficam no chat dos canais do LoLdle (login do app de TV, só com permissão de ler o chat).
+export const lolidle = readJson(LOLIDLE_FILE, {});
+lolidle.accounts ??= [];
+
 export const saveConfig = () => writeJson(CONFIG_FILE, config);
+export const saveLolidle = () => writeJson(LOLIDLE_FILE, lolidle);
 export const saveKick = () => writeJson(KICK_FILE, kick);
 export const savePoints = () => writeJson(POINTS_FILE, pointsAccounts);
 

@@ -12,7 +12,7 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 
 ## Segurança e dados
 
-- **Nunca** leia em voz alta, copie, faça commit ou envie `accounts.json`, `kick.json`, `points.json`, `stats.json` ou `.token.json`. Eles têm tokens, segredos e dados das contas e estão no `.gitignore`. Antes de cada commit, confira com `git status` que nenhum deles entrou.
+- **Nunca** leia em voz alta, copie, faça commit ou envie `accounts.json`, `kick.json`, `points.json`, `lolidle.json`, `stats.json` ou `.token.json`. Eles têm tokens, segredos e dados das contas e estão no `.gitignore`. Antes de cada commit, confira com `git status` que nenhum deles entrou.
 - Não peça para o usuário colar segredos (Client Secret, tokens) no chat. Eles são colados só no painel local.
 - O servidor escuta só em `127.0.0.1`. Não mude para `0.0.0.0`.
 - Não altere configurações do sistema, como a política de execução do PowerShell. Para rodar, use `iniciar.bat` ou `node server.js`.
@@ -50,7 +50,7 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 - Mudou lógica em `src/`? Crie ou ajuste o teste do módulo (um arquivo por módulo, ex.: `test/human.test.js`). Os testes cobrem lógica, não as APIs da Twitch e da Kick: mudanças de hash, endpoint ou bloqueio só aparecem no painel (🐞).
 - Testes **nunca** usam internet nem os arquivos de dados reais: troque `globalThis.fetch` por uma função falsa e defina `IDLELIVE_DATA_DIR` com uma pasta temporária **antes** de importar módulos que leem arquivos (`store.js`, `events.js`, `stats.js`). Não abra WebSocket de verdade.
 - O painel (`public/index.html`) não tem testes: teste ele no navegador.
-- **Não rode uma segunda instância com as contas reais** enquanto o painel do usuário estiver aberto: as duas renovariam o mesmo refresh token e uma derrubaria a outra. Para testar, copie o projeto para outra pasta **sem** `points.json` e rode com outra porta (`PORT=3005 node server.js`).
+- **Não rode uma segunda instância com as contas reais** enquanto o painel do usuário estiver aberto: as duas renovariam o mesmo refresh token e uma derrubaria a outra. Para testar, copie o projeto para outra pasta **sem** `points.json` e `lolidle.json` e rode com outra porta (`PORT=3005 node server.js`).
 - Mudanças no servidor só valem depois de reiniciar o painel. O `index.html` é lido a cada acesso, então a página nova pode rodar com o servidor antigo. Escreva o front-end tolerando campos que ainda não existem (`?.`, `?? 0`).
 - O botão "Reiniciar servidor" faz o processo sair com o código 75, e o `iniciar.bat` (que define `IDLELIVE_LAUNCHER=1`) abre o servidor de novo. Fora do `.bat` o botão fica escondido. Se mudar o `iniciar.bat`, mantenha esse laço.
 - Não abra janelas na tela do usuário sem avisar.

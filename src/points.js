@@ -742,7 +742,7 @@ export class PointsAccount {
   // o painel mostra um aviso só, de internet.
   alerts({ offline = false } = {}) {
     const who = this.account.login;
-    if (this.account.needsRelink) return [{ variant: 'danger', text: `A conta ${who} precisa ser vinculada de novo (página Twitch).` }];
+    if (this.account.needsRelink) return [{ variant: 'danger', text: `A conta ${who} precisa ser vinculada de novo (Pokeidle → Twitch).` }];
     const list = [];
     if (offline) return list;
     if (this.gqlFails >= GQL_FAILS_ALERT || /PersistedQueryNotFound/.test(this.gqlError ?? '')) {

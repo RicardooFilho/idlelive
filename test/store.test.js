@@ -22,8 +22,9 @@ test('usa a pasta da variável IDLELIVE_DATA_DIR', () => {
 });
 
 test('sem arquivos, começa com os valores padrão', () => {
-  assert.deepEqual(store.config, { channels: [], kickChannels: [] });
+  assert.deepEqual(store.config, { channels: [], kickChannels: [], lolidleChannels: [] });
   assert.deepEqual(store.kick, { accounts: [] });
+  assert.deepEqual(store.lolidle, { accounts: [] });
 });
 
 test('points.json antigo (objeto) vira lista', () => {

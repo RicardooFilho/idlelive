@@ -12,6 +12,7 @@ const POINTS_FILE = path.join(DATA_DIR, 'points.json');
 const LOLIDLE_FILE = path.join(DATA_DIR, 'lolidle.json');
 
 export const MAX_ACCOUNTS = 4; // contas de pontos da Twitch e perfis da Kick
+export const MAX_LOL_ACCOUNTS = 5; // contas do LoLdle (só ficam no chat)
 
 // Lê um JSON. Se o arquivo estiver quebrado (ex.: o PC desligou no meio de uma gravação antiga), guarda uma cópia
 // com ".quebrado" no nome e segue com o valor padrão, em vez de o painel não abrir.

@@ -89,7 +89,7 @@ O token fica só no seu PC, no `kick.json`. Não mostre ele para ninguém: quem 
 
 ### LoLdle
 O bônus do LoLdle vem de estar no **chat** das lives dos parceiros da Twitch.
-1. Em **LoLdle → Twitch**, clique em **+ Vincular conta** e confirme o código, como no Pokeidle. Pode ser a mesma conta do Pokeidle.
+1. Em **LoLdle → Twitch**, clique em **+ Vincular conta** e confirme o código, como no Pokeidle. Pode ser a mesma conta do Pokeidle. Até 5 contas.
 2. As contas entram em silêncio no chat dos canais ao vivo e saem quando a live acaba. Não mandam mensagem.
 3. No jogo, ligue a conta da Twitch (Bônus da Twitch) para ele te encontrar no chat.
 

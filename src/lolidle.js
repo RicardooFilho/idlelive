@@ -1,8 +1,8 @@
-// LoLdle: até 4 contas da Twitch ficam no chat dos canais parceiros do LoLdle enquanto eles estão ao vivo.
+// LoLdle: até 5 contas da Twitch ficam no chat dos canais parceiros do LoLdle enquanto eles estão ao vivo.
 // Só presença no chat (IRC), sem mandar mensagem e sem assistir a live. Contas e tokens ficam em lolidle.json.
 import crypto from 'node:crypto';
 import { startDeviceFlow, waitDeviceToken, refreshToken, validate, revoke, TV_CLIENT_ID as CLIENT_ID } from './twitch.js';
-import { lolidle, saveLolidle, MAX_ACCOUNTS } from './store.js';
+import { lolidle, saveLolidle, MAX_LOL_ACCOUNTS } from './store.js';
 import { ChatConnection } from './chat.js';
 import { addEvent } from './events.js';
 
@@ -161,7 +161,7 @@ export class LolIdleMiner {
           account.updateTokens(tokens, info.login);
           account.log('vinculada de novo');
         } else {
-          if (this.accounts.length >= MAX_ACCOUNTS) throw new Error(`Limite de ${MAX_ACCOUNTS} contas atingido`);
+          if (this.accounts.length >= MAX_LOL_ACCOUNTS) throw new Error(`Limite de ${MAX_LOL_ACCOUNTS} contas atingido`);
           const saved = {
             login: info.login,
             userId: info.user_id,
@@ -201,7 +201,7 @@ export class LolIdleMiner {
 
   state() {
     return {
-      max: MAX_ACCOUNTS,
+      max: MAX_LOL_ACCOUNTS,
       pendingLink: this.pendingLink && { userCode: this.pendingLink.userCode, uri: this.pendingLink.uri, error: this.pendingLink.error },
       accounts: this.accounts.map((a) => a.state()),
     };

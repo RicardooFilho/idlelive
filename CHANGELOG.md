@@ -13,6 +13,7 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 - **LoLdle:** vincule até 4 contas da Twitch em **LoLdle → Twitch**: cada conta entra em silêncio no chat dos 47 canais parceiros que estiverem ao vivo e sai quando a live acaba. É assim que o jogo dá o bônus de XP. Não manda mensagem e não assiste a live; pode ser a mesma conta do Pokeidle. O card de cada conta mostra em quais chats ela está agora.
 
 ### Mudanças
+- **LoLdle:** agora aceita até **5 contas** da Twitch (antes eram 4). Precisa reiniciar o servidor uma vez.
 - A loja do Pokeidle não mostra mais as recompensas do LoL Idle que falam de XP.
 - **Visão geral nova:** agora ela mostra os dois jogos e o que rendeu no dia.
   - **Números do topo:** pontos de hoje comparados com ontem, contas trabalhando, baús e Momentos de hoje e lives ao vivo. Os pontos vêm do Histórico, então não zeram quando o painel reinicia.

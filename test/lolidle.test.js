@@ -115,6 +115,11 @@ test('setEnabled: desligar tira as contas dos chats; ligar conecta de novo', asy
   lolidle.accounts.length = 0;
 });
 
+test('state: o LoLdle aceita até 5 contas', async () => {
+  const { LolIdleMiner } = await import('../src/lolidle.js');
+  assert.equal(new LolIdleMiner({ log: () => {}, makeConnection: fakeConnection().make }).state().max, 5);
+});
+
 test('setEnabled: desligado antes de começar, start não conecta', async () => {
   const { LolIdleMiner } = await import('../src/lolidle.js');
   const { lolidle } = await import('../src/store.js');

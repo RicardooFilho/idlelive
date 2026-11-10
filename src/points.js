@@ -795,6 +795,7 @@ export class PointsMiner {
     this.live = [];
     this.all = [];
     this.started = false;
+    this.enabled = true; // Pokeidle ligado em Configurações → Jogos
     this.channelNames = new Map(); // id do canal -> nome
     this.accounts = pointsAccounts.map((a) => this.makeAccount(a));
   }
@@ -806,7 +807,30 @@ export class PointsMiner {
   start() {
     this.started = true;
     if (!PubSub.supported) this.log('Pontos: este Node.js não tem WebSocket (precisa da versão 22 ou mais nova), então Momentos e raids ficam desligados');
-    for (const a of this.accounts) a.start();
+    if (this.enabled) for (const a of this.accounts) a.start();
+  }
+
+  // Jogo desligado: as contas param (sem assistir, baú, follow nem PubSub) e ficam esperando, sem apagar nada.
+  // Uma conta parada não volta (stop é para sempre), então ela é trocada por uma nova que ainda não começou:
+  // essa continua renovando o login (ensureFresh) e começa quando o jogo for ligado de novo.
+  setEnabled(enabled) {
+    if (enabled === this.enabled) return;
+    this.enabled = enabled;
+    if (enabled) {
+      if (this.started) for (const a of this.accounts) a.start();
+      return;
+    }
+    for (const a of this.accounts) a.stop();
+    this.accounts = this.accounts.map((old) => {
+      const fresh = this.makeAccount(old.account);
+      // Renovação em andamento continua valendo: o refresh token só pode ser usado uma vez.
+      fresh.refreshing = old.refreshing;
+      const done = () => fresh.refreshing === old.refreshing && (fresh.refreshing = null);
+      old.refreshing?.then(done, done); // then com os dois lados: uma falha aqui não vira erro solto
+      return fresh;
+    });
+    for (const a of this.accounts) a.setLive(this.live, this.all);
+    this.log('Pontos: Pokeidle desligado, contas da Twitch paradas');
   }
 
   setLive(list, all) {
@@ -854,7 +878,7 @@ export class PointsMiner {
           const miner = this.makeAccount(account);
           this.accounts.push(miner);
           miner.setLive(this.live, this.all);
-          if (this.started) miner.start();
+          if (this.started && this.enabled) miner.start();
           miner.log('vinculada');
         }
         if (this.pendingLink === link) this.pendingLink = null;

@@ -74,3 +74,15 @@ test('normalizeChannel tira espaços, # e maiúsculas', () => {
   assert.equal(normalizeChannel('guaxilol1'), 'guaxilol1');
   assert.equal(normalizeChannel(123), '123');
 });
+
+test('jogos: ligados por padrão; desligar grava no config.json', () => {
+  assert.equal(store.gameEnabled('pokeidle'), true);
+  assert.equal(store.gameEnabled('lolidle'), true);
+  store.setGameEnabled('lolidle', false);
+  assert.equal(store.gameEnabled('lolidle'), false);
+  assert.equal(store.gameEnabled('pokeidle'), true);
+  assert.deepEqual(JSON.parse(fs.readFileSync(file('config.json'), 'utf8')).games, { lolidle: false });
+  store.setGameEnabled('lolidle', true);
+  assert.equal(store.gameEnabled('lolidle'), true);
+  assert.throws(() => store.setGameEnabled('outro', false), /Jogo desconhecido/);
+});

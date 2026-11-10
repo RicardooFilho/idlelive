@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config, kick, pointsAccounts, saveConfig, saveKick, savePoints, normalizeChannel, MAX_ACCOUNTS } from './src/store.js';
+import { config, kick, pointsAccounts, saveConfig, saveKick, savePoints, normalizeChannel, MAX_ACCOUNTS, GAMES, gameEnabled, setGameEnabled } from './src/store.js';
 import { fetchLive, fetchRewards, isNetworkError } from './src/twitch.js';
 import { fetchKickLive, fetchKickChannel, resetKickToken } from './src/kick.js';
 import { installedBrowsers, browserName, listProfiles, openInProfile } from './src/browser.js';
@@ -38,6 +38,14 @@ const kickMiner = new KickMiner({ log });
 const lolMiner = new LolIdleMiner({ log });
 const updater = new Updater({ log });
 
+// Jogo desligado em Configurações → Jogos: as contas dele param e as lives dele não são consultadas.
+function applyGames() {
+  miner.setEnabled(gameEnabled('pokeidle'));
+  kickMiner.setEnabled(gameEnabled('pokeidle'));
+  lolMiner.setEnabled(gameEnabled('lolidle'));
+}
+applyGames();
+
 // ---------- Twitch ----------
 
 function syncPoints() {
@@ -47,8 +55,9 @@ function syncPoints() {
 
 async function updateLive() {
   try {
-    // Uma consulta só para os canais do Pokeidle e do LoLdle (um canal pode estar nas duas listas).
-    live = await fetchLive([...new Set([...config.channels, ...config.lolidleChannels])]);
+    // Uma consulta só para os canais do Pokeidle e do LoLdle (um canal pode estar nas duas listas), só dos jogos ligados.
+    const channels = [...(gameEnabled('pokeidle') ? config.channels : []), ...(gameEnabled('lolidle') ? config.lolidleChannels : [])];
+    live = channels.length ? await fetchLive([...new Set(channels)]) : new Map();
     liveOk = true;
     liveError = null;
     liveOffline = false;
@@ -126,7 +135,8 @@ async function scanKickLive() {
 
 async function updateKickLive() {
   try {
-    kickLive = config.kickChannels.length ? await scanKickLive() : new Map();
+    // A Kick só é usada pelo Pokeidle: com ele desligado, nem consulta.
+    kickLive = config.kickChannels.length && gameEnabled('pokeidle') ? await scanKickLive() : new Map();
     kickError = null;
     kickOffline = false;
   } catch (err) {
@@ -254,6 +264,7 @@ function state() {
     autostart: autostartEnabled(),
     canRestart: CAN_RESTART,
     update: updater.state(),
+    games: Object.fromEntries(GAMES.map((g) => [g, gameEnabled(g)])),
     channels: config.channels.map((name) => ({
       name,
       live: live.has(name),
@@ -287,8 +298,9 @@ function alerts() {
 
 // A cada minuto: anota quais canais estão ao vivo (para os horários).
 function recordStats() {
-  const twitchOk = liveOk && config.channels.length > 0;
-  const kickOk = !kickError && config.kickChannels.length > 0;
+  // Com o Pokeidle desligado, as lives dele não são consultadas: anotar seria dizer que estavam offline.
+  const twitchOk = liveOk && config.channels.length > 0 && gameEnabled('pokeidle');
+  const kickOk = !kickError && config.kickChannels.length > 0 && gameEnabled('pokeidle');
   recordMinute({
     twitchLive: twitchOk ? config.channels.filter((c) => live.has(c)) : null,
     kickLive: kickOk ? config.kickChannels.filter((c) => kickLive.has(c)) : null,
@@ -349,6 +361,23 @@ async function handleApi(req, res, url) {
     const channel = normalizeChannel(id);
     if (!config.channels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
     return send(res, 200, { channel, ...(await fetchRewards(channel)) });
+  }
+
+  // Ligar ou desligar um jogo: { game: 'pokeidle' | 'lolidle', enabled }.
+  if (req.method === 'PUT' && resource === 'games') {
+    const { game, enabled } = await readBody(req);
+    if (!GAMES.includes(game)) return send(res, 400, { error: 'Jogo desconhecido' });
+    setGameEnabled(game, enabled);
+    applyGames();
+    log(`${game === 'pokeidle' ? 'Pokeidle' : 'LoLdle'} ${enabled ? 'ligado' : 'desligado'}`);
+    // Vê quem está ao vivo de novo: ligou, as contas começam sem esperar o próximo minuto;
+    // desligou, as lives daquele jogo saem do painel (com o Pokeidle desligado, a Kick nem é consultada).
+    await safeUpdateLive();
+    if (game === 'pokeidle') {
+      kickScanAt = 0;
+      await updateKickLive();
+    }
+    return send(res, 200, state());
   }
 
   if (req.method === 'PUT' && resource === 'autostart') {

@@ -431,6 +431,7 @@ export class KickMiner {
     this.live = [];
     this.all = [];
     this.started = false;
+    this.enabled = true; // Pokeidle ligado em Configurações → Jogos
     kick.accounts ??= [];
     this.accounts = kick.accounts.map((a) => new KickAccount(a, { log }));
   }
@@ -438,7 +439,22 @@ export class KickMiner {
   start() {
     this.started = true;
     if (typeof WebSocket === 'undefined') this.log('Kick: este Node.js não tem WebSocket (precisa da versão 22 ou mais nova), então o farm da Kick fica desligado');
-    else for (const a of this.accounts) a.start();
+    else if (this.enabled) for (const a of this.accounts) a.start();
+  }
+
+  // Jogo desligado: as contas param e são trocadas por novas que ainda não começaram (stop é para sempre),
+  // prontas para começar quando o jogo for ligado de novo. Nada é apagado.
+  setEnabled(enabled) {
+    if (enabled === this.enabled) return;
+    this.enabled = enabled;
+    if (enabled) {
+      if (this.started && typeof WebSocket !== 'undefined') for (const a of this.accounts) a.start();
+      return;
+    }
+    for (const a of this.accounts) a.stop();
+    this.accounts = this.accounts.map((a) => new KickAccount(a.account, { log: this.log }));
+    for (const a of this.accounts) a.setLive(this.live, this.all);
+    this.log('Kick: Pokeidle desligado, contas da Kick paradas');
   }
 
   setLive(list, all) {
@@ -476,7 +492,7 @@ export class KickMiner {
     const miner = new KickAccount(account, { log: this.log });
     this.accounts.push(miner);
     miner.setLive(this.live, this.all);
-    if (this.started && typeof WebSocket !== 'undefined') miner.start();
+    if (this.started && this.enabled && typeof WebSocket !== 'undefined') miner.start();
     miner.log('vinculada');
   }
 

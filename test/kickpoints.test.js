@@ -193,3 +193,26 @@ test('followNext: não segue no descanso, sem token ou com outro follow em andam
   await acc.followNext();
   assert.deepEqual(posts, []);
 });
+
+// ---------- Jogo desligado (Configurações → Jogos) ----------
+
+test('setEnabled: desligar para as contas e deixa novas esperando; ligar começa de novo', async () => {
+  const { KickMiner } = await import('../src/kickpoints.js');
+  const { kick } = await import('../src/store.js');
+  kick.accounts.push({ id: 9, username: 'kjogo', token: 'tok' });
+  const miner = new KickMiner({ log: () => {} });
+  const old = miner.accounts[0];
+  miner.started = true;
+  miner.setEnabled(false);
+  const fresh = miner.accounts[0];
+  assert.ok(old.stopped);
+  assert.notEqual(fresh, old);
+  assert.equal(fresh.account, old.account);
+  assert.equal(fresh.stopped, false);
+  let starts = 0;
+  fresh.start = () => starts++;
+  miner.setEnabled(true);
+  // Sem WebSocket (Node 20) o farm da Kick não começa, ligado ou não.
+  assert.equal(starts, typeof WebSocket === 'undefined' ? 0 : 1);
+  kick.accounts.length = 0;
+});

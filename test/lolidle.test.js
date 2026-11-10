@@ -96,3 +96,33 @@ test('chat recusou o token e não deu para renovar: sai do chat', async () => {
   assert.equal(acc.conn, null);
   assert.equal(acc.state().needsRelink, true);
 });
+
+test('setEnabled: desligar tira as contas dos chats; ligar conecta de novo', async () => {
+  const { LolIdleMiner } = await import('../src/lolidle.js');
+  const { lolidle } = await import('../src/store.js');
+  lolidle.accounts.push({ login: 'lol', userId: '3', accessToken: 'tok', refreshToken: 'ref' });
+  const { made, make } = fakeConnection();
+  const miner = new LolIdleMiner({ log: () => {}, makeConnection: make });
+  miner.setLive(['a'], new Map([['a', {}]]));
+  miner.start();
+  assert.equal(made.length, 1);
+  miner.setEnabled(false);
+  assert.ok(made[0].closed);
+  assert.equal(miner.accounts[0].state().connected, false);
+  miner.setEnabled(true);
+  assert.equal(made.length, 2);
+  assert.deepEqual([...made[1].wanted], ['a']);
+  lolidle.accounts.length = 0;
+});
+
+test('setEnabled: desligado antes de começar, start não conecta', async () => {
+  const { LolIdleMiner } = await import('../src/lolidle.js');
+  const { lolidle } = await import('../src/store.js');
+  lolidle.accounts.push({ login: 'lol2', userId: '4', accessToken: 'tok', refreshToken: 'ref' });
+  const { made, make } = fakeConnection();
+  const miner = new LolIdleMiner({ log: () => {}, makeConnection: make });
+  miner.setEnabled(false);
+  miner.start();
+  assert.equal(made.length, 0);
+  lolidle.accounts.length = 0;
+});

@@ -101,17 +101,35 @@ export class LolIdleAccount {
 }
 
 export class LolIdleMiner {
-  constructor({ log }) {
+  constructor({ log, makeConnection }) {
     this.log = log;
+    this.makeConnection = makeConnection; // só os testes trocam (conexão falsa, sem socket)
     this.pendingLink = null; // { userCode, uri, error, cancelled }
     this.wanted = new Set();
     this.started = false;
-    this.accounts = lolidle.accounts.map((a) => new LolIdleAccount(a, { log }));
+    this.enabled = true; // LoLdle ligado em Configurações → Jogos
+    this.accounts = lolidle.accounts.map((a) => this.makeAccount(a));
+  }
+
+  makeAccount(account) {
+    return new LolIdleAccount(account, { log: this.log, ...(this.makeConnection && { makeConnection: this.makeConnection }) });
   }
 
   start() {
     this.started = true;
-    for (const a of this.accounts) a.start();
+    if (this.enabled) for (const a of this.accounts) a.start();
+  }
+
+  // Jogo desligado: as contas saem dos chats (a conexão fecha) e voltam quando ele for ligado de novo.
+  // O login continua sendo renovado (ensureFresh não depende da conexão).
+  setEnabled(enabled) {
+    if (enabled === this.enabled) return;
+    this.enabled = enabled;
+    for (const a of this.accounts) {
+      if (!enabled) a.stop();
+      else if (this.started) a.start();
+    }
+    if (!enabled) this.log('LoLdle desligado, contas fora dos chats');
   }
 
   setLive(channels, live) {
@@ -153,12 +171,12 @@ export class LolIdleMiner {
           };
           lolidle.accounts.push(saved);
           saveLolidle();
-          account = new LolIdleAccount(saved, { log: this.log });
+          account = this.makeAccount(saved);
           this.accounts.push(account);
           account.log('vinculada');
         }
         account.setChannels(this.wanted);
-        if (this.started) account.start();
+        if (this.started && this.enabled) account.start();
         if (this.pendingLink === link) this.pendingLink = null;
       })
       .catch((err) => {

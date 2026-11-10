@@ -253,3 +253,37 @@ test('redeem: um resgate por vez e só com a conta ativa', async () => {
   await assert.rejects(relink.acc.redeem('canal', 'r1'), /vinculada de novo/);
   assert.equal(relink.calls.length, 0);
 });
+
+// ---------- Jogo desligado (Configurações → Jogos) ----------
+
+test('setEnabled: desligar para as contas e deixa novas esperando; ligar começa de novo', async () => {
+  const { PointsMiner } = await import('../src/points.js');
+  const { pointsAccounts } = await import('../src/store.js');
+  pointsAccounts.push({ login: 'jogo', userId: '5', accessToken: 'tok' });
+  const miner = new PointsMiner({ log: () => {} });
+  const old = miner.accounts[0];
+  let finishRefresh;
+  old.refreshing = new Promise((resolve) => (finishRefresh = resolve));
+  miner.started = true;
+
+  miner.setEnabled(false);
+  const fresh = miner.accounts[0];
+  assert.ok(old.stopped);
+  assert.notEqual(fresh, old);
+  assert.equal(fresh.account, old.account); // mesma conta salva, nada apagado
+  assert.equal(fresh.stopped, false);
+  // A renovação que estava em andamento é a mesma (o refresh token só vale uma vez).
+  assert.equal(fresh.refreshing, old.refreshing);
+  finishRefresh(true);
+  await old.refreshing;
+  await new Promise((r) => setImmediate(r));
+  assert.equal(fresh.refreshing, null);
+
+  let starts = 0;
+  fresh.start = () => starts++;
+  miner.setEnabled(false); // já desligado: nada muda
+  assert.equal(miner.accounts[0], fresh);
+  miner.setEnabled(true);
+  assert.equal(starts, 1);
+  pointsAccounts.length = 0;
+});

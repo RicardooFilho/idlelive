@@ -60,4 +60,13 @@ export const saveLolidle = () => writeJson(LOLIDLE_FILE, lolidle);
 export const saveKick = () => writeJson(KICK_FILE, kick);
 export const savePoints = () => writeJson(POINTS_FILE, pointsAccounts);
 
-export const normalizeChannel = (name) => String(name).trim().toLowerCase().replace(/^#/, '');
+// Jogos do painel (Configurações → Jogos). Ficam em config.games só quando alguém mexe: sem a chave, o jogo está ligado.
+export const GAMES = ['pokeidle', 'lolidle'];
+export const gameEnabled = (game) => config.games?.[game] !== false;
+export function setGameEnabled(game, enabled) {
+  if (!GAMES.includes(game)) throw new Error('Jogo desconhecido');
+  config.games = { ...config.games, [game]: !!enabled };
+  saveConfig();
+}
+
+export const normalizeChannel =(name) => String(name).trim().toLowerCase().replace(/^#/, '');

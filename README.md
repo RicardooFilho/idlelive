@@ -29,7 +29,8 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - O botão **▶** abre a live no navegador, no perfil da conta, para você resgatar as recompensas.
 
 **Painel**
-- Menu lateral com **Visão geral** (resumo de tudo), os jogos (**Pokeidle** e **LoLdle**, cada um com as abas **Twitch** e **Kick**), **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
+- Menu lateral com **Visão geral** (pontos de hoje, contas que precisam de você, cada jogo ao vivo e a semana), os jogos (**Pokeidle** e **LoLdle**, cada um com as abas **Twitch** e **Kick**), **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
+- **Configurações → Jogos** liga e desliga o Pokeidle e o LoLdle. Jogo desligado some do menu, da Visão geral e do Histórico, e as contas dele param até você ligar de novo. Nada é apagado.
 - No topo, o ícone de inseto 🐞 lista os erros da Twitch e da Kick, e o de presente 🎁 lista os baús, Momentos, raids, follows e resgates, dos últimos 30 dias.
 - Avisos no topo quando algo para de funcionar (conta para vincular de novo, Twitch recusando pedidos, conexão caída). No celular, ele vira uma gaveta no botão ☰.
 
@@ -159,7 +160,7 @@ test/*.test.js         testes automatizados (node:test, sem dependências)
 scripts/check.js       confere a sintaxe de todos os .js
 scripts/release-notes.js  texto da release, tirado do CHANGELOG.md
 .github/workflows/     CI (sintaxe e testes no Node 20, 22 e 24 a cada push) e release (a cada tag v*)
-config.json            listas de canais
+config.json            listas de canais e jogos desligados (games)
 ```
 
 Para trocar a porta, defina `PORT` antes de iniciar (ex.: `set PORT=3005`).

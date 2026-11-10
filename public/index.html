@@ -44,6 +44,8 @@
   html, body { margin: 0; min-height: 100%; }
   body { background: var(--wa-color-surface-lowered); font-family: 'Montserrat', system-ui, sans-serif; }
   :not(:defined) { visibility: hidden; }
+  /* Jogo desligado: o "hidden" vale mesmo em quem tem display próprio (links do menu, cards). */
+  [hidden] { display: none !important; }
 
   .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
 
@@ -128,10 +130,42 @@
   @media (prefers-reduced-motion: reduce) { .unfollowed { animation: none; opacity: .4; } }
   .empty { color: var(--wa-color-text-quiet); font-size: 13px; padding: 8px 0; }
 
-  /* Ao vivo agora: rola sem mostrar a barra, com um degradê embaixo indicando que tem mais. */
-  #live-now { max-height: 340px; overflow-y: auto; scrollbar-width: none; }
-  #live-now.more { mask-image: linear-gradient(to bottom, #000 85%, transparent); }
-  #live-now::-webkit-scrollbar { display: none; }
+  /* Lives da Visão geral: rolam sem mostrar a barra, com um degradê embaixo indicando que tem mais. */
+  .scroll-list { max-height: 300px; overflow-y: auto; scrollbar-width: none; }
+  .scroll-list.more { mask-image: linear-gradient(to bottom, #000 85%, transparent); }
+  .scroll-list::-webkit-scrollbar { display: none; }
+
+  /* Visão geral: cards dos jogos */
+  .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+  .game::part(body) { display: flex; flex-direction: column; gap: 16px; }
+  .game-head { display: flex; align-items: center; gap: 8px; }
+  .game-head h2 { margin: 0; }
+  .game-head > wa-button { margin-left: auto; }
+  .game-head .nav-svg { display: block; }
+  .ov-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); margin-bottom: 2px; }
+  .ov-acc .row, .ov-live .row { padding: 8px 0; }
+  .ov-acc .login { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .ov-acc .today { font-size: 13px; font-weight: 700; color: var(--live); font-variant-numeric: tabular-nums; }
+  .ov-live .who { font-size: 12px; color: var(--brand-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+  .kpi .up { color: var(--live); }
+
+  /* Precisa de você: só aparece quando tem algo para resolver. */
+  .attention .item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
+  .attention .item + .item { border-top: 1px solid var(--wa-color-surface-border); }
+  .attention .item > span { flex: 1; min-width: 200px; }
+
+  /* Barras dos últimos 7 dias */
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 150px; }
+  .week .day { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; min-width: 0; }
+  /* Trilho: ocupa a sobra da coluna, e a barra cresce dentro dele (sem o trilho, o flex achata todas iguais). */
+  .week .track { flex: 1; min-height: 0; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+  .week .bar { width: 100%; max-width: 44px; border-radius: 6px 6px 2px 2px; background: var(--brand-soft); min-height: 3px; }
+  .week .day.today .bar { background: var(--brand); }
+  .week .val { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--wa-color-text-quiet); white-space: nowrap; }
+  .week .day.today .val { color: var(--wa-color-text-normal); }
+  .week .lbl { font-size: 11px; color: var(--wa-color-text-quiet); }
+  .week-foot { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+  #ov-events .event:last-child { border-bottom: none; }
 
   /* Espectadores em vermelho, como o contador da Twitch. */
   .viewers { --wa-color-danger-fill-quiet: rgba(235, 4, 0, .16); --wa-color-danger-border-quiet: rgba(255, 90, 90, .45); --wa-color-danger-on-quiet: #ff6b6b; }
@@ -331,7 +365,7 @@
     <div class="logo"><img src="/favicon.ico" alt="">IdleLive</div>
     <nav class="nav" id="nav">
       <a href="#visao" data-page="visao"><wa-icon name="gauge-high"></wa-icon>Visão geral</a>
-      <div class="nav-label">Jogos</div>
+      <div class="nav-label" data-nav-games>Jogos</div>
       <a href="#twitch" data-page="twitch" data-pages="twitch kick"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12a10 10 0 0 1 20 0z" fill="#e3350d"/><path d="M2 12a10 10 0 0 0 20 0z" fill="#f2f2f2"/><g fill="none" stroke="#16181d" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></g><circle cx="12" cy="12" r="3.2" fill="#f2f2f2" stroke="#16181d" stroke-width="1.6"/></svg>Pokeidle <wa-badge class="count" variant="success" pill data-count="pokeidle" hidden></wa-badge></a>
       <a href="#lolidle" data-page="lolidle" data-pages="lolidle lolidle-kick"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="#c28f2c" d="m1.912 0 1.212 2.474v19.053L1.912 24h14.73l1.337-4.682H8.33V0ZM12 1.516c-.913 0-1.798.112-2.648.312v1.74a9.738 9.738 0 0 1 2.648-.368c5.267 0 9.536 4.184 9.536 9.348a9.203 9.203 0 0 1-2.3 6.086l-.273.954-.602 2.112c2.952-1.993 4.89-5.335 4.89-9.122C23.25 6.468 18.213 1.516 12 1.516Zm0 2.673c-.924 0-1.814.148-2.648.414v13.713h8.817a8.246 8.246 0 0 0 2.36-5.768c0-4.617-3.818-8.359-8.529-8.359zM2.104 7.312A10.858 10.858 0 0 0 .75 12.576c0 1.906.492 3.7 1.355 5.266z"/></svg>LoLdle <wa-badge class="count" variant="success" pill data-count="lolidle" hidden></wa-badge></a>
       <div class="nav-label">Acompanhar</div>
@@ -367,14 +401,32 @@
       <!-- Visão geral -->
       <section class="page" id="page-visao">
         <div class="kpis" id="kpis"></div>
-        <div class="grid-2">
-          <wa-card>
-            <h2 slot="header"><span class="live-dot"></span>Ao vivo agora <wa-badge variant="success" pill id="live-count">0</wa-badge></h2>
-            <div id="live-now"></div>
+        <div id="attention"></div>
+        <!-- Um card por jogo, na mesma ordem do menu. -->
+        <div class="games">
+          <wa-card class="game" data-game-card="pokeidle">
+            <div slot="header" class="game-head"><span data-game-icon="twitch"></span><h2>Pokeidle</h2>
+              <wa-badge variant="success" pill data-count="pokeidle" hidden></wa-badge>
+              <wa-button size="small" appearance="plain" href="#twitch">Abrir<wa-icon slot="end" name="arrow-right"></wa-icon></wa-button></div>
+            <div id="ov-pokeidle"></div>
           </wa-card>
-          <wa-card class="points brand-twitch">
-            <h2 slot="header"><wa-icon name="coins"></wa-icon>Pontos do canal</h2>
-            <div id="points-overview"></div>
+          <wa-card class="game" data-game-card="lolidle">
+            <div slot="header" class="game-head"><span data-game-icon="lolidle"></span><h2>LoLdle</h2>
+              <wa-badge variant="success" pill data-count="lolidle" hidden></wa-badge>
+              <wa-button size="small" appearance="plain" href="#lolidle">Abrir<wa-icon slot="end" name="arrow-right"></wa-icon></wa-button></div>
+            <div id="ov-lolidle"></div>
+          </wa-card>
+        </div>
+        <div class="grid-2" id="ov-more">
+          <wa-card>
+            <div slot="header" class="game-head"><wa-icon name="chart-column"></wa-icon><h2>Pontos nos últimos 7 dias</h2>
+              <wa-button size="small" appearance="plain" href="#historico">Histórico<wa-icon slot="end" name="arrow-right"></wa-icon></wa-button></div>
+            <div id="ov-week"></div>
+          </wa-card>
+          <wa-card>
+            <div slot="header" class="game-head"><wa-icon name="gift"></wa-icon><h2>Últimos acontecimentos</h2>
+              <wa-button size="small" appearance="plain" data-action="events" data-kind="good">Ver todos<wa-icon slot="end" name="arrow-right"></wa-icon></wa-button></div>
+            <div id="ov-events"></div>
           </wa-card>
         </div>
       </section>
@@ -481,6 +533,13 @@
       <section class="page" id="page-config">
         <div class="settings">
           <wa-card>
+            <h2 slot="header"><wa-icon name="gamepad"></wa-icon>Jogos</h2>
+            <div class="meta">Desligue o jogo que você não joga. Ele some do menu, da Visão geral e do Histórico, e as contas dele param até você ligar de novo. Nada é apagado: contas, canais e histórico continuam guardados.</div>
+            <div id="games-status"></div>
+            <wa-switch data-game="pokeidle" hint="Pontos do canal nas lives dos parceiros, na Twitch e na Kick">Pokeidle</wa-switch>
+            <wa-switch data-game="lolidle" hint="Contas da Twitch no chat das lives dos parceiros">LoLdle</wa-switch>
+          </wa-card>
+          <wa-card>
             <h2 slot="header"><wa-icon name="sliders"></wa-icon>Geral</h2>
             <wa-switch data-autostart hint="Abre o painel minimizado quando o PC liga">Iniciar com o Windows</wa-switch>
             <wa-divider></wa-divider>
@@ -494,7 +553,7 @@
               <wa-button variant="brand" appearance="outlined" size="small" data-action="update-check"><wa-icon slot="start" name="arrows-rotate"></wa-icon>Procurar atualização</wa-button>
             </div>
           </wa-card>
-          <wa-card>
+          <wa-card data-game-card="pokeidle">
             <h2 slot="header"><wa-icon name="window-maximize"></wa-icon>Navegador e perfis</h2>
             <div class="meta">O botão <wa-icon name="play"></wa-icon> dos pontos abre a live no navegador para você resgatar as recompensas. Para ela abrir já logada na conta certa, escolha o perfil do navegador em que cada conta está logada. Sem escolher, a live pode abrir logada na conta errada.</div>
             <div class="setting-row"><span>Navegador</span><wa-select size="small" id="browser-select" style="min-width:220px"></wa-select></div>
@@ -506,7 +565,7 @@
             <b class="brand-kick" style="color:var(--brand-text)"><wa-icon name="k"></wa-icon> Contas da Kick</b>
             <div id="kick-profiles"></div>
           </wa-card>
-          <wa-card>
+          <wa-card data-game-card="pokeidle">
             <h2 slot="header"><wa-icon name="k"></wa-icon>App da Kick (opcional)</h2>
             <div id="kick-app-status"></div>
             <div class="meta">Sem o app, o painel vê quem está ao vivo na Kick perguntando canal por canal (a cada 2 minutos). Com o app, é um pedido só a cada minuto. Para criar: <b>kick.com → Configurações → Desenvolvedor</b> (Redirect URL: <code>http://localhost</code>), depois cole os dados. Não mostre o Client Secret para ninguém.</div>
@@ -755,6 +814,7 @@
     $$('[data-autostart]').forEach((s) => (s.checked = !!state.autostart));
     $$('[data-restart]').forEach((b) => (b.hidden = !state.canRestart));
 
+    renderGames();
     renderOverview(twitchLive, kickLive);
     renderTwitch();
     renderPoints();
@@ -775,57 +835,260 @@
     renderConfig();
   }
 
-  function renderOverview(twitchLive, kickLive) {
-    const k = state.kick;
-    setHTML($('kpis'), `
-      ${pointsKpi('twitch', state.points?.accounts)}
-      ${pointsKpi('kick', k.points?.accounts)}
-      <wa-card class="kpi brand-twitch"><span class="label"><wa-icon family="brands" name="twitch"></wa-icon>Twitch ao vivo</span>
-        <span class="value">${twitchLive.length}<small>/${state.channels.length}</small></span>
-        <wa-progress-bar value="${state.channels.length ? Math.round((twitchLive.length / state.channels.length) * 100) : 0}" style="--track-height:6px"></wa-progress-bar></wa-card>
-      <wa-card class="kpi brand-kick"><span class="label"><wa-icon name="k"></wa-icon>Kick ao vivo</span>
-        <span class="value">${kickLive.length}<small>/${k.channels.length}</small></span>
-        <wa-progress-bar value="${k.channels.length ? Math.round((kickLive.length / k.channels.length) * 100) : 0}" style="--track-height:6px"></wa-progress-bar></wa-card>`);
+  // ---------- Jogos ligados (Configurações → Jogos) ----------
 
-    const live = [...twitchLive.map((c) => ({ ...c, p: 'twitch' })), ...kickLive.map((c) => ({ ...c, p: 'kick' }))].sort((a, b) => b.viewers - a.viewers);
-    $('live-count').textContent = live.length;
-    setHTML($('live-now'), live.length ? live.map((c) => `
-      <div class="row"><span class="platform ${c.p}">${c.p === 'twitch' ? 'T' : 'K'}</span>
-        <span class="name">${esc(c.name)}</span>
-        <wa-badge class="viewers" variant="danger" appearance="filled-outlined" pill><wa-icon name="user" slot="start"></wa-icon>${fmt(c.viewers)}</wa-badge>
-      </div>`).join('') : '<div class="empty">Nenhum parceiro ao vivo agora.</div>');
-    // Degradê só quando tem mais lives para rolar.
-    $('live-now').classList.toggle('more', $('live-now').scrollHeight > $('live-now').clientHeight + 4);
+  // Servidor antigo não manda "games": tudo ligado.
+  const gameOn = (game) => state?.games?.[game] !== false;
+  // Jogo de cada página. O Histórico só tem pontos do canal, que são do Pokeidle.
+  const PAGE_GAME = { twitch: 'pokeidle', kick: 'pokeidle', historico: 'pokeidle', lolidle: 'lolidle', 'lolidle-kick': 'lolidle' };
+  const pageOn = (page) => !PAGE_GAME[page] || gameOn(PAGE_GAME[page]);
+  // Os acontecimentos do LoLdle começam com "LoLdle:"; o resto é do Pokeidle.
+  const eventGame = (e) => (/^loldle:/i.test(e.text) ? 'lolidle' : 'pokeidle');
+  const visibleEvents = (kind) => (state.events?.[kind] ?? []).filter((e) => gameOn(eventGame(e)));
+  let gameBusy = false; // pedido de ligar/desligar em andamento: não desfaz o clique na atualização de 5 s
 
-    // Uma linha por conta: o que ela está assistindo e quanto ganhou.
-    const accounts = [...(state.points?.accounts ?? []).map((a) => ({ ...a, p: 'twitch' })), ...(k.points?.accounts ?? []).map((a) => ({ ...a, p: 'kick' }))];
-    setHTML($('points-overview'), !accounts.length ? `<div class="empty">Nenhuma conta juntando pontos ainda.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <wa-button size="small" class="brand-twitch" variant="brand" data-action="go-twitch-link"><wa-icon slot="start" family="brands" name="twitch"></wa-icon>Vincular conta da Twitch</wa-button>
-        <wa-button size="small" class="brand-kick" variant="brand" data-action="go-kick-add"><wa-icon slot="start" name="k"></wa-icon>Adicionar conta da Kick</wa-button>
-      </div>`
-      : accounts.map((a) => `
-        <div class="row"><span class="platform ${a.p}">${a.p === 'twitch' ? 'T' : 'K'}</span>
-          <span class="name">${esc(a.login)}</span>
-          ${a.needsRelink ? `<wa-badge variant="danger" pill>${a.p === 'twitch' ? 'Vincule de novo' : 'Token recusado'}</wa-badge>`
-            : a.resting ? `<span class="meta">descansando até ${esc(a.restUntil ?? '08:00')}</span>`
-            : a.watching.length ? `<span class="meta">${a.watching.map(esc).join(', ')}</span>` : '<span class="meta">esperando live</span>'}
-          ${accountGained(a) ? `<span class="gained">+${fmt(accountGained(a))}</span>` : ''}
-        </div>`).join(''));
+  function renderGames() {
+    $$('.nav a[data-page]').forEach((a) => (a.hidden = !pageOn(a.dataset.page)));
+    $$('[data-nav-games]').forEach((l) => (l.hidden = !gameOn('pokeidle') && !gameOn('lolidle')));
+    $$('[data-game-card]').forEach((c) => (c.hidden = !gameOn(c.dataset.gameCard)));
+    $('ov-more').hidden = !gameOn('pokeidle');
+    if (!gameBusy) {
+      $$('[data-game]').forEach((sw) => {
+        sw.checked = gameOn(sw.dataset.game);
+        sw.disabled = !state.games;
+      });
+    }
+    setHTML($('games-status'), state.games ? ''
+      : '<wa-callout variant="neutral" size="small"><wa-icon slot="icon" name="circle-info"></wa-icon>Reinicie o servidor para ligar e desligar os jogos.</wa-callout>');
+    // Estava na página de um jogo que acabou de ser desligado: volta para a Visão geral.
+    if (!pageOn(location.hash.slice(1))) show('visao');
   }
 
-  const accountGained = (a) => a.channels.reduce((sum, c) => sum + (c.gained ?? 0), 0);
+  async function toggleGame(sw) {
+    const { game } = sw.dataset;
+    const name = game === 'pokeidle' ? 'Pokeidle' : 'LoLdle';
+    const enabled = sw.checked;
+    if (!enabled && !confirm(`Desligar o ${name}? Ele some do painel e as contas dele param até você ligar de novo. Nada é apagado.`)) {
+      sw.checked = true;
+      return;
+    }
+    gameBusy = true;
+    const ok = await api('PUT', 'games', { game, enabled });
+    gameBusy = false;
+    if (!ok) sw.checked = !enabled;
+    else toast(`${name} ${enabled ? 'ligado' : 'desligado'}`, 'info');
+    if (state) render();
+  }
 
-  // Resumo de pontos de uma plataforma na Visão geral.
-  function pointsKpi(platform, accounts = []) {
-    const head = `<wa-card class="kpi brand-${platform}"><span class="label">${platform === 'twitch' ? '<wa-icon family="brands" name="twitch"></wa-icon>Pontos Twitch' : '<wa-icon name="k"></wa-icon>Pontos Kick'}</span>`;
-    if (!accounts.length) return `${head}<span class="value">–</span><span class="hint">Nenhuma conta vinculada</span></wa-card>`;
-    const gained = accounts.reduce((sum, a) => sum + accountGained(a), 0);
-    const relink = accounts.filter((a) => a.needsRelink).length;
-    return `${head}
-      <span class="value">+${fmt(gained)}</span>
-      <span class="hint">${accounts.length} conta${accounts.length === 1 ? '' : 's'} · desde que o painel abriu
-        ${relink ? `<wa-badge variant="danger" pill>${relink} ${platform === 'twitch' ? 'Vincule de novo' : 'Token recusado'}</wa-badge>` : ''}</span></wa-card>`;
+  // ---------- Visão geral ----------
+
+  // Dia no mesmo formato do histórico (AAAA-MM-DD no horário local). offset -1 = ontem.
+  const dayKeyOf = (offset = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return d.toLocaleDateString('sv-SE');
+  };
+  // Pontos de um dia do histórico: { total, accounts: { login: total }, reasons: { motivo: { points, count } } }.
+  // Vem do histórico (e não do "+ganho" dos cards) para não zerar quando o painel reinicia.
+  function dayPoints(key) {
+    const d = (state.pointsHistory ?? []).find((x) => x.day === key);
+    const out = { total: 0, accounts: {}, reasons: {} };
+    for (const [login, reasons] of Object.entries(d?.accounts ?? {})) {
+      out.accounts[login] = sumPoints(reasons);
+      out.total += out.accounts[login];
+      for (const [code, r] of Object.entries(reasons)) {
+        const e = (out.reasons[code] ??= { points: 0, count: 0 });
+        e.points += r.points;
+        e.count += r.count;
+      }
+    }
+    return out;
+  }
+
+  // Todas as contas dos dois jogos, com uma situação só: problem, resting, working, waiting ou connecting.
+  function overviewAccounts() {
+    const points = (list, p) => (list ?? []).map((a) => ({ game: 'pokeidle', p, a,
+      status: a.needsRelink ? 'problem' : a.resting ? 'resting' : a.watching?.length ? 'working' : 'waiting' }));
+    const lol = (state.lolidle?.accounts ?? []).map((a) => ({ game: 'lolidle', p: 'twitch', a,
+      status: a.needsRelink ? 'problem' : !a.connected ? 'connecting' : a.joined?.length ? 'working' : 'waiting' }));
+    return [...points(state.points?.accounts, 'twitch'), ...points(state.kick.points?.accounts, 'kick'), ...lol];
+  }
+
+  const platformMark = (p) => `<span class="platform ${p}">${p === 'twitch' ? 'T' : 'K'}</span>`;
+  const plural = (n, one, many) => `${fmt(n)} ${n === 1 ? one : many}`;
+
+  function renderOverview(twitchLive, kickLive) {
+    const accounts = overviewAccounts().filter((x) => gameOn(x.game));
+    const today = dayPoints(dayKeyOf());
+    const yesterday = dayPoints(dayKeyOf(-1));
+    renderOverviewKpis(accounts, today, yesterday, twitchLive, kickLive);
+    renderAttention(accounts);
+    // Os cards dos jogos desligados ficam escondidos (renderGames); não precisa desenhar.
+    if (gameOn('pokeidle')) {
+      renderOverviewPokeidle(accounts, today, twitchLive, kickLive);
+      renderOverviewWeek();
+      renderOverviewEvents();
+    }
+    if (gameOn('lolidle')) renderOverviewLolidle(accounts);
+  }
+
+  function renderOverviewKpis(accounts, today, yesterday, twitchLive, kickLive) {
+    const farming = accounts.filter((x) => x.game === 'pokeidle');
+    const count = (status) => accounts.filter((x) => x.status === status).length;
+    const poke = gameOn('pokeidle');
+    const lol = gameOn('lolidle');
+    const lolLive = lol ? state.lolidle?.channels.filter((c) => c.live).length ?? 0 : 0;
+    const pokeLive = poke ? twitchLive.length + kickLive.length : 0;
+    const r = today.reasons;
+    const extras = [
+      r.CLAIM && plural(r.CLAIM.count, 'baú', 'baús'),
+      r.COMMUNITY_MOMENT && plural(r.COMMUNITY_MOMENT.count, 'Momento', 'Momentos'),
+      r.RAID && plural(r.RAID.count, 'raid', 'raids'),
+    ].filter(Boolean);
+    const diff = today.total - yesterday.total;
+
+    // Pontos, baús e Momentos são só do Pokeidle: com ele desligado, esses dois cartões saem.
+    setHTML($('kpis'), `${poke ? `
+      <wa-card class="kpi"><span class="label"><wa-icon name="coins"></wa-icon>Pontos hoje</span>
+        ${farming.length || today.total
+          ? `<span class="value">+${fmt(today.total)}</span>
+             <span class="hint">${yesterday.total ? `ontem: +${fmt(yesterday.total)}${diff > 0 ? ` · <span class="up">já passou</span>` : ''}` : 'Twitch e Kick, todas as contas'}</span>`
+          : '<span class="value">–</span><span class="hint">Nenhuma conta juntando pontos</span>'}</wa-card>` : ''}
+      <wa-card class="kpi"><span class="label"><wa-icon name="users"></wa-icon>Contas trabalhando</span>
+        ${accounts.length
+          ? `<span class="value">${count('working')}<small>/${accounts.length}</small></span>
+             <span class="hint">${[count('resting') && `${count('resting')} descansando`, count('waiting') && `${count('waiting')} esperando live`,
+               count('connecting') && `${count('connecting')} conectando`].filter(Boolean).join(' · ') || 'todas ativas'}
+               ${count('problem') ? `<wa-badge variant="danger" pill>${plural(count('problem'), 'precisa', 'precisam')} de você</wa-badge>` : ''}</span>`
+          : '<span class="value">–</span><span class="hint">Nenhuma conta vinculada</span>'}</wa-card>
+      ${poke ? `<wa-card class="kpi"><span class="label"><wa-icon name="gift"></wa-icon>Baús e Momentos hoje</span>
+        <span class="value">${fmt((r.CLAIM?.count ?? 0) + (r.COMMUNITY_MOMENT?.count ?? 0))}</span>
+        <span class="hint">${extras.join(' · ') || 'Pegos sozinhos nas lives da Twitch'}</span></wa-card>` : ''}
+      <wa-card class="kpi"><span class="label"><span class="live-dot"></span>Lives agora</span>
+        <span class="value">${pokeLive + lolLive}</span>
+        <span class="hint">${[poke && `Pokeidle ${pokeLive}`, lol && `LoLdle ${lolLive}`].filter(Boolean).join(' · ') || 'Nenhum jogo ligado'}</span></wa-card>`);
+  }
+
+  // Tudo o que só o jogador resolve, com o botão que resolve. Some quando não tem nada.
+  function renderAttention(accounts) {
+    const items = accounts.filter((x) => x.status === 'problem').map(({ game, p, a }) => {
+      const where = game === 'lolidle' ? 'LoLdle' : `Pokeidle · ${p === 'kick' ? 'Kick' : 'Twitch'}`;
+      const [text, action, icon, label] = game === 'lolidle'
+        ? ['o login venceu. Confirme o código de novo para ela voltar aos chats.', 'go-lol-link', 'link', 'Vincular de novo']
+        : p === 'kick' ? ['a Kick recusou o token. Cole um token novo para ela voltar a juntar pontos.', 'go-kick-add', 'key', 'Trocar token']
+        : ['o login venceu. Confirme o código de novo para ela voltar a juntar pontos.', 'go-twitch-link', 'link', 'Vincular de novo'];
+      return `<div class="item">${platformMark(p)}<span><b>${esc(a.login)}</b> <span class="meta">(${where})</span>: ${text}</span>
+        <wa-button size="small" variant="brand" class="brand-${p}" data-action="${action}"><wa-icon slot="start" name="${icon}"></wa-icon>${label}</wa-button></div>`;
+    });
+    const freshErrors = visibleEvents('bad').filter((e) => e.at > seenAt('bad')).length;
+    if (freshErrors) {
+      items.push(`<div class="item"><wa-icon name="bug" style="color:#ff6b6b"></wa-icon><span>${plural(freshErrors, 'erro novo', 'erros novos')} da Twitch ou da Kick desde a última vez que você olhou.</span>
+        <wa-button size="small" appearance="outlined" data-action="events" data-kind="bad">Ver erros</wa-button></div>`);
+    }
+    if (!gameOn('pokeidle') && !gameOn('lolidle')) {
+      items.push(`<div class="item"><span>Todos os jogos estão desligados, então nenhuma conta está trabalhando.</span>
+        <wa-button size="small" variant="brand" href="#config"><wa-icon slot="start" name="gamepad"></wa-icon>Ligar um jogo</wa-button></div>`);
+    } else if (!accounts.length) {
+      items.push(`<div class="item"><span>Nenhuma conta vinculada ainda. Vincule uma para começar.</span>
+        ${gameOn('pokeidle') ? `<wa-button size="small" class="brand-twitch" variant="brand" data-action="go-twitch-link"><wa-icon slot="start" family="brands" name="twitch"></wa-icon>Pokeidle na Twitch</wa-button>
+        <wa-button size="small" class="brand-kick" variant="brand" data-action="go-kick-add"><wa-icon slot="start" name="k"></wa-icon>Pokeidle na Kick</wa-button>` : ''}
+        ${gameOn('lolidle') ? '<wa-button size="small" class="brand-twitch" variant="brand" data-action="go-lol-link"><wa-icon slot="start" family="brands" name="twitch"></wa-icon>LoLdle</wa-button>' : ''}</div>`);
+    }
+    setHTML($('attention'), items.length ? `<wa-callout variant="warning" class="attention"><wa-icon slot="icon" name="hand"></wa-icon>
+      <div><b>Precisa de você</b>${items.join('')}</div></wa-callout>` : '');
+  }
+
+  // Situação de uma conta numa linha (o texto curto da Visão geral).
+  function accountStatus({ game, p, a, status }) {
+    if (status === 'problem') return `<wa-badge variant="danger" pill>${p === 'kick' ? 'Token recusado' : 'Vincule de novo'}</wa-badge>`;
+    if (status === 'resting') return `<span class="meta"><wa-icon name="moon"></wa-icon> descansando até ${esc(a.restUntil ?? '08:00')}</span>`;
+    if (status === 'connecting') return '<span class="meta">conectando…</span>';
+    if (status === 'waiting') return '<span class="meta">esperando live</span>';
+    return game === 'lolidle'
+      ? `<span class="meta">em ${plural(a.joined.length, 'chat', 'chats')}</span>`
+      : `<span class="meta" title="${esc(a.watching.join(', '))}"><wa-icon name="eye"></wa-icon> ${plural(a.watching.length, 'live', 'lives')}</span>`;
+  }
+
+  // Lista das lives com rolagem e degradê só quando tem mais para rolar.
+  function liveList(el, rows, empty) {
+    setHTML(el, rows.length ? rows.join('') : `<div class="empty">${empty}</div>`);
+    el.classList.toggle('more', el.scrollHeight > el.clientHeight + 4);
+  }
+
+  function renderOverviewPokeidle(accounts, today, twitchLive, kickLive) {
+    const mine = accounts.filter((x) => x.game === 'pokeidle');
+    const el = $('ov-pokeidle');
+    if (!el.firstElementChild) el.innerHTML = '<div class="ov-acc"></div><div><div class="ov-label">Ao vivo agora</div><div class="ov-live scroll-list"></div></div>';
+    setHTML(el.querySelector('.ov-acc'), mine.length
+      ? `<div class="ov-label">Contas · pontos hoje</div>${mine.map((x) => `<div class="row">${platformMark(x.p)}<span class="login">${esc(x.a.login)}</span>
+          ${accountStatus(x)}<span class="today" title="Pontos ganhos hoje">${today.accounts[x.a.login] ? `+${fmt(today.accounts[x.a.login])}` : ''}</span></div>`).join('')}`
+      : '<div class="empty">Nenhuma conta juntando pontos. Vincule uma em Pokeidle → Twitch ou Kick.</div>');
+
+    // Quem está assistindo cada live, para ver que as contas estão onde deviam.
+    const watchers = (p, name) => mine.filter((x) => x.p === p && x.a.watching?.includes(name)).map((x) => x.a.login);
+    const live = [...twitchLive.map((c) => ({ ...c, p: 'twitch' })), ...kickLive.map((c) => ({ ...c, p: 'kick' }))].sort((a, b) => b.viewers - a.viewers);
+    liveList(el.querySelector('.ov-live'), live.map((c) => {
+      const who = watchers(c.p, c.name);
+      return `<div class="row">${platformMark(c.p)}<span class="name" title="${esc(c.name)}">${esc(c.name)}</span>
+        ${who.length ? `<span class="who" title="Assistindo: ${esc(who.join(', '))}"><wa-icon name="eye"></wa-icon> ${esc(who.join(', '))}</span>` : ''}
+        <wa-badge class="viewers" variant="danger" appearance="filled-outlined" pill><wa-icon name="user" slot="start"></wa-icon>${fmt(c.viewers)}</wa-badge></div>`;
+    }), 'Nenhum parceiro do Pokeidle ao vivo agora.');
+  }
+
+  function renderOverviewLolidle(accounts) {
+    const el = $('ov-lolidle');
+    const lol = state.lolidle;
+    if (!lol) return setHTML(el, '<div class="empty">Reinicie o servidor para usar o LoLdle.</div>');
+    if (!el.querySelector('.ov-acc')) {
+      el._html = null; // o aviso de "reinicie" foi trocado à mão
+      el.innerHTML = '<div class="ov-acc"></div><div><div class="ov-label">Ao vivo agora</div><div class="ov-live scroll-list"></div></div>';
+    }
+    const mine = accounts.filter((x) => x.game === 'lolidle');
+    setHTML(el.querySelector('.ov-acc'), mine.length
+      ? `<div class="ov-label">Contas no chat</div>${mine.map((x) => `<div class="row">${platformMark('twitch')}<span class="login">${esc(x.a.login)}</span>${accountStatus(x)}</div>`).join('')}`
+      : '<div class="empty">Nenhuma conta no chat. Vincule uma em LoLdle → Twitch.</div>');
+    const inChat = (name) => mine.filter((x) => x.a.joined?.includes(name)).length;
+    liveList(el.querySelector('.ov-live'), sortChannels(lol.channels.filter((c) => c.live)).map((c) => {
+      const n = inChat(c.name);
+      return `<div class="row">${platformMark('twitch')}<span class="name" title="${esc(c.name)}">${esc(c.name)}</span>
+        ${mine.length ? `<span class="who" title="Contas no chat desta live"><wa-icon name="comments"></wa-icon> ${n}/${mine.length}</span>` : ''}
+        <wa-badge class="viewers" variant="danger" appearance="filled-outlined" pill><wa-icon name="user" slot="start"></wa-icon>${fmt(c.viewers)}</wa-badge></div>`;
+    }), 'Nenhum parceiro do LoLdle ao vivo agora.');
+  }
+
+  // Barras dos pontos dos últimos 7 dias (dias sem pontos entram com zero).
+  function renderOverviewWeek() {
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const key = dayKeyOf(i - 6);
+      return { key, total: dayPoints(key).total };
+    });
+    const max = Math.max(...days.map((d) => d.total));
+    if (!max) return setHTML($('ov-week'), '<div class="empty">As barras aparecem quando as contas (Twitch ou Kick) ganharem os primeiros pontos com o painel aberto.</div>');
+    const week = days.reduce((t, d) => t + d.total, 0);
+    const active = days.filter((d) => d.total).length;
+    const short = (n) => n >= 10000 ? `${fmt(Math.round(n / 1000))} mil` : fmt(n);
+    setHTML($('ov-week'), `<div class="week">${days.map((d, i) => {
+      const label = i === 6 ? 'Hoje' : new Date(`${d.key}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+      return `<div class="day ${i === 6 ? 'today' : ''}" title="${esc(dayLabel(d.key))}: +${fmt(d.total)} pontos">
+        <span class="val">${d.total ? `+${short(d.total)}` : ''}</span>
+        <div class="track"><div class="bar" style="height:${Math.round((d.total / max) * 100)}%"></div></div>
+        <span class="lbl">${label}</span></div>`;
+    }).join('')}</div>
+    <div class="week-foot meta"><span>Semana: <b>+${fmt(week)}</b></span><span>Média por dia: <b>+${fmt(Math.round(week / active))}</b></span></div>`);
+  }
+
+  // Os acontecimentos bons mais recentes (o resto fica na gaveta do 🎁).
+  function renderOverviewEvents() {
+    const list = visibleEvents('good').slice(0, 6);
+    setHTML($('ov-events'), list.length ? list.map((e) => {
+      const date = new Date(e.at);
+      const day = date.toLocaleDateString('sv-SE');
+      const when = day === dayKeyOf() ? date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : dayLabel(day);
+      const text = e.text.charAt(0).toUpperCase() + e.text.slice(1);
+      return `<div class="event good"><span class="icon"><wa-icon name="${eventIcon(e)}"></wa-icon></span>
+        <span class="body">${e.account ? `<span class="who">${esc(e.account)}</span> · ` : ''}${esc(text)}</span>
+        <span class="when">${esc(when)}</span></div>`;
+    }).join('') : `<div class="empty">${EVENTS_INFO.good.empty}</div>`);
   }
 
   // Código para vincular a conta de pontos.
@@ -1218,9 +1481,9 @@
     : /^baú/i.test(e.text) ? 'gift' : /^momento/i.test(e.text) ? 'star' : /raid/i.test(e.text) ? 'people-group' : /^seguiu/i.test(e.text) ? 'heart' : 'circle-check';
 
   function renderEvents() {
-    const events = state.events ?? { good: [], bad: [] };
+    const events = { good: visibleEvents('good'), bad: visibleEvents('bad') };
     for (const kind of ['good', 'bad']) {
-      const fresh = (events[kind] ?? []).filter((e) => e.at > seenAt(kind)).length;
+      const fresh = events[kind].filter((e) => e.at > seenAt(kind)).length;
       $$(`[data-events-count="${kind}"]`).forEach((b) => {
         b.hidden = !fresh || eventsKind === kind;
         b.textContent = fresh > 99 ? '99+' : fresh;
@@ -1484,6 +1747,10 @@
       show('twitch');
       api('POST', 'points/link');
     }
+    if (action === 'go-lol-link') {
+      show('lolidle');
+      api('POST', 'lolidle/link');
+    }
     if (action === 'go-kick-add') {
       show('kick');
       $('kick-token').value = '';
@@ -1569,6 +1836,7 @@
   document.addEventListener('change', (e) => {
     const t = e.target;
     if (t.matches('[data-autostart]')) api('PUT', 'autostart', { enabled: t.checked });
+    if (t.matches('[data-game]')) toggleGame(t);
     if (t.matches('[data-filter]')) {
       filters[t.dataset.filter] = t.value;
       render();
@@ -1619,7 +1887,7 @@
   // ---------- Navegação ----------
 
   const titles = {
-    visao: ['Visão geral', 'Tudo o que está acontecendo agora'],
+    visao: ['Visão geral', 'Como estão as contas e quanto rendeu hoje'],
     twitch: ['Pokeidle', 'Pontos do canal nas lives dos parceiros da Twitch'],
     kick: ['Pokeidle', 'Pontos do canal nas lives dos parceiros da Kick'],
     lolidle: ['LoLdle', 'Contas da Twitch no chat das lives dos parceiros'],
@@ -1633,9 +1901,12 @@
     history.replaceState(null, '', '#kick');
   }
 
+  // Ícones dos jogos nos cards da Visão geral: os mesmos desenhos do menu.
+  $$('[data-game-icon]').forEach((s) => (s.innerHTML = document.querySelector(`#nav a[data-page="${s.dataset.gameIcon}"] svg`)?.outerHTML ?? ''));
+
   const drawer = $('drawer');
   function show(target = location.hash.slice(1)) {
-    const page = titles[target] ? target : 'visao';
+    const page = titles[target] && pageOn(target) ? target : 'visao';
     $$('.page').forEach((p) => p.classList.toggle('active', p.id === `page-${page}`));
     $$('.nav a').forEach((a) => a.classList.toggle('active', (a.dataset.pages ?? a.dataset.page).split(' ').includes(page)));
     $$('.game-tabs a').forEach((a) => a.classList.toggle('active', a.getAttribute('href') === `#${page}`));

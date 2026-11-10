@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config, kick, pointsAccounts, saveConfig, saveKick, savePoints, normalizeChannel, MAX_ACCOUNTS, GAMES, gameEnabled, setGameEnabled } from './src/store.js';
 import { fetchLive, fetchRewards, isNetworkError } from './src/twitch.js';
-import { fetchKickLive, fetchKickChannel, resetKickToken } from './src/kick.js';
+import { fetchKickLive, fetchKickChannel, fetchKickRewards, resetKickToken } from './src/kick.js';
 import { installedBrowsers, browserName, listProfiles, openInProfile } from './src/browser.js';
 import { recordMinute, pointsHistory } from './src/stats.js';
 import { autostartEnabled, setAutostart } from './src/autostart.js';
@@ -229,6 +229,24 @@ async function handleKick(req, res, url) {
       log(`Kick: abrindo #${channel} no navegador`);
       return send(res, 200, state());
     }
+    if (req.method === 'POST' && sub === 'redeem') {
+      const { channel: raw, rewardId, text } = await readBody(req);
+      const channel = normalizeChannel(raw ?? '');
+      if (!config.kickChannels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
+      try {
+        const reward = await kickMiner.find(id).redeem(channel, String(rewardId ?? ''), String(text ?? ''));
+        return send(res, 200, { ...state(), redeemed: { title: reward.title, cost: reward.cost } });
+      } catch (err) {
+        return send(res, 400, { error: `Não deu para resgatar: ${err.message}` });
+      }
+    }
+  }
+
+  // Loja de um canal da Kick: recompensas lidas sem login (o saldo de cada conta vem do state).
+  if (req.method === 'GET' && action === 'rewards' && id) {
+    const channel = normalizeChannel(id);
+    if (!config.kickChannels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
+    return send(res, 200, { channel, ...(await fetchKickRewards(channel)) });
   }
 
   if (action === 'channels') {

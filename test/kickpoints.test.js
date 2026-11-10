@@ -216,3 +216,75 @@ test('setEnabled: desligar para as contas e deixa novas esperando; ligar começa
   assert.equal(starts, typeof WebSocket === 'undefined' ? 0 : 1);
   kick.accounts.length = 0;
 });
+
+// ---------- redeem (loja) ----------
+
+// Kick falsa da loja: uma recompensa de 300 pontos e o saldo pedido. `redeemed` guarda os resgates que chegaram.
+const shopSetup = ({ balance = 1000, redeemStatus = 200, rewards } = {}) => {
+  const redeemed = [];
+  respond = (url, options) => {
+    if (url.endsWith('/rewards')) return json({ data: rewards ?? [{ id: 'xp', title: 'Bônus XP PokeIdle', cost: 300, is_enabled: true, is_paused: false, is_user_input_required: false }] });
+    if (url.endsWith('/points')) return json({ data: { points: balance } });
+    if (url.endsWith('/redeem')) {
+      const { transaction_id: id, ...rest } = JSON.parse(options.body);
+      redeemed.push(rest);
+      return json(redeemStatus === 200 ? {} : { message: 'recusado' }, redeemStatus);
+    }
+    if (url.endsWith('/v1/user')) return json({ id: 7, username: 'kconta' });
+    return json({});
+  };
+  return redeemed;
+};
+
+test('redeem: resgata, desconta do saldo e avisa como coisa boa', async () => {
+  const redeemed = shopSetup();
+  const acc = makeAccount();
+  const reward = await acc.redeem('loja1', 'xp');
+  assert.equal(reward.cost, 300);
+  assert.deepEqual(redeemed, [{ message: '' }]);
+  assert.equal(acc.channel('loja1').balance, 700);
+  assert.ok(recentEvents().good.some((e) => /resgatou "Bônus XP PokeIdle" em #loja1/.test(e.text)));
+  assert.equal(acc.redeeming, false);
+});
+
+test('redeem: sem pontos suficientes nem chega a pedir o resgate', async () => {
+  const redeemed = shopSetup({ balance: 100 });
+  const acc = makeAccount();
+  await assert.rejects(acc.redeem('loja2', 'xp'), /faltam 200 pontos/);
+  assert.deepEqual(redeemed, []);
+  assert.equal(acc.channel('loja2').balance, 100);
+});
+
+test('redeem: recompensa sumida, pausada ou com texto faltando é recusada antes', async () => {
+  shopSetup({ rewards: [
+    { id: 'p', title: 'Pausada', cost: 1, is_enabled: true, is_paused: true },
+    { id: 't', title: 'Texto', cost: 1, is_enabled: true, is_user_input_required: true },
+  ] });
+  const acc = makeAccount();
+  await assert.rejects(acc.redeem('loja3', 'sumiu'), /não existe mais/);
+  await assert.rejects(acc.redeem('loja3', 'p'), /pausada/);
+  await assert.rejects(acc.redeem('loja3', 't'), /pede um texto/);
+});
+
+test('redeem: recusa da Kick vai para os erros e o saldo não muda', async () => {
+  shopSetup({ redeemStatus: 400 });
+  const acc = makeAccount();
+  await assert.rejects(acc.redeem('loja4', 'xp'), /recusado/);
+  assert.equal(acc.channel('loja4').balance, 1000);
+  assert.ok(recentEvents().bad.some((e) => /não deu para resgatar .* em #loja4/.test(e.text)));
+  assert.equal(acc.redeeming, false);
+});
+
+test('redeem: token recusado pede token novo; um resgate por vez; conta sem token não resgata', async () => {
+  shopSetup({ redeemStatus: 401 });
+  const acc = makeAccount();
+  await assert.rejects(acc.redeem('loja5', 'xp'));
+  assert.equal(acc.account.needsRelink, true);
+  await assert.rejects(acc.redeem('loja5', 'xp'), /token novo/);
+
+  shopSetup();
+  const other = makeAccount();
+  const first = other.redeem('loja6', 'xp');
+  await assert.rejects(other.redeem('loja6', 'xp'), /em andamento/);
+  await first;
+});

@@ -3,8 +3,9 @@
 // espectador que o player do site abre e manda o aviso de "assistindo" de tempos em tempos.
 // Mesmas travas da Twitch (human.js): descanso diário, tempos aleatórios e poucas leituras de saldo.
 import { kick, saveKick, MAX_ACCOUNTS } from './store.js';
-import { fetchKickUser, fetchKickPoints, fetchViewerToken, followKickChannel, cleanKickToken } from './kick.js';
+import { fetchKickUser, fetchKickPoints, fetchKickRewards, redeemKickReward, fetchViewerToken, followKickChannel, cleanKickToken } from './kick.js';
 import { isNetworkError } from './twitch.js';
+import { redeemProblem } from './points.js';
 import { recordPoints } from './stats.js';
 import { addEvent } from './events.js';
 import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK, FOLLOW_DELAY, FOLLOW_GAP, FOLLOW_CHECK } from './human.js';
@@ -160,6 +161,7 @@ export class KickAccount {
     this.netFails = 0;
     this.siteFails = 0;
     this.siteError = null;
+    this.redeeming = false; // um resgate por vez, para dois cliques não gastarem duas vezes
   }
 
   log(msg) {
@@ -388,6 +390,41 @@ export class KickAccount {
     }
     ch.balance = balance;
     ch.startBalance ??= balance;
+  }
+
+  // Resgate pedido pelo jogador na loja do painel (nunca sozinho). Lê saldo e recompensa de novo antes,
+  // porque o preço e a situação podem ter mudado desde que a loja abriu. Mesmas checagens da Twitch.
+  async redeem(slug, rewardId, text = '') {
+    if (!this.active) throw new Error('cole um token novo para esta conta antes de resgatar');
+    if (this.redeeming) throw new Error('já tem um resgate em andamento nesta conta');
+    this.redeeming = true;
+    try {
+      const { rewards } = await fetchKickRewards(slug);
+      const reward = rewards.find((r) => r.id === rewardId);
+      if (!reward) throw new Error('a recompensa não existe mais neste canal');
+      let balance;
+      try {
+        balance = await fetchKickPoints(slug, this.account.token);
+      } catch (err) {
+        if (err.status === 401) this.markRelink();
+        throw err;
+      }
+      this.channel(slug).balance = balance;
+      const problem = redeemProblem(reward, balance, text);
+      if (problem) throw new Error(problem);
+      try {
+        await redeemKickReward(slug, reward.id, this.account.token, reward.inputRequired ? text.trim() : '');
+      } catch (err) {
+        if (err.status === 401 || err.status === 403) this.checkAuth(err).catch(() => {});
+        this.report('bad', `não deu para resgatar "${reward.title}" em #${slug} (${err.message})`, slug);
+        throw err;
+      }
+      this.channel(slug).balance = balance - reward.cost;
+      this.report('good', `resgatou "${reward.title}" em #${slug} por ${reward.cost.toLocaleString('pt-BR')} pontos`, slug);
+      return reward;
+    } finally {
+      this.redeeming = false;
+    }
   }
 
   alerts({ offline = false } = {}) {

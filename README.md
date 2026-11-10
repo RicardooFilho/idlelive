@@ -133,7 +133,7 @@ Use o `iniciar.bat`, que não depende disso.
 
 ## O que ele não faz (de propósito)
 
-- Não resgata nada sozinho. O resgate é sempre com você: pela loja do painel (Twitch), com confirmação, ou pelo botão **▶**, na live.
+- Não resgata nada sozinho. O resgate é sempre com você: pela loja do painel (Twitch e Kick), com confirmação, ou pelo botão **▶**, na live.
 
 ## Para desenvolvedores
 

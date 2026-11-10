@@ -468,7 +468,7 @@
         <div>
           <h2><wa-icon name="coins"></wa-icon>Pontos do canal
             <wa-button class="help-btn" appearance="plain" size="small" data-action="kick-help" title="Como funciona o farm na Kick"><wa-icon name="circle-info" label="Como funciona"></wa-icon></wa-button></h2>
-          <div class="meta play-tip" hidden><wa-icon name="play"></wa-icon> abre a live no navegador, na conta certa, para você resgatar as recompensas.</div>
+          <div class="meta play-tip" hidden><wa-icon name="store"></wa-icon> abre a loja do canal para resgatar as recompensas por aqui; <wa-icon name="play"></wa-icon> abre a live no navegador, na conta certa.</div>
           <div class="points-grid" id="kick-points"></div>
         </div>
         <div>
@@ -711,7 +711,8 @@
     </section>
     <section>
       <h3><wa-icon name="gift"></wa-icon>Resgatar as recompensas</h3>
-      <p>O painel só junta pontos; o resgate é com você. O botão <wa-icon name="play"></wa-icon> ao lado de cada canal abre a live no navegador. Para abrir já logado na conta certa, escolha o perfil de cada conta em <b>Configurações → Navegador e perfis</b>.</p>
+      <p>O botão <wa-icon name="store"></wa-icon> ao lado de cada canal abre a <b>loja</b> dele, com as recompensas do Pokeidle. Escolha a conta e clique em <b>Resgatar</b>. O painel pede confirmação antes e nunca resgata sozinho.</p>
+      <p>O botão <wa-icon name="play"></wa-icon> abre a live no navegador, para resgatar por lá. Para abrir já logado na conta certa, escolha o perfil de cada conta em <b>Configurações → Navegador e perfis</b>.</p>
       <p>Para adicionar uma conta, use <b>+ Adicionar conta</b> nos cards acima.</p>
     </section>
     <section>
@@ -1196,7 +1197,7 @@
         <td class="num ${c.gained ? 'gained' : 'quiet'}">${c.gained ? `+${fmt(c.gained)}` : '–'}</td>
         ${twitch ? `<td class="num ${c.claims ? '' : 'quiet'}">${c.claims || '–'}</td>
         <td class="num ${c.moments ? '' : 'quiet'}">${c.moments || '–'}</td>` : ''}
-        <td style="white-space:nowrap">${shopButton(platform, p.login, c.name)}${playButton(platform, p, c)}</td>
+        <td style="white-space:nowrap">${shopButton(platform, p, c.name)}${playButton(platform, p, c)}</td>
       </tr>`).join('')}
     </table>`);
   }
@@ -1212,9 +1213,9 @@
   const playButton = (platform, account, c) => `<wa-button class="play" appearance="plain" size="small" data-action="points-open" data-platform="${platform}" data-key="${esc(accountKey(platform, account))}" data-channel="${esc(c.name)}"
     title="Abrir ${esc(c.name)} com a conta ${esc(account.login)}"><wa-icon name="play" label="Abrir live"></wa-icon></wa-button>`;
 
-  // Loja: abre as recompensas do canal (só na Twitch), já com esta conta escolhida.
-  const shopButton = (platform, login, channel) => platform === 'twitch' ? `<wa-button class="play" appearance="plain" size="small" data-action="shop-open" data-key="${esc(login ?? '')}" data-channel="${esc(channel)}"
-    title="Loja de ${esc(channel)}: ver e resgatar recompensas"><wa-icon name="store" label="Loja"></wa-icon></wa-button>` : '';
+  // Loja: abre as recompensas do canal (Twitch ou Kick), já com esta conta escolhida.
+  const shopButton = (platform, account, channel) => `<wa-button class="play" appearance="plain" size="small" data-action="shop-open" data-platform="${platform}" data-key="${esc(accountKey(platform, account))}" data-channel="${esc(channel)}"
+    title="Loja de ${esc(channel)}: ver e resgatar recompensas"><wa-icon name="store" label="Loja"></wa-icon></wa-button>`;
 
   // Bolinha do canal: verde ao vivo, apagada offline; pisca se a conta ainda não segue o canal.
   // `followed === false` (e não `!followed`) para o painel novo não piscar tudo com o servidor antigo.
@@ -1231,7 +1232,7 @@
             <span class="balance" ${c.balance === null ? 'title="Lendo o saldo…"' : ''}>${c.balance === null ? '–' : fmt(c.balance)}</span>
             ${c.gained ? `<span class="gained" title="Ganho desde que o painel abriu">+${fmt(c.gained)}</span>` : ''}
           </span>
-          ${shopButton(platform, account.login, c.name)}${playButton(platform, account, c)}
+          ${shopButton(platform, account, c.name)}${playButton(platform, account, c)}
         </div>`).join('') : '<div class="empty">Nenhum canal na lista.</div>'}</div>`;
   }
 
@@ -1290,9 +1291,9 @@
       : '<div class="empty">Nenhum canal ainda. Adicione os canais parceiros do LoLdle aqui em cima.</div>');
   }
 
-  // ---------- Loja (recompensas de um canal da Twitch) ----------
+  // ---------- Loja (recompensas de um canal da Twitch ou da Kick) ----------
 
-  // Loja aberta: { channel, key (login da conta escolhida), data, error, texts, busy, message }.
+  // Loja aberta: { platform, channel, key (conta escolhida: login na Twitch, id na Kick), data, error, texts, busy, message }.
   // As recompensas são lidas ao abrir (e depois de cada resgate); os saldos vêm do state, que atualiza a cada 5 s.
   let shop = null;
   const timeOf = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -1308,11 +1309,19 @@
   let shopFilter = null;
   // A loja mostra só o que é do Pokeidle: "Pokeidle" no título ou na descrição, ou um dos bônus dos filtros.
   // O resto do canal (sons, VIP, pedidos ao streamer) fica de fora.
-  const isPokeIdle = (r) => /poke\s*idle/i.test(`${r.title} ${r.prompt}`) || SHOP_FILTERS.some((f) => f.match.test(r.title));
+  // As do LoL Idle (que também falam de XP) ficam de fora, a não ser que citem o Pokeidle.
+  const isPokeIdle = (r) => {
+    const text = `${r.title} ${r.prompt}`;
+    if (/poke\s*idle/i.test(text)) return true;
+    return !/lol\s*idle|loldle/i.test(text) && SHOP_FILTERS.some((f) => f.match.test(r.title));
+  };
 
-  function openShop(channel, key) {
-    shop = { channel, key, data: null, error: null, texts: {}, busy: null, message: null };
-    $('rewards-dialog').label = `Loja de ${channel}`;
+  const shopAccounts = (platform) => (platform === 'kick' ? state.kick?.points?.accounts : state.points?.accounts) ?? [];
+
+  function openShop(platform, channel, key) {
+    shop = { platform, channel, key, data: null, error: null, texts: {}, busy: null, message: null };
+    $('rewards-dialog').label = `Loja de ${channel}${platform === 'kick' ? ' (Kick)' : ''}`;
+    $('rewards-dialog').className = `brand-${platform}`;
     renderShop();
     $('rewards-dialog').open = true;
     loadShop();
@@ -1325,7 +1334,7 @@
     if (!quiet) Object.assign(current, { data: null, error: null });
     renderShop();
     try {
-      const res = await fetch(`/api/rewards/${encodeURIComponent(current.channel)}`);
+      const res = await fetch(`/api/${current.platform === 'kick' ? 'kick/' : ''}rewards/${encodeURIComponent(current.channel)}`);
       const data = await res.json().catch(() => ({ error: 'reinicie o servidor para usar a loja' }));
       if (!res.ok) throw new Error(res.status === 404 ? 'reinicie o servidor para usar a loja' : data.error || 'algo deu errado');
       current.data = data;
@@ -1356,9 +1365,11 @@
              <wa-button size="small" appearance="outlined" data-action="shop-reload">Tentar de novo</wa-button></div></wa-callout>`
         : '<div class="empty"><wa-spinner></wa-spinner> Abrindo a loja…</div>');
     }
-    const accounts = state.points?.accounts ?? [];
-    const account = accounts.find((a) => a.login === shop.key) ?? accounts.find((a) => !a.needsRelink) ?? accounts[0];
-    shop.key = account?.login ?? null;
+    const { platform } = shop;
+    const kick = platform === 'kick';
+    const accounts = shopAccounts(platform);
+    const account = accounts.find((a) => accountKey(platform, a) === shop.key) ?? accounts.find((a) => !a.needsRelink) ?? accounts[0];
+    shop.key = account ? accountKey(platform, account) : null;
     const balance = balanceIn(account, shop.channel);
     const { pointsName, pointsIcon } = shop.data;
     const rewards = shop.data.rewards.filter(isPokeIdle);
@@ -1367,12 +1378,12 @@
     const picker = accounts.length
       ? `<div class="shop-accounts" style="--cols:${Math.min(accounts.length, 4)}">${accounts.map((a) => {
           const b = balanceIn(a, shop.channel);
-          return `<wa-button size="small" variant="brand" appearance="${a.login === shop.key ? 'accent' : 'outlined'}" data-action="shop-account" data-key="${esc(a.login)}"
+          return `<wa-button size="small" variant="brand" appearance="${accountKey(platform, a) === shop.key ? 'accent' : 'outlined'}" data-action="shop-account" data-key="${esc(accountKey(platform, a))}"
             title="${esc(a.login)}"><span class="who">${esc(a.login)}</span><span class="bal">· ${b === null ? '–' : fmt(b)}</span></wa-button>`;
         }).join('')}<span class="meta">Conta que vai resgatar, com o saldo de ${esc(pointsName)} neste canal.</span></div>`
-      : '<wa-callout variant="neutral" size="small"><wa-icon slot="icon" name="circle-info"></wa-icon>Vincule uma conta em Pokeidle → Twitch para resgatar por aqui.</wa-callout>';
+      : `<wa-callout variant="neutral" size="small"><wa-icon slot="icon" name="circle-info"></wa-icon>${kick ? 'Adicione uma conta em Pokeidle → Kick' : 'Vincule uma conta em Pokeidle → Twitch'} para resgatar por aqui.</wa-callout>`;
     const relink = account?.needsRelink
-      ? '<wa-callout variant="danger" size="small"><wa-icon slot="icon" name="circle-exclamation"></wa-icon>Esta conta precisa ser vinculada de novo antes de resgatar.</wa-callout>' : '';
+      ? `<wa-callout variant="danger" size="small"><wa-icon slot="icon" name="circle-exclamation"></wa-icon>${kick ? 'Cole um token novo para esta conta' : 'Esta conta precisa ser vinculada de novo'} antes de resgatar.</wa-callout>` : '';
     const message = shop.message ? `<wa-callout variant="${shop.message.variant}" size="small" style="margin:8px 0">
         <wa-icon slot="icon" name="${shop.message.variant === 'success' ? 'circle-check' : 'circle-exclamation'}"></wa-icon>${esc(shop.message.text)}</wa-callout>` : '';
 
@@ -1400,7 +1411,7 @@
           <span class="title">${esc(r.title)}</span>
           ${r.prompt ? `<span class="desc">${esc(r.prompt)}</span>` : ''}
           ${tags ? `<span class="tags">${tags}</span>` : ''}
-          ${r.inputRequired && canBuy ? `<wa-input size="small" maxlength="200" placeholder="Texto que o streamer pede" data-shop-text="${esc(r.id)}" value="${esc(shop.texts[r.id] ?? '')}"></wa-input>` : ''}
+          ${r.inputRequired && canBuy ? `<wa-input size="small" maxlength="200" placeholder="${esc(r.inputPrompt || 'Texto que o streamer pede')}" data-shop-text="${esc(r.id)}" value="${esc(shop.texts[r.id] ?? '')}"></wa-input>` : ''}
         </div>
         <div class="buy">
           <span class="cost">${icon}${fmt(r.cost)}</span>
@@ -1421,19 +1432,21 @@
       shop.message = { variant: 'danger', text: `"${reward.title}" pede um texto. Escreva no campo antes de resgatar.` };
       return renderShop();
     }
-    const { channel, key } = shop;
-    if (!confirm(`Resgatar "${reward.title}" por ${fmt(reward.cost)} pontos com a conta ${key}?\n\nNão dá para desfazer: os pontos só voltam se o streamer devolver.`)) return;
+    const { platform, channel, key } = shop;
+    const login = shopAccounts(platform).find((a) => accountKey(platform, a) === key)?.login ?? key;
+    if (!confirm(`Resgatar "${reward.title}" por ${fmt(reward.cost)} pontos com a conta ${login}${platform === 'kick' ? ' da Kick' : ''}?\n\nNão dá para desfazer: os pontos só voltam se o streamer devolver.`)) return;
     const current = shop;
     Object.assign(current, { busy: rewardId, message: null });
     renderShop();
     try {
-      const res = await fetch(`/api/points/${encodeURIComponent(key)}/redeem`, {
+      const path = platform === 'kick' ? `kick/accounts/${encodeURIComponent(key)}` : `points/${encodeURIComponent(key)}`;
+      const res = await fetch(`/api/${path}/redeem`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channel, rewardId, text }),
       });
       const data = await res.json().catch(() => ({ error: 'O servidor respondeu algo inesperado. Reinicie o servidor e tente de novo.' }));
       if (res.ok) {
         state = data;
-        current.message = { variant: 'success', text: `Resgatado com ${key}: "${reward.title}" por ${fmt(reward.cost)} pontos.` };
+        current.message = { variant: 'success', text: `Resgatado com ${login}: "${reward.title}" por ${fmt(reward.cost)} pontos.` };
         delete current.texts[rewardId];
       } else current.message = { variant: 'danger', text: res.status === 404 ? 'Reinicie o servidor para resgatar por aqui.' : data.error || 'Algo deu errado' };
     } catch {
@@ -1764,7 +1777,7 @@
       $('points-dialog').open = true;
     }
     if (action === 'kick-help') $('kick-help').open = true;
-    if (action === 'shop-open') openShop(channel, key || null);
+    if (action === 'shop-open') openShop(platform || 'twitch', channel, key || null);
     if (action === 'shop-reload') loadShop();
     if (action === 'shop-account' && shop) {
       shop.key = key;

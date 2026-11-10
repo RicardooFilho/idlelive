@@ -1,5 +1,6 @@
 // Kick: a API oficial diz quais canais estão ao vivo (token de app, sem login de usuário);
 // a API do site (kick.com/api) dá os números do canal e da live, a conta e o saldo de pontos.
+import crypto from 'node:crypto';
 const TOKEN_URL = 'https://id.kick.com/oauth/token';
 const API_URL = 'https://api.kick.com/public/v1';
 
@@ -102,6 +103,63 @@ export async function followKickChannel(slug, token) {
   if (res.status === 401) throw new KickError('token da Kick recusado', 401);
   if (!res.ok) throw new KickError(`a Kick respondeu ${res.status}`, res.status);
   return true;
+}
+
+// Recompensa da Kick no mesmo formato da Twitch (toReward em twitch.js), para o painel usar a mesma loja.
+// A Kick não tem estoque, tempo de espera nem imagem por recompensa: só a cor.
+export const toKickReward = (r) => ({
+  id: r.id,
+  title: r.title,
+  prompt: r.description ?? '',
+  inputPrompt: r.prompt ?? '',
+  cost: r.cost,
+  color: r.background_color ?? null,
+  image: null,
+  paused: !!r.is_paused,
+  inStock: true,
+  subOnly: false,
+  inputRequired: !!r.is_user_input_required,
+  cooldownUntil: null,
+});
+
+// Loja de um canal: as recompensas ativas, da mais barata para a mais cara. Sem login, como na Twitch.
+export async function fetchKickRewards(slug) {
+  const data = await siteGet(`/v2/channels/${encodeURIComponent(slug)}/rewards`);
+  return {
+    pointsName: 'pontos',
+    pointsIcon: null,
+    rewards: (data?.data ?? [])
+      .filter((r) => r.is_enabled !== false)
+      .map(toKickReward)
+      .sort((a, b) => a.cost - b.cost),
+  };
+}
+
+// Identificador do resgate no formato que o site da Kick usa (ULID): horário em ms + parte aleatória, em base32.
+// Cada resgate leva um novo, para a Kick não contar o mesmo pedido duas vezes.
+const ULID_CHARS = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+export function ulid(now = Date.now()) {
+  let time = '';
+  for (let t = now, i = 0; i < 10; i++, t = Math.floor(t / 32)) time = ULID_CHARS[t % 32] + time;
+  return time + [...crypto.randomBytes(16)].map((b) => ULID_CHARS[b % 32]).join('');
+}
+
+// Resgata uma recompensa com a conta, com o mesmo corpo que o site manda: { transaction_id, message }.
+// A Kick explica a recusa no corpo da resposta ("message" e, na validação, "errors"); ela aparece como veio.
+export async function redeemKickReward(slug, rewardId, token, text = '') {
+  const res = await fetch(`${SITE_URL}/v2/channels/${encodeURIComponent(slug)}/rewards/${encodeURIComponent(rewardId)}/redeem`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transaction_id: ulid(), message: text }),
+  });
+  if (res.status === 401) throw new KickError('token da Kick recusado', 401);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    const details = Object.values(body?.errors ?? {}).flat().join(' ');
+    const reason = [body?.message ?? body?.error, details].filter(Boolean).join(' ');
+    throw new KickError(reason ? `a Kick recusou: ${reason}` : `a Kick respondeu ${res.status}`, res.status);
+  }
+  return res.json().catch(() => ({}));
 }
 
 // Token da conexão de espectador (websockets.kick.com), ligado à conta e ao canal.

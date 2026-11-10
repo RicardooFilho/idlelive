@@ -5,6 +5,7 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 ## 10/11/2026
 
 ### Novidades
+- **Loja da Kick:** em **Pokeidle → Kick**, o botão da loja ao lado de cada canal mostra as recompensas do Pokeidle (XP, Capture Boost, Secret Lure) e resgata com a conta escolhida, igual à loja da Twitch. O painel pede confirmação antes e nunca resgata sozinho. Precisa reiniciar o servidor uma vez para usar.
 - **Configurações → Jogos:** liga e desliga o **Pokeidle** e o **LoLdle**. Jogo desligado some do menu, da Visão geral, do Histórico e das listas do 🐞 e do 🎁 (o Histórico e os cards de navegador e app da Kick são do Pokeidle). As contas dele param: no Pokeidle não assistem, não pegam baú nem seguem canais; no LoLdle saem dos chats. O painel também para de ver quem está ao vivo nos canais dele. Nada é apagado, e ao ligar de novo tudo volta. Precisa reiniciar o servidor uma vez para usar.
 - **Atualização pelo painel:** o painel procura versão nova no GitHub a cada 6 horas e mostra um aviso no topo. O botão **Atualizar agora** baixa a versão nova, troca os arquivos do programa e reinicia sozinho, sem precisar de git. Suas contas, canais e histórico continuam. Em **Configurações** aparece a versão atual e o botão **Procurar atualização**.
 - **Download pelo IdleLive.zip:** cada versão sai como release no GitHub, com o zip pronto para extrair.
@@ -12,6 +13,7 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 - **LoLdle:** vincule até 4 contas da Twitch em **LoLdle → Twitch**: cada conta entra em silêncio no chat dos 47 canais parceiros que estiverem ao vivo e sai quando a live acaba. É assim que o jogo dá o bônus de XP. Não manda mensagem e não assiste a live; pode ser a mesma conta do Pokeidle. O card de cada conta mostra em quais chats ela está agora.
 
 ### Mudanças
+- A loja do Pokeidle não mostra mais as recompensas do LoL Idle que falam de XP.
 - **Visão geral nova:** agora ela mostra os dois jogos e o que rendeu no dia.
   - **Números do topo:** pontos de hoje comparados com ontem, contas trabalhando, baús e Momentos de hoje e lives ao vivo. Os pontos vêm do Histórico, então não zeram quando o painel reinicia.
   - **Precisa de você:** só aparece quando alguma conta (Pokeidle ou LoLdle) precisa ser vinculada de novo, quando a Kick recusa um token ou quando tem erro novo, e traz o botão que resolve.

@@ -8,6 +8,8 @@ export const GQL_URL = 'https://gql.twitch.tv/gql';
 export const isNetworkError = (err) => err instanceof TypeError && /fetch failed/i.test(err.message);
 export const TV_CLIENT_ID = 'ue6666qo983tsx6so1t0vnawi233wa';
 const STREAM_INFO_HASH = '198492e0857f6aedead9665c81c5a06d67b25b58034649687124083ff288597d';
+// Saldo e recompensas de um canal. Usado aqui sem login (só a loja) e em points.js com login (saldo e baú).
+export const CHANNEL_POINTS_HASH = '7fe050e3761eb2cf258d70ee1a21cbd76fa8cf3d7e7b12fc437e7029d446b5e3';
 
 async function postForm(url, params) {
   const res = await fetch(url, { method: 'POST', body: new URLSearchParams(params) });
@@ -85,4 +87,45 @@ export async function fetchLive(logins) {
     }
   }
   return live;
+}
+
+// Recompensa da Twitch no formato do painel. `cooldownUntil` é quando ela volta (null = disponível).
+export const toReward = (r) => ({
+  id: r.id,
+  title: r.title,
+  prompt: r.prompt ?? '',
+  cost: r.cost,
+  color: r.backgroundColor ?? null,
+  image: r.image?.url2x ?? r.defaultImage?.url2x ?? null,
+  paused: !!r.isPaused,
+  inStock: r.isInStock !== false,
+  subOnly: !!r.isSubOnly,
+  inputRequired: !!r.isUserInputRequired,
+  cooldownUntil: r.cooldownExpiresAt ?? null,
+});
+
+// Loja de um canal: as recompensas que dão para resgatar com pontos, da mais barata para a mais cara.
+// Sem login, como a lista de lives: abrir a loja não usa nenhuma conta.
+export async function fetchRewards(login) {
+  const res = await fetch(GQL_URL, {
+    method: 'POST',
+    headers: { 'Client-Id': TV_CLIENT_ID },
+    body: JSON.stringify({ operationName: 'ChannelPointsContext', variables: { channelLogin: login }, extensions: { persistedQuery: { version: 1, sha256Hash: CHANNEL_POINTS_HASH } } }),
+  });
+  if (!res.ok) throw new Error(`Twitch respondeu ${res.status}`);
+  const body = await res.json();
+  if (body.errors?.length) throw new Error(body.errors[0].message);
+  const channel = body.data?.community?.channel;
+  if (!channel) throw new Error('canal não encontrado');
+  const settings = channel.communityPointsSettings ?? {};
+  return {
+    channelId: channel.id,
+    pointsName: settings.name || 'pontos',
+    pointsIcon: settings.image?.url2x ?? null,
+    // Só as ativas e pagas com pontos (algumas são pagas com bits).
+    rewards: (settings.customRewards ?? [])
+      .filter((r) => r.isEnabled !== false && (r.pricingType ?? 'POINTS') === 'POINTS')
+      .map(toReward)
+      .sort((a, b) => a.cost - b.cost),
+  };
 }

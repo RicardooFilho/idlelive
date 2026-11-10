@@ -5,6 +5,7 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 ## 09/11/2026
 
 ### Novidades
+- **Loja do canal (Twitch):** o botão de **loja** ao lado de cada canal, nos cards de pontos, abre as recompensas daquele streamer, com descrição, preço e situação (pausada, esgotada, em espera, só inscritos). Escolha a conta pelos botões do topo, que mostram o saldo de cada uma no canal, e clique em **Resgatar**. O painel confirma antes, lê o saldo e a recompensa de novo e só então resgata. Ele nunca resgata sozinho. Os resgates aparecem na lista do ícone de **presente** 🎁 e as recusas da Twitch na do **inseto** 🐞. A loja mostra só as recompensas do PokeIdle. Os botões **XP**, **Capture Boost** e **Shiny Lure** no topo da loja mostram só aquele tipo de bônus; clique de novo para ver todas.
 - **Follow automático:** cada conta (Twitch e Kick) segue todos os canais da lista, inclusive os que ela quase nunca assiste. Segue um por vez, a cada 3 a 10 minutos (tempo aleatório, como uma pessoa), começando pelas lives que está assistindo. Cada canal só é seguido uma vez por conta: se você deixar de seguir depois, a conta não segue de novo. Os follows aparecem na lista do ícone de **presente** 🎁.
 - **Bolinha piscando = ainda não segue:** nos cards de pontos, a bolinha do canal pisca enquanto aquela conta não segue o canal. Nos cards de "Canais parceiros", a bolinha verde pisca se alguma conta ainda não segue.
 

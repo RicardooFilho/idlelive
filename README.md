@@ -17,7 +17,8 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 - Pega os **Momentos** dos canais oficiais e o baú assim que a Twitch avisa.
 - Entra nas **raids** de um canal oficial para outro canal oficial, se a conta estava assistindo quem fez a raid.
 - **Segue todos os canais da lista**, um por vez a cada 3 a 10 minutos (só uma vez por canal: se você deixar de seguir, a conta não segue de novo).
-- O botão **▶** ao lado de cada canal abre a live no navegador, na conta certa, para você resgatar as recompensas.
+- **Loja do canal:** o botão de loja ao lado de cada canal mostra as recompensas do streamer (descrição e preço) e resgata pela conta que você escolher, sempre com confirmação.
+- O botão **▶** ao lado de cada canal abre a live no navegador, na conta certa, para resgatar por lá.
 - Mostra o saldo em todos os canais da lista, ao vivo ou offline, quanto subiu desde que o painel abriu e quantos bônus foram pegos.
 
 **Kick**
@@ -29,7 +30,7 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 
 **Painel**
 - Menu lateral com **Visão geral** (resumo de tudo), **Twitch**, **Kick**, **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
-- No topo, o ícone de inseto 🐞 lista os erros da Twitch e da Kick, e o de presente 🎁 lista os baús, Momentos, raids e follows, dos últimos 30 dias.
+- No topo, o ícone de inseto 🐞 lista os erros da Twitch e da Kick, e o de presente 🎁 lista os baús, Momentos, raids, follows e resgates, dos últimos 30 dias.
 - Avisos no topo quando algo para de funcionar (conta para vincular de novo, Twitch recusando pedidos, conexão caída). No celular, ele vira uma gaveta no botão ☰.
 
 **Geral**
@@ -115,7 +116,7 @@ Use o `iniciar.bat`, que não depende disso.
 
 ## O que ele não faz (de propósito)
 
-- Não resgata recompensas com os pontos. Ele só junta os pontos e pega o bônus; o resgate é com você, pelo botão **▶**.
+- Não resgata nada sozinho. O resgate é sempre com você: pela loja do painel (Twitch), com confirmação, ou pelo botão **▶**, na live.
 
 ## Para desenvolvedores
 

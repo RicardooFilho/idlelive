@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config, kick, pointsAccounts, saveConfig, saveKick, savePoints, normalizeChannel, MAX_ACCOUNTS } from './src/store.js';
-import { fetchLive, isNetworkError } from './src/twitch.js';
+import { fetchLive, fetchRewards, isNetworkError } from './src/twitch.js';
 import { fetchKickLive, fetchKickChannel, resetKickToken } from './src/kick.js';
 import { installedBrowsers, browserName, listProfiles, openInProfile } from './src/browser.js';
 import { recordMinute, pointsHistory } from './src/stats.js';
@@ -311,6 +311,13 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  // Loja de um canal da Twitch: recompensas (lidas sem login) e o saldo de cada conta nele.
+  if (req.method === 'GET' && resource === 'rewards' && id) {
+    const channel = normalizeChannel(id);
+    if (!config.channels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
+    return send(res, 200, { channel, ...(await fetchRewards(channel)) });
+  }
+
   if (req.method === 'PUT' && resource === 'autostart') {
     const { enabled } = await readBody(req);
     setAutostart(!!enabled);
@@ -319,7 +326,8 @@ async function handleApi(req, res, url) {
   }
 
   // Contas de pontos do canal: /api/points/link (vincular), /api/points/<login> (desvincular),
-  // /api/points/<login>/profile (perfil do navegador) e /api/points/<login>/open (abrir uma live nesse perfil).
+  // /api/points/<login>/profile (perfil do navegador), /api/points/<login>/open (abrir uma live nesse perfil)
+  // e /api/points/<login>/redeem (resgatar uma recompensa da loja).
   if (resource === 'points') {
     const sub = rawSub && decodeURIComponent(rawSub);
     if (req.method === 'POST' && id === 'link') await miner.startLink();
@@ -333,6 +341,16 @@ async function handleApi(req, res, url) {
       if (!config.channels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
       openInProfile(currentBrowser(), miner.profileOf(id), `https://www.twitch.tv/${channel}`);
       log(`Pontos (${id}): abrindo #${channel} no navegador`);
+    } else if (req.method === 'POST' && sub === 'redeem') {
+      const { channel: raw, rewardId, text } = await readBody(req);
+      const channel = normalizeChannel(raw ?? '');
+      if (!config.channels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
+      try {
+        const reward = await miner.find(id).redeem(channel, String(rewardId ?? ''), String(text ?? ''));
+        return send(res, 200, { ...state(), redeemed: { title: reward.title, cost: reward.cost } });
+      } catch (err) {
+        return send(res, 400, { error: `Não deu para resgatar: ${err.message}` });
+      }
     } else if (req.method === 'DELETE' && id && !sub) miner.unlink(id);
     else return send(res, 404, { error: 'Rota não encontrada' });
     return send(res, 200, state());

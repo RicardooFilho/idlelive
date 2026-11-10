@@ -248,6 +248,36 @@
   .play::part(base) { padding: 0 4px; height: 24px; color: var(--wa-color-text-quiet); }
   .play:hover::part(base) { color: var(--brand-text); }
 
+  /* Loja: recompensas de um canal da Twitch. */
+  #rewards-dialog { --width: min(800px, 94vw); }
+  /* Contas em colunas iguais: todas numa linha (até 4); em tela estreita, 2 por linha. */
+  .shop-accounts { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 8px; margin-bottom: 6px; }
+  .shop-accounts wa-button { width: 100%; min-width: 0; }
+  .shop-accounts wa-button::part(base) { width: 100%; padding-inline: 10px; }
+  .shop-accounts wa-button::part(label) { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
+  .shop-accounts .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .shop-accounts .bal { flex: none; opacity: .85; }
+  .shop-accounts .meta { grid-column: 1 / -1; }
+  .shop-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 2px; }
+  .reward { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--wa-color-surface-border); }
+  .reward:last-child { border-bottom: none; }
+  .reward.unavailable .pic, .reward.unavailable .info { opacity: .55; }
+  .reward .pic { width: 44px; height: 44px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--brand-soft); }
+  .reward .pic img { width: 28px; height: 28px; }
+  .reward .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .reward .title { font-weight: 600; overflow-wrap: anywhere; }
+  .reward .desc { font-size: 13px; color: var(--wa-color-text-quiet); overflow-wrap: anywhere; white-space: pre-line; }
+  .reward .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .reward .buy { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .reward .cost { font-weight: 700; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .reward .cost img { width: 16px; height: 16px; }
+  .reward .why { font-size: 12px; color: var(--wa-color-text-quiet); text-align: right; }
+  @media (max-width: 520px) {
+    .reward { flex-wrap: wrap; }
+    .reward .buy { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; }
+  }
+  @media (max-width: 640px) { .shop-accounts { --cols: 2 !important; } }
+
   /* Histórico de pontos */
   .history { overflow-x: auto; }
   .history table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -341,7 +371,7 @@
           <h2><wa-icon name="coins"></wa-icon>Pontos do canal
             <wa-button class="help-btn" appearance="plain" size="small" data-action="farm-help" title="Como funciona o farm de pontos"><wa-icon name="circle-info" label="Como funciona"></wa-icon></wa-button></h2>
           <div id="points-link"></div>
-          <div class="meta play-tip" hidden><wa-icon name="play"></wa-icon> abre a live no navegador, na conta certa, para você resgatar as recompensas.</div>
+          <div class="meta play-tip" hidden><wa-icon name="store"></wa-icon> abre a loja do canal para resgatar as recompensas por aqui; <wa-icon name="play"></wa-icon> abre a live no navegador, na conta certa.</div>
           <div class="points-grid" id="points"></div>
         </div>
         <div>
@@ -486,7 +516,8 @@
 
     <section>
       <h3><wa-icon name="gift"></wa-icon>Resgatar o bônus de XP</h3>
-      <p>O painel só junta pontos; o resgate é com você. O botão <wa-icon name="play"></wa-icon> ao lado de cada canal abre a live no navegador. Para abrir já logado na conta certa, escolha o perfil de cada conta em <b>Configurações → Navegador e perfis</b>.</p>
+      <p>O botão <wa-icon name="store"></wa-icon> ao lado de cada canal abre a <b>loja</b> dele: as recompensas, a descrição e o preço de cada uma. Escolha a conta e clique em <b>Resgatar</b>. O painel pede confirmação antes, porque resgate não tem volta, e nunca resgata sozinho.</p>
+      <p>O botão <wa-icon name="play"></wa-icon> abre a live no navegador, para resgatar por lá. Para abrir já logado na conta certa, escolha o perfil de cada conta em <b>Configurações → Navegador e perfis</b>.</p>
     </section>
 
     <section>
@@ -577,6 +608,7 @@
   </div>
 </wa-dialog>
 <wa-dialog id="points-dialog" label="Pontos do canal" class="brand-twitch" light-dismiss><div class="points-wrap" id="points-all"></div></wa-dialog>
+<wa-dialog id="rewards-dialog" label="Loja" class="brand-twitch" light-dismiss><div id="rewards"></div></wa-dialog>
 <div class="toast" id="toast"></div>
 <div id="no-ui" style="position:fixed;inset:0;display:none;place-items:center;padding:24px;font:16px/1.5 system-ui,sans-serif;color:#eee;background:#111;text-align:center">
   <div><b>O visual do painel não carregou.</b><br>Ele vem da internet: confira a conexão e recarregue a página (F5).<br>O farm continua rodando na janela preta.</div>
@@ -675,6 +707,7 @@
     } catch {}
     const hasAccounts = (state.points?.accounts?.length ?? 0) + (state.kick.points?.accounts?.length ?? 0) > 0;
     $$('.play-tip').forEach((t) => (t.hidden = tipSeen || !hasAccounts));
+    renderShop();
     renderHistory();
     renderAlerts();
     renderEvents();
@@ -839,7 +872,7 @@
         <td class="num ${c.gained ? 'gained' : 'quiet'}">${c.gained ? `+${fmt(c.gained)}` : '–'}</td>
         ${twitch ? `<td class="num ${c.claims ? '' : 'quiet'}">${c.claims || '–'}</td>
         <td class="num ${c.moments ? '' : 'quiet'}">${c.moments || '–'}</td>` : ''}
-        <td>${playButton(platform, p, c)}</td>
+        <td style="white-space:nowrap">${shopButton(platform, p.login, c.name)}${playButton(platform, p, c)}</td>
       </tr>`).join('')}
     </table>`);
   }
@@ -854,6 +887,10 @@
   // ▶: abre a live no navegador, no perfil da conta, para resgatar recompensas.
   const playButton = (platform, account, c) => `<wa-button class="play" appearance="plain" size="small" data-action="points-open" data-platform="${platform}" data-key="${esc(accountKey(platform, account))}" data-channel="${esc(c.name)}"
     title="Abrir ${esc(c.name)} com a conta ${esc(account.login)}"><wa-icon name="play" label="Abrir live"></wa-icon></wa-button>`;
+
+  // Loja: abre as recompensas do canal (só na Twitch), já com esta conta escolhida.
+  const shopButton = (platform, login, channel) => platform === 'twitch' ? `<wa-button class="play" appearance="plain" size="small" data-action="shop-open" data-key="${esc(login ?? '')}" data-channel="${esc(channel)}"
+    title="Loja de ${esc(channel)}: ver e resgatar recompensas"><wa-icon name="store" label="Loja"></wa-icon></wa-button>` : '';
 
   // Bolinha do canal: verde ao vivo, apagada offline; pisca se a conta ainda não segue o canal.
   // `followed === false` (e não `!followed`) para o painel novo não piscar tudo com o servidor antigo.
@@ -870,7 +907,7 @@
             <span class="balance" ${c.balance === null ? 'title="Lendo o saldo…"' : ''}>${c.balance === null ? '–' : fmt(c.balance)}</span>
             ${c.gained ? `<span class="gained" title="Ganho desde que o painel abriu">+${fmt(c.gained)}</span>` : ''}
           </span>
-          ${playButton(platform, account, c)}
+          ${shopButton(platform, account.login, c.name)}${playButton(platform, account, c)}
         </div>`).join('') : '<div class="empty">Nenhum canal na lista.</div>'}</div>`;
   }
 
@@ -895,13 +932,177 @@
     setHTML($('kick-channels'), channelCards('kick', state.kick.channels));
   }
 
+  // ---------- Loja (recompensas de um canal da Twitch) ----------
+
+  // Loja aberta: { channel, key (login da conta escolhida), data, error, texts, busy, message }.
+  // As recompensas são lidas ao abrir (e depois de cada resgate); os saldos vêm do state, que atualiza a cada 5 s.
+  let shop = null;
+  const timeOf = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const balanceIn = (account, channel) => account?.channels.find((c) => c.name === channel)?.balance ?? null;
+  const onCooldown = (r) => !!r.cooldownUntil && Date.parse(r.cooldownUntil) > Date.now();
+
+  // Filtros pelos bônus do PokeIdle, pelo título da recompensa. O escolhido vale para todas as lojas até trocar.
+  const SHOP_FILTERS = [
+    { id: 'xp', label: 'XP', icon: 'arrow-trend-up', match: /\bxp\b/i },
+    { id: 'capture', label: 'Capture Boost', icon: 'bullseye', match: /captur/i },
+    { id: 'lure', label: 'Shiny Lure', icon: 'star', match: /lure|shiny/i },
+  ];
+  let shopFilter = null;
+  // A loja mostra só o que é do PokeIdle: "PokeIdle" no título ou na descrição, ou um dos bônus dos filtros.
+  // O resto do canal (sons, VIP, pedidos ao streamer) fica de fora.
+  const isPokeIdle = (r) => /poke\s*idle/i.test(`${r.title} ${r.prompt}`) || SHOP_FILTERS.some((f) => f.match.test(r.title));
+
+  function openShop(channel, key) {
+    shop = { channel, key, data: null, error: null, texts: {}, busy: null, message: null };
+    $('rewards-dialog').label = `Loja de ${channel}`;
+    renderShop();
+    $('rewards-dialog').open = true;
+    loadShop();
+  }
+
+  // quiet: atualiza sem trocar a lista por "Abrindo a loja…" (depois de um resgate).
+  async function loadShop(quiet = false) {
+    const current = shop;
+    if (!current) return;
+    if (!quiet) Object.assign(current, { data: null, error: null });
+    renderShop();
+    try {
+      const res = await fetch(`/api/rewards/${encodeURIComponent(current.channel)}`);
+      const data = await res.json().catch(() => ({ error: 'reinicie o servidor para usar a loja' }));
+      if (!res.ok) throw new Error(res.status === 404 ? 'reinicie o servidor para usar a loja' : data.error || 'algo deu errado');
+      current.data = data;
+      current.error = null;
+    } catch (err) {
+      if (!current.data) current.error = err instanceof TypeError ? 'o servidor não respondeu' : err.message;
+    }
+    if (shop === current) renderShop();
+  }
+
+  // O mesmo motivo que o servidor daria (redeemProblem em points.js), para avisar antes do clique.
+  function rewardProblem(r, balance) {
+    if (r.paused) return 'pausada';
+    if (!r.inStock) return 'esgotada';
+    if (onCooldown(r)) return `volta às ${timeOf(r.cooldownUntil)}`;
+    if (balance === null) return 'saldo ainda não lido';
+    if (balance < r.cost) return `faltam ${fmt(r.cost - balance)}`;
+    return null;
+  }
+
+  function renderShop() {
+    if (!shop || !state) return;
+    const el = $('rewards');
+    if (!shop.data) {
+      return setHTML(el, shop.error
+        ? `<wa-callout variant="danger"><wa-icon slot="icon" name="circle-exclamation"></wa-icon>
+             <div class="link-box"><div>Não deu para abrir a loja: ${esc(shop.error)}</div>
+             <wa-button size="small" appearance="outlined" data-action="shop-reload">Tentar de novo</wa-button></div></wa-callout>`
+        : '<div class="empty"><wa-spinner></wa-spinner> Abrindo a loja…</div>');
+    }
+    const accounts = state.points?.accounts ?? [];
+    const account = accounts.find((a) => a.login === shop.key) ?? accounts.find((a) => !a.needsRelink) ?? accounts[0];
+    shop.key = account?.login ?? null;
+    const balance = balanceIn(account, shop.channel);
+    const { pointsName, pointsIcon } = shop.data;
+    const rewards = shop.data.rewards.filter(isPokeIdle);
+    const icon = pointsIcon ? `<img src="${esc(pointsIcon)}" alt="">` : '<wa-icon name="coins"></wa-icon>';
+
+    const picker = accounts.length
+      ? `<div class="shop-accounts" style="--cols:${Math.min(accounts.length, 4)}">${accounts.map((a) => {
+          const b = balanceIn(a, shop.channel);
+          return `<wa-button size="small" variant="brand" appearance="${a.login === shop.key ? 'accent' : 'outlined'}" data-action="shop-account" data-key="${esc(a.login)}"
+            title="${esc(a.login)}"><span class="who">${esc(a.login)}</span><span class="bal">· ${b === null ? '–' : fmt(b)}</span></wa-button>`;
+        }).join('')}<span class="meta">Conta que vai resgatar, com o saldo de ${esc(pointsName)} neste canal.</span></div>`
+      : '<wa-callout variant="neutral" size="small"><wa-icon slot="icon" name="circle-info"></wa-icon>Vincule uma conta na página Twitch para resgatar por aqui.</wa-callout>';
+    const relink = account?.needsRelink
+      ? '<wa-callout variant="danger" size="small"><wa-icon slot="icon" name="circle-exclamation"></wa-icon>Esta conta precisa ser vinculada de novo antes de resgatar.</wa-callout>' : '';
+    const message = shop.message ? `<wa-callout variant="${shop.message.variant}" size="small" style="margin:8px 0">
+        <wa-icon slot="icon" name="${shop.message.variant === 'success' ? 'circle-check' : 'circle-exclamation'}"></wa-icon>${esc(shop.message.text)}</wa-callout>` : '';
+
+    // Só mostra os filtros que têm alguma recompensa neste canal.
+    const filters = SHOP_FILTERS.filter((f) => rewards.some((r) => f.match.test(r.title)));
+    const active = filters.find((f) => f.id === shopFilter);
+    const filterBar = filters.length ? `<div class="shop-filters">${filters.map((f) =>
+      `<wa-button size="small" pill variant="brand" appearance="${f === active ? 'accent' : 'outlined'}" data-action="shop-filter" data-key="${f.id}"
+        title="${f === active ? 'Mostrar todas' : `Só ${esc(f.label)}`}"><wa-icon slot="start" name="${f.icon}"></wa-icon>${esc(f.label)}</wa-button>`).join('')}</div>` : '';
+    const shown = active ? rewards.filter((r) => active.match.test(r.title)) : rewards;
+
+    const list = shown.length ? shown.map((r) => {
+      const problem = rewardProblem(r, balance);
+      const tags = [
+        r.paused && '<wa-tag size="small" variant="warning">pausada</wa-tag>',
+        !r.inStock && '<wa-tag size="small" variant="warning">esgotada</wa-tag>',
+        onCooldown(r) && `<wa-tag size="small" variant="warning">em espera até ${esc(timeOf(r.cooldownUntil))}</wa-tag>`,
+        r.subOnly && '<wa-tag size="small" variant="neutral">só inscritos</wa-tag>',
+        r.inputRequired && '<wa-tag size="small" variant="neutral">pede texto</wa-tag>',
+      ].filter(Boolean).join('');
+      const canBuy = !!account && !account.needsRelink && !problem;
+      return `<div class="reward ${r.paused || !r.inStock || onCooldown(r) ? 'unavailable' : ''}">
+        <div class="pic" ${r.color ? `style="background:${esc(r.color)}"` : ''}>${r.image ? `<img src="${esc(r.image)}" alt="">` : '<wa-icon name="gift"></wa-icon>'}</div>
+        <div class="info">
+          <span class="title">${esc(r.title)}</span>
+          ${r.prompt ? `<span class="desc">${esc(r.prompt)}</span>` : ''}
+          ${tags ? `<span class="tags">${tags}</span>` : ''}
+          ${r.inputRequired && canBuy ? `<wa-input size="small" maxlength="200" placeholder="Texto que o streamer pede" data-shop-text="${esc(r.id)}" value="${esc(shop.texts[r.id] ?? '')}"></wa-input>` : ''}
+        </div>
+        <div class="buy">
+          <span class="cost">${icon}${fmt(r.cost)}</span>
+          <wa-button size="small" variant="brand" data-action="shop-redeem" data-reward="${esc(r.id)}" ${canBuy && !shop.busy ? '' : 'disabled'} ${shop.busy === r.id ? 'loading' : ''}>Resgatar</wa-button>
+          ${problem && account ? `<span class="why">${esc(problem)}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('') : `<div class="empty">${active ? `Nenhuma recompensa de ${esc(active.label)} ativa agora.` : 'Este canal não tem recompensas do PokeIdle ativas agora.'}</div>`;
+
+    setHTML(el, `${picker}${relink}${message}${filterBar}<div>${list}</div>`);
+  }
+
+  async function redeemReward(rewardId) {
+    const reward = shop?.data?.rewards.find((r) => r.id === rewardId);
+    if (!reward || shop.busy || !shop.key) return;
+    const text = (shop.texts[rewardId] ?? '').trim();
+    if (reward.inputRequired && !text) {
+      shop.message = { variant: 'danger', text: `"${reward.title}" pede um texto. Escreva no campo antes de resgatar.` };
+      return renderShop();
+    }
+    const { channel, key } = shop;
+    if (!confirm(`Resgatar "${reward.title}" por ${fmt(reward.cost)} pontos com a conta ${key}?\n\nNão dá para desfazer: os pontos só voltam se o streamer devolver.`)) return;
+    const current = shop;
+    Object.assign(current, { busy: rewardId, message: null });
+    renderShop();
+    try {
+      const res = await fetch(`/api/points/${encodeURIComponent(key)}/redeem`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channel, rewardId, text }),
+      });
+      const data = await res.json().catch(() => ({ error: 'O servidor respondeu algo inesperado. Reinicie o servidor e tente de novo.' }));
+      if (res.ok) {
+        state = data;
+        current.message = { variant: 'success', text: `Resgatado com ${key}: "${reward.title}" por ${fmt(reward.cost)} pontos.` };
+        delete current.texts[rewardId];
+      } else current.message = { variant: 'danger', text: res.status === 404 ? 'Reinicie o servidor para resgatar por aqui.' : data.error || 'Algo deu errado' };
+    } catch {
+      current.message = { variant: 'danger', text: 'O servidor não respondeu. Veja na lista do presente 🎁 se o resgate entrou antes de tentar de novo.' };
+    }
+    current.busy = null;
+    if (shop !== current) return;
+    render();
+    loadShop(true); // estoque e tempo de espera podem ter mudado
+  }
+
+  $('rewards-dialog').addEventListener('wa-after-hide', (e) => {
+    if (e.target === $('rewards-dialog')) shop = null;
+  });
+  // Texto das recompensas que pedem um: guardado fora do HTML, para não sumir quando a janela atualiza.
+  document.addEventListener('input', (e) => {
+    const id = e.target.dataset?.shopText;
+    if (id && shop) shop.texts[id] = e.target.value;
+  });
+
   // ---------- Acontecimentos (erros e coisas boas) ----------
 
   let eventsKind = null; // lista aberta na gaveta: 'good' | 'bad'
   let eventsSeenBefore = 0; // o que era novo quando a lista abriu (fica destacado)
   const EVENTS_INFO = {
     bad: { title: 'Erros da Twitch e da Kick', intro: 'Erros que as plataformas devolveram nos últimos 30 dias. O mesmo erro da mesma conta só aparece de novo depois de 10 minutos.', empty: 'Nenhum erro nos últimos 30 dias.' },
-    good: { title: 'Baús, Momentos, raids e follows', intro: 'O que as contas pegaram e os canais que elas seguiram nos últimos 30 dias.', empty: 'Nenhum baú, Momento, raid ou follow ainda.' },
+    good: { title: 'Baús, Momentos, raids, follows e resgates', intro: 'O que as contas pegaram, os canais que elas seguiram e as recompensas resgatadas nos últimos 30 dias.', empty: 'Nenhum baú, Momento, raid, follow ou resgate ainda.' },
   };
 
   // Quando cada lista foi vista pela última vez (guardado no navegador, para o contador de novos).
@@ -1141,6 +1342,18 @@
       $('points-dialog').open = true;
     }
     if (action === 'kick-help') $('kick-help').open = true;
+    if (action === 'shop-open') openShop(channel, key || null);
+    if (action === 'shop-reload') loadShop();
+    if (action === 'shop-account' && shop) {
+      shop.key = key;
+      shop.message = null;
+      renderShop();
+    }
+    if (action === 'shop-redeem') redeemReward(el.dataset.reward);
+    if (action === 'shop-filter') {
+      shopFilter = shopFilter === key ? null : key; // clicar no filtro ligado mostra todas de novo
+      renderShop();
+    }
     if (action === 'kick-add') {
       $('kick-token').value = '';
       $('kick-add').open = true;

@@ -2,7 +2,7 @@
 // Baseado no Twitch Channel Points Miner v2 (github.com/rdavydov/Twitch-Channel-Points-Miner-v2).
 // Usa a API interna (GQL) da Twitch, que só aceita tokens dos apps da própria Twitch, por isso o login é o do app de TV.
 import crypto from 'node:crypto';
-import { startDeviceFlow, waitDeviceToken, refreshToken, validate, revoke, isNetworkError, GQL_URL, TV_CLIENT_ID as CLIENT_ID } from './twitch.js';
+import { startDeviceFlow, waitDeviceToken, refreshToken, validate, revoke, isNetworkError, toReward, GQL_URL, CHANNEL_POINTS_HASH, TV_CLIENT_ID as CLIENT_ID } from './twitch.js';
 import { pointsAccounts, savePoints, MAX_ACCOUNTS } from './store.js';
 import { recordPoints } from './stats.js';
 import { addEvent } from './events.js';
@@ -14,12 +14,44 @@ const PAGE_UA = 'Mozilla/5.0 (X11; Linux x86_64; rv:85.0) Gecko/20100101 Firefox
 // Consultas salvas da GQL. Se a Twitch trocar alguma, o log mostra "PersistedQueryNotFound" e o hash precisa ser atualizado.
 const HASHES = {
   PlaybackAccessToken: 'ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9',
-  ChannelPointsContext: '7fe050e3761eb2cf258d70ee1a21cbd76fa8cf3d7e7b12fc437e7029d446b5e3',
+  ChannelPointsContext: CHANNEL_POINTS_HASH,
   ClaimCommunityPoints: '46aaeebe02c99afdf4fc97c7c0cba964124bf6b0af229395f1f6d1feed05b3d0',
   CommunityMomentCallout_Claim: 'e2d67415aead910f7f9ceb45a77b750a1e1d9622c936d832328a0689e054db62',
   JoinRaid: 'c6a332a86d1087fbbb1a8623aa01bd1313d2386e7c63be60fdb2d1901f01a4ae',
   FollowButton_FollowUser: '800e7346bdf7e5278a3c1d3f21b2b56e2639928f86815677a7126b093b2fdd08',
+  RedeemCustomReward: 'd56249a7adb4978898ea3412e196688d4ac3cea1c0c2dfd65561d229ea5dcc42',
 };
+
+// Recusas do resgate que a Twitch devolve, em palavras simples. Código desconhecido aparece como veio.
+const REDEEM_ERRORS = {
+  NOT_ENOUGH_POINTS: 'pontos insuficientes',
+  PROPERTIES_MISMATCH: 'o streamer mudou a recompensa; abra a loja de novo',
+  DISABLED: 'a recompensa foi desativada',
+  PAUSED: 'a recompensa está pausada',
+  OUT_OF_STOCK: 'a recompensa esgotou',
+  MAX_PER_STREAM: 'a recompensa atingiu o limite desta live',
+  MAX_PER_USER_PER_STREAM: 'esta conta já resgatou o máximo permitido nesta live',
+  GLOBAL_COOLDOWN: 'a recompensa está em tempo de espera',
+  STREAM_NOT_LIVE: 'o canal precisa estar ao vivo',
+  USER_BANNED: 'esta conta está banida do canal',
+  FORBIDDEN: 'a Twitch não deixou esta conta resgatar',
+  DUPLICATE_TRANSACTION: 'resgate repetido',
+  TRANSACTION_IN_PROGRESS: 'já tem um resgate em andamento',
+};
+const REDEEM_TEXT_MAX = 200; // tamanho máximo do texto que algumas recompensas pedem
+
+// Por que a conta não pode resgatar a recompensa agora (null = pode). Só inscritos fica para a Twitch dizer.
+export function redeemProblem(reward, balance, text = '', now = Date.now()) {
+  if (reward.paused) return 'a recompensa está pausada';
+  if (!reward.inStock) return 'a recompensa esgotou';
+  if (reward.cooldownUntil && Date.parse(reward.cooldownUntil) > now) return 'a recompensa está em tempo de espera';
+  if (typeof balance !== 'number') return 'não deu para ler o saldo da conta';
+  const missing = reward.cost - balance;
+  if (missing > 0) return missing === 1 ? 'falta 1 ponto' : `faltam ${missing.toLocaleString('pt-BR')} pontos`;
+  if (reward.inputRequired && !text.trim()) return 'esta recompensa pede um texto';
+  if (text.length > REDEEM_TEXT_MAX) return `o texto passa de ${REDEEM_TEXT_MAX} letras`;
+  return null;
+}
 
 const MAX_WATCH = 2; // a Twitch só conta tempo assistido em 2 lives ao mesmo tempo, por conta
 const WATCH_CYCLE = 20 * 1000; // cada live recebe um "minuto assistido" a cada ~20 s, como no miner original
@@ -195,6 +227,7 @@ export class PointsAccount {
     this.followFailed = new Set(); // canais em que o follow falhou nesta sessão (tenta de novo quando o painel reiniciar)
     this.nextFollow = 0;
     this.followBusy = false;
+    this.redeeming = false; // um resgate por vez, para dois cliques não gastarem duas vezes
     this.wasResting = false;
     this.checking = false;
     this.watching = [];
@@ -571,6 +604,52 @@ export class PointsAccount {
       this.report('good', `Momento pego em #${name}`, name);
     } catch (err) {
       this.report('bad', `não deu para pegar o Momento em #${name} (${err.message})`, name);
+    }
+  }
+
+  // Resgate pedido pelo jogador na loja do painel (nunca sozinho). Lê saldo e recompensa de novo antes,
+  // como o navegador ao abrir a loja: o preço e a situação podem ter mudado desde que a loja abriu.
+  // As recusas que dá para ver antes (sem pontos, pausada…) só voltam para o painel; as da Twitch vão também para os erros.
+  async redeem(name, rewardId, text = '') {
+    if (!this.active) throw new Error('a conta precisa ser vinculada de novo');
+    if (this.redeeming) throw new Error('já tem um resgate em andamento nesta conta');
+    this.redeeming = true;
+    try {
+      const data = await this.gql('ChannelPointsContext', { channelLogin: name });
+      const channel = data.community?.channel;
+      const raw = channel?.communityPointsSettings?.customRewards?.find((r) => r.id === rewardId);
+      if (!channel?.id || !raw || raw.isEnabled === false) throw new Error('a recompensa não existe mais neste canal');
+      const reward = toReward(raw);
+      const balance = channel.self?.communityPoints?.balance;
+      if (typeof balance === 'number') this.channel(name).balance = balance;
+      const problem = redeemProblem(reward, balance, text);
+      if (problem) throw new Error(problem);
+      try {
+        const result = await this.gql('RedeemCustomReward', {
+          input: {
+            channelID: channel.id,
+            cost: reward.cost,
+            // A Twitch confere título, preço e descrição (prompt) com a recompensa atual; se algum mudar,
+            // responde PROPERTIES_MISMATCH. O texto que a pessoa escreve vai em textInput.
+            prompt: raw.prompt ?? null,
+            rewardID: reward.id,
+            textInput: reward.inputRequired ? text.trim() : null,
+            title: reward.title,
+            transactionID: crypto.randomBytes(16).toString('hex'),
+          },
+        });
+        const outcome = result.redeemCommunityPointsCustomReward;
+        if (outcome?.error?.code) throw new Error(REDEEM_ERRORS[outcome.error.code] ?? outcome.error.code);
+        if (!outcome) throw new Error('a Twitch não confirmou o resgate');
+      } catch (err) {
+        this.report('bad', `não deu para resgatar "${reward.title}" em #${name} (${err.message})`, name);
+        throw err;
+      }
+      this.channel(name).balance = balance - reward.cost;
+      this.report('good', `resgatou "${reward.title}" em #${name} por ${reward.cost.toLocaleString('pt-BR')} pontos`, name);
+      return reward;
+    } finally {
+      this.redeeming = false;
     }
   }
 

@@ -247,6 +247,22 @@ test('redeem: resgata, desconta do saldo e avisa como coisa boa', async () => {
   assert.equal(acc.redeeming, false);
 });
 
+test('redeem: o "+ganho" do card não cai com o resgate, nem com um gasto fora do painel', async () => {
+  shopSetup({ balance: 1000 });
+  const acc = makeAccount();
+  acc.all = ['loja7'];
+  const gained = () => acc.state().channels[0].gained;
+  Object.assign(acc.channel('loja7'), { balance: 900, startBalance: 850 }); // ganhou 50 e a leitura do resgate acha mais 100
+  await acc.redeem('loja7', 'xp');
+  assert.equal(acc.channel('loja7').balance, 700);
+  assert.equal(gained(), 150);
+  // Resgate feito no site da Kick: a leitura seguinte vem mais baixa.
+  shopSetup({ balance: 400 });
+  await acc.checkChannel('loja7');
+  assert.equal(acc.channel('loja7').balance, 400);
+  assert.equal(gained(), 150);
+});
+
 test('redeem: sem pontos suficientes nem chega a pedir o resgate', async () => {
   const redeemed = shopSetup({ balance: 100 });
   const acc = makeAccount();
@@ -287,4 +303,47 @@ test('redeem: token recusado pede token novo; um resgate por vez; conta sem toke
   const first = other.redeem('loja6', 'xp');
   await assert.rejects(other.redeem('loja6', 'xp'), /em andamento/);
   await first;
+});
+
+// ---------- conexão de espectador ----------
+
+test('KickWatch: timer que já disparou sai da lista; os pendentes são cancelados ao parar', async () => {
+  const { KickWatch } = await import('../src/kickpoints.js');
+  const watch = new KickWatch({ token: () => 'tok', live: { slug: 'a' }, log: () => {}, report: () => {}, onAuthError: () => {} });
+  let fired = 0;
+  watch.later(() => fired++, 1);
+  assert.equal(watch.timers.size, 1);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(fired, 1);
+  assert.equal(watch.timers.size, 0);
+
+  watch.later(() => fired++, 60000);
+  watch.stop();
+  assert.equal(watch.timers.size, 0);
+  watch.retry(); // parada: não agenda mais nada
+  assert.equal(watch.timers.size, 0);
+  assert.equal(fired, 1);
+});
+
+// ---------- avisos ----------
+
+test('alerts: sem WebSocket (Node antigo), avisa que o farm da Kick está desligado', async (t) => {
+  const { KickMiner } = await import('../src/kickpoints.js');
+  const { kick } = await import('../src/store.js');
+  const realWebSocket = globalThis.WebSocket;
+  t.after(() => {
+    globalThis.WebSocket = realWebSocket;
+    kick.accounts.length = 0;
+  });
+  const node = (list) => list.filter((a) => /Node\.js/.test(a.text));
+
+  globalThis.WebSocket = undefined;
+  assert.equal(node(new KickMiner({ log: () => {} }).alerts()).length, 0); // sem conta, não incomoda
+  kick.accounts.push({ id: 11, username: 'kaviso', token: 'tok' });
+  const miner = new KickMiner({ log: () => {} });
+  assert.equal(node(miner.alerts()).length, 1);
+  assert.equal(node(miner.alerts())[0].variant, 'warning');
+
+  globalThis.WebSocket = class {};
+  assert.equal(node(miner.alerts()).length, 0);
 });

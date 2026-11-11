@@ -11,7 +11,7 @@ const KICK_FILE = path.join(DATA_DIR, 'kick.json');
 const POINTS_FILE = path.join(DATA_DIR, 'points.json');
 const LOLIDLE_FILE = path.join(DATA_DIR, 'lolidle.json');
 
-export const MAX_ACCOUNTS = 4; // contas de pontos da Twitch e perfis da Kick
+export const MAX_ACCOUNTS = 4; // contas de pontos, na Twitch e na Kick
 export const MAX_LOL_ACCOUNTS = 5; // contas do LoLdle (só ficam no chat)
 
 // Lê um JSON. Se o arquivo estiver quebrado (ex.: o PC desligou no meio de uma gravação antiga), guarda uma cópia
@@ -70,4 +70,4 @@ export function setGameEnabled(game, enabled) {
   saveConfig();
 }
 
-export const normalizeChannel =(name) => String(name).trim().toLowerCase().replace(/^#/, '');
+export const normalizeChannel = (name) => String(name).trim().toLowerCase().replace(/^#/, '');

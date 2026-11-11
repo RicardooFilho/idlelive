@@ -187,11 +187,12 @@
   .points .row.off .name { color: var(--wa-color-text-quiet); font-weight: 500; }
   .play-tip { margin: -4px 0 12px; }
   .points-more { display: flex; justify-content: center; margin-top: auto; }
-  /* Até 4 contas de pontos lado a lado (2 em telas médias, 1 no celular). */
+  /* Cards das contas do LoLdle: nome, situação e os chats em que a conta está. */
   .lol-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .lol-head .login { font-weight: 700; margin-right: auto; }
   .lol-chats { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; }
   .lol-chats > span { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+  /* Até 4 contas de pontos lado a lado (2 em telas médias, 1 no celular). */
   .points-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
   @media (min-width: 1500px) { .points-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .points-grid > .points::part(body) { height: 100%; box-sizing: border-box; }
@@ -388,8 +389,8 @@
       <div class="actions">
         <wa-button class="events-btn bad" appearance="plain" size="small" data-action="events" data-kind="bad" title="Erros da Twitch e da Kick">
           <wa-icon name="bug" label="Erros"></wa-icon><span class="events-count" data-events-count="bad" hidden></span></wa-button>
-        <wa-button class="events-btn good" appearance="plain" size="small" data-action="events" data-kind="good" title="Baús, Momentos, raids e follows">
-          <wa-icon name="gift" label="Baús, Momentos, raids e follows"></wa-icon><span class="events-count" data-events-count="good" hidden></span></wa-button>
+        <wa-button class="events-btn good" appearance="plain" size="small" data-action="events" data-kind="good" title="Baús, Momentos, raids, follows e resgates">
+          <wa-icon name="gift" label="Baús, Momentos, raids, follows e resgates"></wa-icon><span class="events-count" data-events-count="good" hidden></span></wa-button>
         <wa-switch size="small" data-autostart>Iniciar com o Windows</wa-switch>
         <wa-button variant="brand" appearance="outlined" size="small" data-restart hidden><wa-icon slot="start" name="rotate-right"></wa-icon>Reiniciar servidor</wa-button>
         <wa-button variant="brand" size="small" href="https://pokeidle-gg.pages.dev/#hunt" target="_blank"><wa-icon slot="end" name="arrow-up-right-from-square"></wa-icon>Hub</wa-button>
@@ -641,8 +642,8 @@
       <h3><wa-icon name="chart-column"></wa-icon>Ganho e histórico</h3>
       <ul>
         <li>O <b>"+ganho"</b> dos cards conta desde que o painel abriu e zera ao reiniciar.</li>
-        <li>A página <b>Histórico</b> guarda os pontos por dia e de onde vieram, por 60 dias.</li>
-        <li>Gastar pontos não aparece como perda.</li>
+        <li>A página <b>Histórico</b> guarda os pontos por dia e de onde vieram, por 30 dias.</li>
+        <li>Gastar pontos não aparece como perda: depois de um resgate, o "+ganho" continua mostrando o que a conta ganhou.</li>
       </ul>
     </section>
 
@@ -699,7 +700,7 @@
     <section>
       <h3><wa-icon name="list-ol"></wa-icon>Quais lives cada conta assiste</h3>
       <p>Até <b>2 lives por conta</b> ao mesmo tempo (mais que isso a Kick começa a bloquear), sempre as lives onde a conta já tem mais pontos.</p>
-      <p>Na Kick os pontos vêm só do tempo assistido: não tem baú, sequência nem Momentos.</p>
+      <p>Na Kick os pontos vêm do tempo assistido e de um bônus ao seguir o canal: não tem baú, sequência nem Momentos.</p>
     </section>
     <section>
       <h3><wa-icon name="moon"></wa-icon>Mesmas travas da Twitch</h3>
@@ -1020,9 +1021,11 @@
     const mine = accounts.filter((x) => x.game === 'pokeidle');
     const el = $('ov-pokeidle');
     if (!el.firstElementChild) el.innerHTML = '<div class="ov-acc"></div><div><div class="ov-label">Ao vivo agora</div><div class="ov-live scroll-list"></div></div>';
+    // No histórico, as contas da Kick ficam como "nome (Kick)" (recordPoints em kickpoints.js).
+    const earned = (x) => today.accounts[x.p === 'kick' ? `${x.a.login} (Kick)` : x.a.login];
     setHTML(el.querySelector('.ov-acc'), mine.length
       ? `<div class="ov-label">Contas · pontos hoje</div>${mine.map((x) => `<div class="row">${platformMark(x.p)}<span class="login">${esc(x.a.login)}</span>
-          ${accountStatus(x)}<span class="today" title="Pontos ganhos hoje">${today.accounts[x.a.login] ? `+${fmt(today.accounts[x.a.login])}` : ''}</span></div>`).join('')}`
+          ${accountStatus(x)}<span class="today" title="Pontos ganhos hoje">${earned(x) ? `+${fmt(earned(x))}` : ''}</span></div>`).join('')}`
       : '<div class="empty">Nenhuma conta juntando pontos. Vincule uma em Pokeidle → Twitch ou Kick.</div>');
 
     // Quem está assistindo cada live, para ver que as contas estão onde deviam.
@@ -1906,7 +1909,7 @@
     lolidle: ['LoLdle', 'Contas da Twitch no chat das lives dos parceiros'],
     'lolidle-kick': ['LoLdle', 'Kick'],
     historico: ['Histórico', 'Pontos ganhos por dia, na Twitch e na Kick, e de onde vieram'],
-    config: ['Configurações', 'Iniciar com o Windows, reiniciar, atualizar, navegador e app da Kick'],
+    config: ['Configurações', 'Jogos, iniciar com o Windows, reiniciar, atualizar, navegador e app da Kick'],
   };
   let bookmarkToken = null;
   if (location.hash.startsWith('#kick-token=')) {

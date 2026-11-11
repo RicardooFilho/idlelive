@@ -5,7 +5,7 @@
 import { kick, saveKick, MAX_ACCOUNTS } from './store.js';
 import { fetchKickUser, fetchKickPoints, fetchKickRewards, redeemKickReward, fetchViewerToken, followKickChannel, cleanKickToken } from './kick.js';
 import { isNetworkError } from './twitch.js';
-import { redeemProblem } from './points.js';
+import { redeemProblem, setBalance } from './points.js';
 import { recordPoints } from './stats.js';
 import { addEvent } from './events.js';
 import { sleep, random, clock, restWindow, isResting, SWITCH_DELAY, START_DELAY, CHECK_OTHERS, CHECK_TICK, CHECKS_PER_TICK, FOLLOW_DELAY, FOLLOW_GAP, FOLLOW_CHECK } from './human.js';
@@ -21,7 +21,7 @@ const SILENCE_LIMIT = 90 * 1000; // sem nada da Kick nesse tempo, a conexão est
 const STABLE_AFTER = 60 * 1000; // a espera entre reconexões só volta ao mínimo depois de a conexão ficar de pé esse tempo
 
 // Uma conexão de espectador numa live (wss://websockets.kick.com/viewer/v1/connect).
-class KickWatch {
+export class KickWatch {
   constructor({ token, live, log, report, onAuthError }) {
     this.token = token;
     this.live = live; // { slug, channelId, userId, livestreamId }
@@ -29,7 +29,7 @@ class KickWatch {
     this.report = report;
     this.onAuthError = onAuthError;
     this.ws = null;
-    this.timers = [];
+    this.timers = new Set(); // só os que ainda não dispararam
     this.stopped = false;
     this.connected = false;
     this.retryDelay = 5000;
@@ -54,12 +54,10 @@ class KickWatch {
     const handshake = () => send({ type: 'channel_handshake', data: { message: { channelId: Number(this.live.channelId) } } });
     // Repete em intervalos aleatórios, cada um sorteado de novo.
     const every = (range, fn) => {
-      const tick = () => {
-        this.timers.push(setTimeout(() => {
-          fn();
-          tick();
-        }, random(range)));
-      };
+      const tick = () => this.later(() => {
+        fn();
+        tick();
+      }, random(range));
       tick();
     };
 
@@ -127,13 +125,23 @@ class KickWatch {
 
   retry() {
     if (this.stopped) return;
-    this.timers.push(setTimeout(() => this.start(), this.retryDelay));
+    this.later(() => this.start(), this.retryDelay);
     this.retryDelay = Math.min(this.retryDelay * 2, 2 * 60 * 1000);
+  }
+
+  // setTimeout que dá para cancelar em clearTimers. O timer sai da lista quando dispara: o aviso de "assistindo"
+  // roda a cada ~11 s, e guardar todos faria a lista crescer enquanto a live durasse.
+  later(fn, ms) {
+    const timer = setTimeout(() => {
+      this.timers.delete(timer);
+      fn();
+    }, ms);
+    this.timers.add(timer);
   }
 
   clearTimers() {
     for (const t of this.timers) clearTimeout(t);
-    this.timers = [];
+    this.timers.clear();
   }
 
   stop() {
@@ -388,8 +396,7 @@ export class KickAccount {
       ch.followChecks = gain > 0 ? 0 : ch.followChecks - 1;
       if (ch.followChecks > 0) ch.nextCheck = Date.now() + random(FOLLOW_CHECK); // o bônus ainda não caiu: olha de novo logo
     }
-    ch.balance = balance;
-    ch.startBalance ??= balance;
+    setBalance(ch, balance);
   }
 
   // Resgate pedido pelo jogador na loja do painel (nunca sozinho). Lê saldo e recompensa de novo antes,
@@ -409,7 +416,8 @@ export class KickAccount {
         if (err.status === 401) this.markRelink();
         throw err;
       }
-      this.channel(slug).balance = balance;
+      const ch = this.channel(slug);
+      setBalance(ch, balance);
       const problem = redeemProblem(reward, balance, text);
       if (problem) throw new Error(problem);
       try {
@@ -419,7 +427,7 @@ export class KickAccount {
         this.report('bad', `não deu para resgatar "${reward.title}" em #${slug} (${err.message})`, slug);
         throw err;
       }
-      this.channel(slug).balance = balance - reward.cost;
+      setBalance(ch, balance - reward.cost);
       this.report('good', `resgatou "${reward.title}" em #${slug} por ${reward.cost.toLocaleString('pt-BR')} pontos`, slug);
       return reward;
     } finally {
@@ -556,7 +564,12 @@ export class KickMiner {
   }
 
   alerts(options) {
-    return this.accounts.flatMap((a) => a.alerts(options));
+    const list = this.accounts.flatMap((a) => a.alerts(options));
+    // Sem WebSocket as contas nem começam (ver start): sem este aviso, elas ficariam em "Esperando live" para sempre.
+    if (this.accounts.length && typeof WebSocket === 'undefined') {
+      list.push({ variant: 'warning', text: 'Atualize o Node.js para a versão 22 ou mais nova para as contas da Kick juntarem pontos. Nesta versão o farm da Kick fica desligado.' });
+    }
+    return list;
   }
 
   state() {

@@ -2,6 +2,18 @@
 
 Mudanças do IdleLive, da mais recente para a mais antiga.
 
+## 11/11/2026
+
+Precisa reiniciar o servidor uma vez para valer.
+
+### Mudanças
+- **Histórico guarda 30 dias:** o painel guardava 60 dias de pontos, mas só mostrava 30. Agora guarda os mesmos 30 que mostra, e a Ajuda diz o mesmo. Os dias mais antigos saem do `stats.json`.
+- **Queda de internet não enche mais o 🐞:** sem internet, cada canal virava um erro "erro ao ver os pontos de #canal" (mais de 100 numa hora). Agora isso fica só na janela preta, e o aviso de internet no topo do painel continua aparecendo.
+- O painel parou de anotar os horários das lives, que não aparecem em nenhuma tela desde que as barrinhas de horário saíram. O que já estava anotado sai do `stats.json`.
+
+### Correções
+- **"+ganho" depois de um resgate:** o "+ganho" dos cards caía para zero quando a conta resgatava uma recompensa e só voltava a subir depois de recuperar tudo o que gastou. Agora ele continua mostrando o que a conta ganhou desde que o painel abriu, na Twitch e na Kick, mesmo se o resgate foi feito pelo navegador.
+
 ## 10/11/2026
 
 ### Novidades
@@ -21,6 +33,16 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
   - **Um card por jogo:** **Pokeidle** e **LoLdle** mostram as contas, os pontos de hoje de cada uma e as lives ao vivo, com a conta que está assistindo cada live (ou quantas contas estão no chat).
   - **Pontos nos últimos 7 dias**, em barras, e os **últimos acontecimentos** (baús, Momentos, raids, follows e resgates).
 - **Menu por jogo:** "Plataformas" virou **Jogos**, com **Pokeidle** e **LoLdle**. Cada jogo tem as abas **Twitch** e **Kick**; as antigas páginas Twitch e Kick agora são as abas do Pokeidle.
+- **O painel abre na hora:** a página já responde enquanto o servidor faz as primeiras checagens (antes ela só respondia depois delas, e sem o app da Kick isso levava vários segundos). As lives aparecem logo em seguida.
+- **Menos alarme falso no 🐞:** a live que acabou não aparece mais como erro ("lista de qualidades respondeu 404"), e uma falha de rede sozinha num "minuto assistido" só vira erro se repetir na vez seguinte. Precisa reiniciar o servidor.
+
+### Correções
+- **Abrir o painel duas vezes não derruba mais as contas:** a segunda janela preta podia renovar o login das contas da Twitch antes de perceber que o painel já estava aberto, e a primeira ficava pedindo "Vincule de novo". Agora ela para antes de mexer nos logins.
+- **Segurança:** só o próprio painel consegue falar com o servidor. Antes, um site aberto no navegador conseguia mandar pedidos para ele (adicionar um canal, reiniciar) ou derrubar o servidor com um endereço malformado.
+- **LoLdle:** uma conta desvinculada (ou o jogo desligado) bem na hora em que o chat reconectava podia continuar nos chats. Remover um canal do Pokeidle que também está no LoLdle não tira mais as contas do chat dele por um minuto.
+- **Visão geral:** as contas da Kick agora mostram os pontos de hoje (o valor ficava sempre em branco).
+- **Kick no Node.js 20:** o painel avisa no topo que as contas da Kick não juntam pontos nessa versão, em vez de deixar elas em "Esperando live" para sempre.
+- Conexão da Kick aberta por muitas horas não gasta mais memória aos poucos.
 
 ## 09/11/2026
 

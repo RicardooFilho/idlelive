@@ -254,6 +254,135 @@ test('redeem: um resgate por vez e só com a conta ativa', async () => {
   assert.equal(relink.calls.length, 0);
 });
 
+// ---------- saldo e "+ganho" dos cards ----------
+
+const badEvents = (name) => recentEvents().bad.filter((e) => e.channel === name);
+const networkError = () => new TypeError('fetch failed');
+
+// O "+ganho" que o card do canal mostra.
+const gained = (acc, name) => {
+  acc.all = [name];
+  return acc.state().channels[0].gained;
+};
+const userMessage = (type, channelId, balance, points) => ({ type, data: { balance: { channel_id: channelId, balance }, point_gain: points && { total_points: points, reason_code: 'WATCH' } } });
+
+test('redeem: o "+ganho" do card não cai com o resgate', async () => {
+  const { acc } = redeemSetup({ balance: 5000 });
+  Object.assign(acc.channel('canal'), { balance: 4900, startBalance: 4800 }); // ganhou 100 e a leitura do resgate acha mais 100
+  await acc.redeem('canal', 'r1');
+  assert.equal(acc.channel('canal').balance, 4000);
+  assert.equal(gained(acc, 'canal'), 200);
+});
+
+test('redeem: aviso do gasto que chega antes da resposta não desconta duas vezes', async () => {
+  const { acc } = redeemSetup({ balance: 5000 });
+  acc.channelNames.set('42', 'canal');
+  Object.assign(acc.channel('canal'), { balance: 5000, startBalance: 4800 });
+  const gql = acc.gql;
+  acc.gql = async (operation, variables) => {
+    if (operation === 'RedeemCustomReward') acc.onUserMessage(userMessage('points-spent', '42', 4000));
+    return gql(operation, variables);
+  };
+  await acc.redeem('canal', 'r1');
+  assert.equal(acc.channel('canal').balance, 4000);
+  assert.equal(gained(acc, 'canal'), 200);
+});
+
+test('aviso em tempo real: ganho sobe o "+ganho", gasto fora do painel não derruba', () => {
+  const acc = makeAccount();
+  acc.channelNames.set('7', 'aviso');
+  acc.onUserMessage(userMessage('points-earned', '7', 1010, 10)); // primeiro saldo conhecido: o ganho já aparece
+  assert.equal(gained(acc, 'aviso'), 10);
+  acc.onUserMessage(userMessage('points-spent', '7', 510));
+  assert.equal(acc.channel('aviso').balance, 510);
+  assert.equal(gained(acc, 'aviso'), 10);
+  acc.onUserMessage(userMessage('points-earned', '7', 560, 50));
+  assert.equal(gained(acc, 'aviso'), 60);
+});
+
+test('checkChannel: saldo que caiu (resgate no navegador) não derruba o "+ganho"', async () => {
+  const acc = makeAccount();
+  let balance = 1000;
+  acc.gql = async () => ({ community: { channel: { id: '8', self: { communityPoints: { balance } } } } });
+  await acc.checkChannel('lido');
+  balance = 1050;
+  await acc.checkChannel('lido');
+  balance = 50;
+  await acc.checkChannel('lido');
+  assert.equal(acc.channel('lido').balance, 50);
+  assert.equal(gained(acc, 'lido'), 50);
+});
+
+test('checkChannel: sem internet fica fora da lista de erros; recusa da Twitch entra', async () => {
+  const acc = makeAccount();
+  acc.gql = async () => {
+    throw networkError();
+  };
+  await acc.checkChannel('semrede');
+  await acc.checkChannel('semrede');
+  assert.equal(badEvents('semrede').length, 0);
+  acc.gql = async () => {
+    throw new Error('Twitch respondeu 500');
+  };
+  await acc.checkChannel('semrede');
+  assert.equal(badEvents('semrede')[0].text, 'erro ao ver os pontos de #semrede (Twitch respondeu 500)');
+});
+
+// ---------- minuto assistido ----------
+
+test('sendMinute: live que acabou (404 na lista de qualidades) vem marcada, sem virar erro', async (t) => {
+  const realFetch = globalThis.fetch;
+  t.after(() => (globalThis.fetch = realFetch));
+  const acc = makeAccount();
+  acc.gql = async () => ({ streamPlaybackAccessToken: { signature: 'sig', value: 'tok' } });
+  let status = 404;
+  globalThis.fetch = async () => new Response('', { status });
+  await assert.rejects(acc.sendMinute(live('acabou')), (err) => err.ended === true && /a live acabou/.test(err.message));
+  // Outra recusa continua sendo erro de verdade.
+  status = 403;
+  await assert.rejects(acc.sendMinute(live('acabou')), (err) => !err.ended && /respondeu 403/.test(err.message));
+});
+
+test('minuteFailed: live que acabou fica fora da lista de erros', () => {
+  const acc = makeAccount();
+  acc.minuteFailed(live('fim'), Object.assign(new Error('a live acabou'), { ended: true }));
+  acc.minuteFailed(live('fim'), Object.assign(new Error('a live acabou'), { ended: true }));
+  assert.equal(acc.channel('fim').error, 'a live acabou'); // o card ainda mostra que não está contando
+  assert.equal(badEvents('fim').length, 0);
+});
+
+test('minuteFailed: falha de rede sozinha não é erro; repetida na vez seguinte, é', () => {
+  const acc = makeAccount();
+  acc.minuteFailed(live('rede'), networkError());
+  assert.equal(badEvents('rede').length, 0);
+  acc.minuteOk(live('rede')); // voltou: a próxima falha conta do zero
+  assert.equal(acc.channel('rede').error, null);
+  acc.minuteFailed(live('rede'), networkError());
+  assert.equal(badEvents('rede').length, 0);
+  acc.minuteFailed(live('rede'), networkError());
+  acc.minuteFailed(live('rede'), networkError());
+  assert.equal(badEvents('rede').length, 1);
+  assert.equal(badEvents('rede')[0].text, '#rede não contou (sem conexão com a internet)');
+});
+
+test('minuteFailed: recusa da Twitch vira erro na hora, uma vez só enquanto for a mesma', () => {
+  const acc = makeAccount();
+  acc.minuteFailed(live('recusa'), new Error('lista de vídeo respondeu 500'));
+  acc.minuteFailed(live('recusa'), new Error('lista de vídeo respondeu 500'));
+  assert.equal(badEvents('recusa').length, 1);
+  acc.minuteFailed(live('recusa'), new Error('pedaço do vídeo respondeu 403'));
+  assert.equal(badEvents('recusa').length, 2);
+});
+
+test('minuteOk: soma o tempo assistido e garante a sequência depois de uns minutos', () => {
+  const acc = makeAccount();
+  const l = live('seq');
+  for (let i = 0; i < 20; i++) acc.minuteOk(l); // 20 × 20 s: ainda não deu 7 min
+  assert.equal(acc.streakDone(l), false);
+  acc.minuteOk(l);
+  assert.equal(acc.streakDone(l), true);
+});
+
 // ---------- Jogo desligado (Configurações → Jogos) ----------
 
 test('setEnabled: desligar para as contas e deixa novas esperando; ligar começa de novo', async () => {

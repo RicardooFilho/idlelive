@@ -20,10 +20,12 @@ export class ChatConnection {
     this.connected = false;
     this.closed = false;
     this.retryDelay = 1000;
+    this.reconnectTimer = null;
     this.connect();
   }
 
   connect() {
+    if (this.closed) return;
     const socket = tls.connect(6697, HOST, { servername: HOST });
     this.socket = socket;
     socket.setEncoding('utf8');
@@ -57,13 +59,12 @@ export class ChatConnection {
     socket.on('error', (err) => this.log(`${this.login}: erro de conexão (${err.message})`));
     socket.on('close', () => {
       clearInterval(pinger);
-      if (this.socket !== socket) return; // substituído por reconnect()
       this.connected = false;
       this.joined.clear();
       this.pending.clear();
       if (this.closed) return;
       this.log(`${this.login}: conexão caiu, reconectando em ${this.retryDelay / 1000}s`);
-      setTimeout(() => this.connect(), this.retryDelay);
+      this.reconnectTimer = setTimeout(() => this.connect(), this.retryDelay);
       this.retryDelay = Math.min(this.retryDelay * 2, 60000);
     });
   }
@@ -110,17 +111,11 @@ export class ChatConnection {
     }
   }
 
-  reconnect() {
-    const old = this.socket;
-    this.connected = false;
-    this.joined.clear();
-    this.pending.clear();
-    this.connect();
-    old.destroy();
-  }
-
+  // Cancela também a reconexão agendada: fechada no meio da espera (conta desvinculada, jogo desligado),
+  // ela abriria uma conexão que ninguém fecha, e a conta continuaria nos chats.
   close() {
     this.closed = true;
+    clearTimeout(this.reconnectTimer);
     this.socket.destroy();
   }
 }

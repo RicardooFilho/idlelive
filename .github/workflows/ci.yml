@@ -4,6 +4,8 @@ name: CI
 
 on:
   push:
+    # Só branches: no push de uma tag, o release.yml já roda a sintaxe e os testes.
+    branches: ['**']
   pull_request:
 
 jobs:

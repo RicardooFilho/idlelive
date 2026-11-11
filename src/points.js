@@ -53,6 +53,14 @@ export function redeemProblem(reward, balance, text = '', now = Date.now()) {
   return null;
 }
 
+// Saldo novo de um canal (o `ch` dos cards de pontos, na Twitch e na Kick). O saldo só cai quando a conta gasta
+// (resgate, pelo painel ou fora dele): o saldo inicial desce junto, para o "+ganho" não cair com o resgate.
+export function setBalance(ch, balance) {
+  if (ch.balance !== null && ch.startBalance !== null && balance < ch.balance) ch.startBalance -= ch.balance - balance;
+  ch.balance = balance;
+  ch.startBalance ??= balance;
+}
+
 const MAX_WATCH = 2; // a Twitch só conta tempo assistido em 2 lives ao mesmo tempo, por conta
 const WATCH_CYCLE = 20 * 1000; // cada live recebe um "minuto assistido" a cada ~20 s, como no miner original
 
@@ -65,6 +73,7 @@ const CLAIM_DELAY = [5 * 1000, 40 * 1000]; // espera antes de pegar baú ou Mome
 const SITE_INTERVAL = 60 * 60 * 1000;
 const STREAK_MS = 7 * 60 * 1000; // assistir uns minutos de cada live garante a sequência (watch streak), que dá +300 a +450 pontos
 const GQL_FAILS_ALERT = 3; // falhas seguidas na API da Twitch antes de avisar no painel
+const NET_FAILS_REPORT = 2; // falhas de rede seguidas no "minuto assistido" de uma live antes de virar erro no painel
 const RAID_STAY = 5 * 60 * 1000; // depois de entrar numa raid, fica uns minutos na live que recebeu, como quem foi junto
 
 const PUBSUB_URL = 'wss://pubsub-edge.twitch.tv/v1';
@@ -222,7 +231,7 @@ export class PointsAccount {
     this.joinedRaids = new Set();
     this.live = []; // [{ name, channelId, broadcastId }] na ordem da lista de canais oficiais
     this.all = []; // todos os canais oficiais, ao vivo ou não
-    this.channels = new Map(); // canal -> { balance, startBalance, claims, moments, watchedMs, broadcastId, error, nextCheck }
+    this.channels = new Map(); // canal -> { balance, startBalance, claims, moments, watchedMs, broadcastId, error, fails, reported, nextCheck }
     this.claiming = new Set(); // baús e Momentos esperando para serem pegos
     this.followFailed = new Set(); // canais em que o follow falhou nesta sessão (tenta de novo quando o painel reiniciar)
     this.nextFollow = 0;
@@ -318,7 +327,7 @@ export class PointsAccount {
 
   channel(name) {
     if (!this.channels.has(name)) {
-      this.channels.set(name, { balance: null, startBalance: null, claims: 0, moments: 0, watchedMs: 0, broadcastId: null, error: null, nextCheck: 0 });
+      this.channels.set(name, { balance: null, startBalance: null, claims: 0, moments: 0, watchedMs: 0, broadcastId: null, error: null, fails: 0, reported: null, nextCheck: 0 });
     }
     return this.channels.get(name);
   }
@@ -443,6 +452,8 @@ export class PointsAccount {
 
     const headers = { 'User-Agent': TV_UA };
     const master = await fetch(`https://usher.ttvnw.net/api/channel/hls/${live.name}.m3u8?${new URLSearchParams({ sig: signature, token: value })}`, { headers });
+    // 404 = a live acabou e a lista de lives (lida a cada minuto) ainda não sabe. Não é erro: vem marcado para não ir ao painel.
+    if (master.status === 404) throw Object.assign(new Error('a live acabou'), { ended: true });
     if (!master.ok) throw new Error(`lista de qualidades respondeu ${master.status}`);
     const playlistUrl = lastUrl(await master.text());
     const playlist = await fetch(playlistUrl, { headers });
@@ -460,6 +471,31 @@ export class PointsAccount {
       body: new URLSearchParams({ data: Buffer.from(JSON.stringify(event)).toString('base64') }),
     });
     if (res.status !== 204) throw new Error(`a Twitch respondeu ${res.status} ao minuto assistido`);
+  }
+
+  // O minuto contou: soma o tempo assistido (para a sequência) e esquece as falhas desta live.
+  minuteOk(live) {
+    const ch = this.channel(live.name);
+    ch.watchedMs += WATCH_CYCLE;
+    if (ch.watchedMs >= STREAK_MS && !this.streakDone(live)) this.markStreak(live);
+    if (ch.error) this.log(`#${live.name} voltou a contar`);
+    Object.assign(ch, { error: null, fails: 0, reported: null });
+  }
+
+  // O minuto não contou. Para a lista de erros do painel só vai o que é problema de verdade. Ficam só na janela preta:
+  // - a live que acabou;
+  // - uma falha de rede sozinha, que acontece de vez em quando sem a internet ter caído (perder um aviso de 20 s
+  //   não custa nada). Se ela se repetir na vez seguinte, aí vira erro.
+  minuteFailed(live, err) {
+    const ch = this.channel(live.name);
+    ch.fails++;
+    const text = `#${live.name} não contou (${err.message})`;
+    const quiet = err.ended || (isNetworkError(err) && ch.fails < NET_FAILS_REPORT);
+    if (!quiet && ch.reported !== err.message) {
+      this.report('bad', text, live.name);
+      ch.reported = err.message;
+    } else if (ch.error !== err.message) this.log(text); // só quando o erro muda, para não encher a janela a cada 20 s
+    ch.error = err.message;
   }
 
   // Entra e sai da pausa (descanso ou conta precisando vincular de novo): para tudo e fecha a conexão
@@ -495,7 +531,7 @@ export class PointsAccount {
         else if (this.watching.length && !this.wasResting) this.log('nenhuma live oficial para assistir agora');
       }
       // Erro de uma live que saiu da lista (ex.: acabou) não vale mais.
-      for (const name of this.watching) if (!names.includes(name)) this.channel(name).error = null;
+      for (const name of this.watching) if (!names.includes(name)) Object.assign(this.channel(name), { error: null, fails: 0, reported: null });
       // Live que a conta acabou de abrir: lê o saldo logo, como o navegador faz ao abrir a página.
       for (const name of names) if (!this.watching.includes(name)) this.channel(name).nextCheck = 0;
       this.watching = names;
@@ -507,17 +543,11 @@ export class PointsAccount {
       for (const live of targets) {
         if (this.stopped) return;
         const started = Date.now();
-        const ch = this.channel(live.name);
         try {
           await this.sendMinute(live);
-          ch.watchedMs += WATCH_CYCLE;
-          if (ch.watchedMs >= STREAK_MS && !this.streakDone(live)) this.markStreak(live);
-          if (ch.error) this.log(`#${live.name} voltou a contar`);
-          ch.error = null;
+          this.minuteOk(live);
         } catch (err) {
-          // Loga só quando o erro muda, para não encher a janela a cada 20 s.
-          if (ch.error !== err.message) this.report('bad', `#${live.name} não contou (${err.message})`, live.name);
-          ch.error = err.message;
+          this.minuteFailed(live, err);
         }
         // Intervalo com uma variação aleatória de até 15%, para não ser sempre exato.
         await sleep(Math.max(0, started + (WATCH_CYCLE / targets.length) * random([0.85, 1.15]) - Date.now()));
@@ -562,7 +592,11 @@ export class PointsAccount {
       channelId = data.community?.channel?.id;
     } catch (err) {
       if (!this.active) return;
-      this.report('bad', `erro ao ver os pontos de #${name} (${err.message})`, name);
+      const text = `erro ao ver os pontos de #${name} (${err.message})`;
+      // Sem internet, a leitura falha em todos os canais, um por um: fica só na janela preta,
+      // porque o aviso do topo do painel já diz que a internet caiu.
+      if (isNetworkError(err)) this.log(text);
+      else this.report('bad', text, name);
       return;
     }
     if (channelId) this.channelNames.set(channelId, name);
@@ -571,8 +605,7 @@ export class PointsAccount {
     if (!this.liveEvents && ch.balance !== null && points.balance > ch.balance) {
       recordPoints(this.account.login, 'OTHER', points.balance - ch.balance);
     }
-    ch.balance = points.balance;
-    ch.startBalance ??= points.balance;
+    setBalance(ch, points.balance);
     if (points.availableClaim) this.claimBonus(name, live?.channelId ?? channelId, points.availableClaim.id);
   }
 
@@ -621,7 +654,8 @@ export class PointsAccount {
       if (!channel?.id || !raw || raw.isEnabled === false) throw new Error('a recompensa não existe mais neste canal');
       const reward = toReward(raw);
       const balance = channel.self?.communityPoints?.balance;
-      if (typeof balance === 'number') this.channel(name).balance = balance;
+      const ch = this.channel(name);
+      if (typeof balance === 'number') setBalance(ch, balance);
       const problem = redeemProblem(reward, balance, text);
       if (problem) throw new Error(problem);
       try {
@@ -645,7 +679,8 @@ export class PointsAccount {
         this.report('bad', `não deu para resgatar "${reward.title}" em #${name} (${err.message})`, name);
         throw err;
       }
-      this.channel(name).balance = balance - reward.cost;
+      // O aviso em tempo real do gasto pode ter chegado antes e já baixado o saldo: aí não desconta de novo.
+      setBalance(ch, Math.min(ch.balance, balance - reward.cost));
       this.report('good', `resgatou "${reward.title}" em #${name} por ${reward.cost.toLocaleString('pt-BR')} pontos`, name);
       return reward;
     } finally {
@@ -719,14 +754,19 @@ export class PointsAccount {
     const data = msg.data ?? {};
     const channelId = data.channel_id ?? data.claim?.channel_id ?? data.balance?.channel_id;
     const name = this.channelNames.get(channelId);
+    const balance = data.balance?.balance;
     if (msg.type === 'points-earned') {
       const { total_points: points, reason_code: reason } = data.point_gain ?? {};
       if (points) recordPoints(this.account.login, reason ?? 'OTHER', points);
-      if (name && data.balance) {
+      if (name && typeof balance === 'number') {
         const ch = this.channel(name);
-        ch.balance = data.balance.balance;
-        ch.startBalance ??= ch.balance - points;
+        // Primeiro saldo conhecido deste canal: o inicial é o de antes deste ganho, para ele já aparecer no card.
+        ch.startBalance ??= balance - (points ?? 0);
+        setBalance(ch, balance);
       }
+    } else if (msg.type === 'points-spent') {
+      // Resgate feito fora do painel (no navegador, por exemplo): o saldo cai na hora, sem esperar a próxima leitura.
+      if (name && typeof balance === 'number') setBalance(this.channel(name), balance);
     } else if (msg.type === 'claim-available' && name && data.claim?.id) {
       // Pega o baú assim que avisado (depois da espera de "pessoa"), sem esperar a próxima leitura de saldo.
       this.claimBonus(name, channelId, data.claim.id);

@@ -6,7 +6,10 @@ Leia antes de mexer no projeto. Elas valem para qualquer agente (Claude, Copilot
 
 IdleLive é um painel local (Node.js) para jogadores de jogos idle que dão bônus por assistir lives de parceiros:
 - **Twitch:** mostra quem está ao vivo e até 4 contas juntam **pontos do canal** nas lives dos parceiros (`src/points.js`, baseado no Twitch Channel Points Miner v2). O jogo dá o bônus de XP para quem resgata com esses pontos;
-- **Kick:** lista as lives dos parceiros e até 4 contas juntam **pontos do canal** em segundo plano (`src/kickpoints.js`, baseado no Kick Channel Points Miner de Baillora). O login é o token da conta, colado no painel.
+- **Kick:** lista as lives dos parceiros e até 4 contas juntam **pontos do canal** em segundo plano (`src/kickpoints.js`, baseado no Kick Channel Points Miner de Baillora). O login é o token da conta, colado no painel;
+- **LoLdle:** até 5 contas da Twitch ficam em silêncio no **chat** (IRC) dos parceiros que estão ao vivo (`src/lolidle.js` e `src/chat.js`). É a presença no chat que dá o bônus desse jogo; não assistem a live nem juntam pontos.
+
+Cada jogo (Pokeidle e LoLdle) pode ser desligado em Configurações → Jogos (`gameEnabled` em `src/store.js`).
 
 O público é de jogadores, não programadores. Veja o [README.md](README.md).
 
@@ -15,6 +18,8 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 - **Nunca** leia em voz alta, copie, faça commit ou envie `accounts.json`, `kick.json`, `points.json`, `lolidle.json`, `stats.json` ou `.token.json`. Eles têm tokens, segredos e dados das contas e estão no `.gitignore`. Antes de cada commit, confira com `git status` que nenhum deles entrou.
 - Não peça para o usuário colar segredos (Client Secret, tokens) no chat. Eles são colados só no painel local.
 - O servidor escuta só em `127.0.0.1`. Não mude para `0.0.0.0`.
+- O servidor só atende o próprio painel: confere o `Host` (tem de ser `localhost` ou `127.0.0.1`) e, na API, o `Origin` (`server.js`). Sem isso, qualquer site aberto no navegador mandaria pedidos para o painel. Não tire essas checagens nem adicione cabeçalhos de CORS.
+- O servidor abre a porta **antes** de renovar os logins: uma segunda janela do painel para na porta ocupada sem gastar o refresh token de ninguém. Mantenha essa ordem.
 - Não altere configurações do sistema, como a política de execução do PowerShell. Para rodar, use `iniciar.bat` ou `node server.js`.
 
 ## Código

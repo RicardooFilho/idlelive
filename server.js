@@ -8,7 +8,7 @@ import { config, kick, pointsAccounts, saveConfig, saveKick, savePoints, normali
 import { fetchLive, fetchRewards, isNetworkError } from './src/twitch.js';
 import { fetchKickLive, fetchKickChannel, fetchKickRewards, resetKickToken } from './src/kick.js';
 import { installedBrowsers, browserName, listProfiles, openInProfile } from './src/browser.js';
-import { recordMinute, pointsHistory } from './src/stats.js';
+import { saveStats, pointsHistory } from './src/stats.js';
 import { autostartEnabled, setAutostart } from './src/autostart.js';
 import { PointsMiner } from './src/points.js';
 import { KickMiner } from './src/kickpoints.js';
@@ -30,7 +30,6 @@ const FAVICON_FILE = path.join(PUBLIC_DIR, 'favicon.ico');
 const log = (msg) => console.log(`[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`);
 
 let live = new Map(); // canal -> { viewers, userId, streamId }
-let liveOk = false; // a última checagem das lives da Twitch deu certo?
 let liveError = null; // mensagem da última falha, para o aviso no painel
 let liveOffline = false; // a última falha foi falta de internet?
 const miner = new PointsMiner({ log });
@@ -58,11 +57,9 @@ async function updateLive() {
     // Uma consulta só para os canais do Pokeidle e do LoLdle (um canal pode estar nas duas listas), só dos jogos ligados.
     const channels = [...(gameEnabled('pokeidle') ? config.channels : []), ...(gameEnabled('lolidle') ? config.lolidleChannels : [])];
     live = channels.length ? await fetchLive([...new Set(channels)]) : new Map();
-    liveOk = true;
     liveError = null;
     liveOffline = false;
   } catch (err) {
-    liveOk = false;
     if (err.message !== liveError) addEvent({ kind: 'bad', platform: 'twitch', text: `não deu para ver quem está ao vivo (${err.message})` });
     liveError = err.message;
     liveOffline = isNetworkError(err);
@@ -314,17 +311,6 @@ function alerts() {
   return [...list, ...miner.alerts({ offline }), ...kickMiner.alerts({ offline })];
 }
 
-// A cada minuto: anota quais canais estão ao vivo (para os horários).
-function recordStats() {
-  // Com o Pokeidle desligado, as lives dele não são consultadas: anotar seria dizer que estavam offline.
-  const twitchOk = liveOk && config.channels.length > 0 && gameEnabled('pokeidle');
-  const kickOk = !kickError && config.kickChannels.length > 0 && gameEnabled('pokeidle');
-  recordMinute({
-    twitchLive: twitchOk ? config.channels.filter((c) => live.has(c)) : null,
-    kickLive: kickOk ? config.kickChannels.filter((c) => kickLive.has(c)) : null,
-  });
-}
-
 async function readBody(req) {
   let body = '';
   for await (const chunk of req) body += chunk;
@@ -474,8 +460,8 @@ async function handleApi(req, res, url) {
     }
 
     if (req.method === 'DELETE' && id) {
+      // Não tira o canal de `live`: ele pode estar também na lista do LoLdle, e as contas sairiam do chat à toa.
       config.channels = config.channels.filter((c) => c !== id);
-      live.delete(id);
       saveConfig();
       syncPoints();
       return send(res, 200, state());
@@ -485,10 +471,27 @@ async function handleApi(req, res, url) {
   send(res, 404, { error: 'Rota não encontrada' });
 }
 
+// Só o próprio painel fala com o servidor. Qualquer site aberto no navegador consegue mandar pedidos para o
+// localhost (adicionar um canal, reiniciar…), então:
+// - o endereço pedido tem de ser o deste PC, o que barra um domínio de fora apontado para 127.0.0.1;
+// - quando o navegador diz de que página veio o pedido (Origin), tem de ser a do painel.
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1)(:\d+)?$/i;
+
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
   try {
-    if (url.pathname.startsWith('/api/')) return await handleApi(req, res, url);
+    const { host = '', origin } = req.headers;
+    if (!LOCAL_HOST.test(host)) return send(res, 403, { error: 'Abra o painel pelo endereço http://localhost' });
+    // Endereço torto (ex.: "//") faz o URL lançar erro: responde 400 em vez de derrubar o servidor.
+    let url;
+    try {
+      url = new URL(req.url, `http://${host}`);
+    } catch {
+      return send(res, 400, { error: 'Endereço inválido' });
+    }
+    if (url.pathname.startsWith('/api/')) {
+      if (origin && origin !== `http://${host}`) return send(res, 403, { error: 'Pedido de fora do painel' });
+      return await handleApi(req, res, url);
+    }
     if (url.pathname === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       return res.end(fs.readFileSync(PANEL_FILE));
@@ -499,11 +502,26 @@ const server = http.createServer(async (req, res) => {
     }
     send(res, 404, { error: 'Não encontrado' });
   } catch (err) {
-    send(res, 500, { error: err.message });
+    // Se a resposta já começou, mandar outra lançaria um erro sem ninguém para pegar.
+    if (res.headersSent) res.end();
+    else send(res, 500, { error: err.message });
   }
 });
 
 // ---------- Início ----------
+
+server.on('error', (err) => {
+  if (err.code !== 'EADDRINUSE') throw err;
+  console.log(`O painel já está aberto em outra janela (porta ${PORT} em uso). Feche a outra janela ou use http://localhost:${PORT}`);
+  process.exit(1);
+});
+
+// Abre a porta antes de mexer nos logins: se o painel já estiver aberto em outra janela, este para aqui, sem
+// renovar nada (o refresh token só vale uma vez; renovado pelos dois, a conta cairia no outro).
+// De quebra, o painel já abre no navegador enquanto as primeiras checagens rodam.
+// Só escuta no próprio PC: o painel dá acesso às contas.
+await new Promise((resolve) => server.listen(PORT, '127.0.0.1', resolve));
+log(`Painel em http://localhost:${PORT}`);
 
 await miner.ensureFresh().catch((err) => log(`Pontos: erro ao checar token (${err.message})`));
 await lolMiner.ensureFresh();
@@ -517,19 +535,11 @@ setInterval(safeUpdateLive, LIVE_INTERVAL);
 setInterval(updateKickLive, LIVE_INTERVAL);
 setInterval(() => miner.ensureFresh().catch((err) => log(`Pontos: erro ao checar token (${err.message})`)), TOKEN_INTERVAL);
 setInterval(() => lolMiner.ensureFresh(), TOKEN_INTERVAL);
+// A cada minuto: grava no stats.json os pontos anotados desde a última vez.
 setInterval(() => {
   try {
-    recordStats();
+    saveStats();
   } catch (err) {
     log(`Erro ao salvar estatísticas: ${err.message}`);
   }
 }, 60 * 1000);
-
-server.on('error', (err) => {
-  if (err.code !== 'EADDRINUSE') throw err;
-  console.log(`O painel já está aberto em outra janela (porta ${PORT} em uso). Feche a outra janela ou use http://localhost:${PORT}`);
-  process.exit(1);
-});
-
-// Só escuta no próprio PC: o painel dá acesso às contas.
-server.listen(PORT, '127.0.0.1', () => log(`Painel em http://localhost:${PORT}`));

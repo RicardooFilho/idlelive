@@ -23,10 +23,11 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 
 **Kick**
 - Mostra o status ao vivo e o número de espectadores dos parceiros (pela API oficial, se você criar o app da Kick, ou canal por canal sem ele).
-- **Pontos do canal:** até 4 contas, cada uma "assiste" até 2 lives por vez em segundo plano, sempre as lives onde ela tem mais pontos. Na Kick os pontos vêm só do tempo assistido.
+- **Pontos do canal:** até 4 contas, cada uma "assiste" até 2 lives por vez em segundo plano, sempre as lives onde ela tem mais pontos. Na Kick os pontos vêm do tempo assistido e de um bônus ao seguir o canal.
 - Mesmas travas da Twitch: descanso das 5h às 8h (Brasília), tempos aleatórios e poucas leituras de saldo.
 - **Segue todos os canais da lista** aos poucos, como na Twitch.
-- O botão **▶** abre a live no navegador, no perfil da conta, para você resgatar as recompensas.
+- **Loja do canal:** como na Twitch, o botão de loja mostra as recompensas do Pokeidle e resgata pela conta que você escolher, sempre com confirmação.
+- O botão **▶** abre a live no navegador, no perfil da conta, para resgatar por lá.
 
 **Painel**
 - Menu lateral com **Visão geral** (pontos de hoje, contas que precisam de você, cada jogo ao vivo e a semana), os jogos (**Pokeidle** e **LoLdle**, cada um com as abas **Twitch** e **Kick**), **Histórico** (pontos por dia e de onde vieram) e **Configurações**.
@@ -43,7 +44,7 @@ Tudo roda no seu próprio PC. Nada é enviado para servidores de terceiros além
 ## Do que você precisa
 
 - Windows 10 ou 11.
-- [Node.js](https://nodejs.org) versão 22 ou mais nova (na 20 funciona, mas sem os Momentos e sem o motivo dos pontos no histórico). Baixe a versão **LTS** e vá clicando em "Avançar".
+- [Node.js](https://nodejs.org) versão 22 ou mais nova (na 20 o painel abre, mas as contas da Kick não juntam pontos e a Twitch fica sem Momentos, raids e o motivo dos pontos no histórico). Baixe a versão **LTS** e vá clicando em "Avançar".
 - Internet: além da Twitch e da Kick, o visual do painel (componentes Web Awesome e fonte Montserrat) carrega da internet.
 - Google Chrome, Brave ou Microsoft Edge, só para o botão **▶** abrir as lives no perfil de cada conta. O Edge já vem no Windows. O Firefox não é compatível.
 
@@ -105,7 +106,7 @@ Esses arquivos são criados na pasta do projeto e **nunca devem ser enviados par
 | Arquivo | O que guarda |
 |---|---|
 | `kick.json` | Tokens das contas da Kick, app da Kick e navegador escolhido |
-| `stats.json` | Horários das lives e histórico de pontos por dia |
+| `stats.json` | Histórico de pontos por dia, dos últimos 30 dias |
 | `points.json` | Login das contas de pontos do canal (tokens) |
 | `lolidle.json` | Login das contas do LoLdle, que ficam no chat (tokens) |
 | `eventos.jsonl` | Erros e baús/Momentos/raids dos últimos 30 dias (as listas do topo) |
@@ -151,10 +152,10 @@ src/lolidle.js         LoLdle: contas da Twitch no chat das lives dos parceiros
 src/chat.js            conexão de chat da Twitch (IRC), sem mandar mensagem
 src/human.js           travas comuns às duas plataformas (descanso, tempos aleatórios)
 src/browser.js         navegadores (Chrome, Brave, Edge), perfis e o botão ▶
-src/stats.js           horários das lives e histórico de pontos
+src/stats.js           histórico de pontos por dia (stats.json)
 src/events.js          erros e baús/Momentos/raids dos últimos 30 dias (eventos.jsonl)
 src/autostart.js       atalho "Iniciar com o Windows"
-src/store.js           leitura e gravação dos arquivos .json
+src/store.js           leitura e gravação dos arquivos .json, limites de contas e jogos ligados
 src/update.js          atualizador: procura a release nova no GitHub e troca os arquivos
 test/*.test.js         testes automatizados (node:test, sem dependências)
 scripts/check.js       confere a sintaxe de todos os .js

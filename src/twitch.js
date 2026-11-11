@@ -1,5 +1,7 @@
 // Chamadas à Twitch: login por código (Device Code Flow), tokens e status das lives.
 // Tudo usa o Client ID do app de TV da Twitch, porque a API interna (GQL) só aceita os apps da própria Twitch.
+import { sleep } from './human.js';
+
 const ID_URL = 'https://id.twitch.tv/oauth2';
 export const GQL_URL = 'https://gql.twitch.tv/gql';
 
@@ -16,8 +18,6 @@ async function postForm(url, params) {
   const text = await res.text();
   return { ok: res.ok, data: text ? JSON.parse(text) : {} };
 }
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Retorna { device_code, user_code, verification_uri, expires_in, interval }.
 export async function startDeviceFlow(clientId, scopes) {

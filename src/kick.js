@@ -58,8 +58,8 @@ class KickError extends Error {
   }
 }
 
-async function siteGet(path, token, method = 'GET') {
-  const res = await fetch(`${SITE_URL}${path}`, { method, headers: token ? { Authorization: `Bearer ${token}` } : {} });
+async function siteGet(path, token) {
+  const res = await fetch(`${SITE_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
   if (res.status === 401) throw new KickError('token da Kick recusado', 401);
   if (res.status === 403) throw new KickError('a Kick bloqueou o pedido', 403);
   if (!res.ok) throw new KickError(`a Kick respondeu ${res.status}`, res.status);

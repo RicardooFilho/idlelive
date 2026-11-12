@@ -70,13 +70,20 @@
   .nav-svg { width: 18px; height: 18px; flex: none; }
   .nav a .count { margin-left: auto; }
   /* Abas Twitch | Kick dentro de cada jogo */
-  .game-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--wa-color-surface-border); margin-bottom: 4px; }
+  .game-tabs { position: relative; display: flex; gap: 6px; border-bottom: 1px solid var(--wa-color-surface-border); margin-bottom: 4px; }
   .game-tabs a {
     display: flex; align-items: center; gap: 8px; padding: 10px 16px; margin-bottom: -1px;
     color: var(--wa-color-text-quiet); text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent;
   }
   .game-tabs a:hover { color: var(--wa-color-text-normal); }
-  .game-tabs a.active { color: var(--brand-text); border-bottom-color: var(--brand); }
+  .game-tabs a.active { color: var(--brand-text); }
+  /* Transitions.dev — Tabs sliding (adaptado: barrinha embaixo em vez de pílula).
+     A barrinha sai da aba de antes e desliza até a nova, mesmo trocando de página (Twitch ↔ Kick). */
+  .tab-ink {
+    position: absolute; left: 0; bottom: -1px; height: 2px; width: 0; background: var(--brand); pointer-events: none;
+    transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), width 250ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-reduced-motion: reduce) { .tab-ink { transition: none !important; } }
   .sidebar-foot { margin-top: auto; padding: 12px 10px 0; border-top: 1px solid var(--wa-color-surface-border); font-size: 12px; color: var(--wa-color-text-quiet); display: flex; flex-direction: column; gap: 8px; }
   .server-status { display: flex; align-items: center; gap: 8px; }
   .server-status.down { color: #ff6b6b; }
@@ -276,6 +283,76 @@
   }
   .events-btn.bad .events-count { background: #c62828; color: #fff; }
   .events-btn.good .events-count { background: var(--live); color: #062a12; }
+  /* Transitions.dev — Notification badge: entra na diagonal e "estoura" quando chega evento novo. */
+  .events-count.pop {
+    animation: badge-slide 260ms cubic-bezier(0.22, 1, 0.36, 1), badge-pop 500ms cubic-bezier(0.34, 1.36, 0.64, 1);
+  }
+  @keyframes badge-slide { from { translate: -8.2px 12.4px; } }
+  @keyframes badge-pop { from { scale: 0; opacity: 0; filter: blur(2px); } }
+  @media (prefers-reduced-motion: reduce) { .events-count.pop { animation: none; } }
+  /* Transitions.dev — Number subtle change: só os dígitos que mudaram trocam, subindo (ganhou) ou descendo. */
+  .num-anim { display: inline-flex; align-items: baseline; }
+  .num-slot { position: relative; display: inline-block; }
+  .num-new { display: inline-block; animation: num-in 455ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .num-old { position: absolute; inset: 0; text-align: center; pointer-events: none; animation: num-out 455ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  @keyframes num-in { from { transform: translateY(calc(0.3em * var(--num-dir, 1))); opacity: 0; filter: blur(0.042em); } }
+  @keyframes num-out { to { transform: translateY(calc(-0.3em * var(--num-dir, 1))); opacity: 0; filter: blur(0.042em); } }
+
+  /* Logos da Kick e da Twitch (theSVG, versão "mono"): pintados com a cor do texto. */
+  .brand-logo { width: 1em; height: 1em; fill: currentColor; flex: none; }
+  .platform svg { width: 60%; height: 60%; fill: currentColor; }
+
+  /* Mini gráfico dos últimos 7 dias no cartão "Pontos hoje". */
+  .kpi { position: relative; }
+  .kpi .spark { position: absolute; top: 18px; right: 18px; width: 88px; height: 32px; }
+  .kpi .spark svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+  /* Transitions.dev — Skeleton loader and reveal: esboço pulsando até o servidor responder;
+     depois o conteúdo aparece saindo do desfoque. */
+  .skel { display: block; border-radius: 6px; background: var(--wa-color-neutral-fill-quiet); animation: skel-pulse 1000ms ease-in-out infinite; }
+  .skel.round { border-radius: 50%; flex: none; }
+  .skel-row { display: flex; align-items: center; gap: 12px; }
+  @keyframes skel-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+  .revealing { animation: skel-reveal 400ms ease-in-out both; }
+  @keyframes skel-reveal { from { opacity: 0; filter: blur(2px); } }
+
+  /* Transitions.dev — Shimmer text: um brilho passa pelo texto enquanto o painel espera algo. */
+  .shimmer { position: relative; display: inline-block; }
+  .shimmer::before {
+    content: attr(data-text); position: absolute; inset: 0; pointer-events: none;
+    background-image: linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255, 255, 255, .9) 50%, transparent 60%, transparent 100%);
+    background-size: 400% 100%; background-repeat: no-repeat;
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+    animation: shimmer 2000ms linear infinite;
+  }
+  @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0% 0; } }
+
+  /* Transitions.dev — Error state shake: o campo treme e fica vermelho quando o valor não serve. */
+  .shake { animation: shake 280ms linear; }
+  @keyframes shake {
+    0% { transform: translateX(0); animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+    28.57% { transform: translateX(6px); animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+    57.14% { transform: translateX(-6px); animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+    78.57% { transform: translateX(4px); animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+    100% { transform: translateX(0); }
+  }
+  wa-input::part(base) { transition: border-color 280ms ease-out; }
+  wa-input.is-error::part(base) { border-color: var(--wa-color-danger-fill-loud); }
+
+  /* Resgate feito: o "carregando" do botão vira um ✓ que se desenha, e sai confete do botão. */
+  .redeem-done { animation: check-pop 500ms cubic-bezier(0.34, 1.36, 0.64, 1); }
+  .check-draw { width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .check-draw path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: check-draw 420ms cubic-bezier(0.65, 0, 0.35, 1) 80ms forwards; }
+  @keyframes check-pop { from { scale: .85; } }
+  @keyframes check-draw { to { stroke-dashoffset: 0; } }
+  .confetti { position: fixed; width: 7px; height: 11px; border-radius: 2px; pointer-events: none; z-index: 10000; }
+  .smoke { position: fixed; border-radius: 50%; pointer-events: none; z-index: 10000; background: var(--wa-color-neutral-fill-normal); filter: blur(6px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skel, .revealing, .shake, .redeem-done { animation: none !important; }
+    .shimmer::before { animation: none !important; }
+    .check-draw path { animation: none; stroke-dashoffset: 0; }
+  }
   /* Lista na gaveta da direita. */
   .event-day { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); margin: 16px 0 6px; }
   .event-day:first-child { margin-top: 0; }
@@ -374,7 +451,7 @@
       <a href="#config" data-page="config"><wa-icon name="gear"></wa-icon>Configurações</a>
     </nav>
     <div class="sidebar-foot">
-      <div class="server-status" id="server-status"><span class="live-dot"></span><span>Conectando…</span></div>
+      <div class="server-status" id="server-status"><span class="live-dot"></span><span class="shimmer" data-text="Conectando…">Conectando…</span></div>
       <span id="server-host"></span>
     </div>
   </aside>
@@ -436,7 +513,7 @@
       <section class="page" id="page-twitch">
         <nav class="game-tabs">
           <a href="#twitch" class="brand-twitch active"><wa-icon family="brands" name="twitch"></wa-icon>Twitch <wa-badge class="count" variant="success" pill data-count="twitch" hidden></wa-badge></a>
-          <a href="#kick" class="brand-kick"><wa-icon name="k"></wa-icon>Kick <wa-badge class="count" variant="success" pill data-count="kick" hidden></wa-badge></a>
+          <a href="#kick" class="brand-kick"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Kick <wa-badge class="count" variant="success" pill data-count="kick" hidden></wa-badge></a>
         </nav>
         <div>
           <h2><wa-icon name="coins"></wa-icon>Pontos do canal
@@ -464,7 +541,7 @@
       <section class="page" id="page-kick">
         <nav class="game-tabs">
           <a href="#twitch" class="brand-twitch"><wa-icon family="brands" name="twitch"></wa-icon>Twitch <wa-badge class="count" variant="success" pill data-count="twitch" hidden></wa-badge></a>
-          <a href="#kick" class="brand-kick active"><wa-icon name="k"></wa-icon>Kick <wa-badge class="count" variant="success" pill data-count="kick" hidden></wa-badge></a>
+          <a href="#kick" class="brand-kick active"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Kick <wa-badge class="count" variant="success" pill data-count="kick" hidden></wa-badge></a>
         </nav>
         <div>
           <h2><wa-icon name="coins"></wa-icon>Pontos do canal
@@ -491,7 +568,7 @@
       <section class="page brand-twitch" id="page-lolidle">
         <nav class="game-tabs">
           <a href="#lolidle" class="brand-twitch active"><wa-icon family="brands" name="twitch"></wa-icon>Twitch <wa-badge class="count" variant="success" pill data-count="lolidle" hidden></wa-badge></a>
-          <a href="#lolidle-kick" class="brand-kick"><wa-icon name="k"></wa-icon>Kick <wa-badge class="count" variant="success" pill data-count="lolidle-kick" hidden></wa-badge></a>
+          <a href="#lolidle-kick" class="brand-kick"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Kick <wa-badge class="count" variant="success" pill data-count="lolidle-kick" hidden></wa-badge></a>
         </nav>
         <div>
           <h2><wa-icon name="comments"></wa-icon>Contas no chat</h2>
@@ -513,7 +590,7 @@
       <section class="page" id="page-lolidle-kick">
         <nav class="game-tabs">
           <a href="#lolidle" class="brand-twitch"><wa-icon family="brands" name="twitch"></wa-icon>Twitch <wa-badge class="count" variant="success" pill data-count="lolidle" hidden></wa-badge></a>
-          <a href="#lolidle-kick" class="brand-kick active"><wa-icon name="k"></wa-icon>Kick <wa-badge class="count" variant="success" pill data-count="lolidle-kick" hidden></wa-badge></a>
+          <a href="#lolidle-kick" class="brand-kick active"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Kick <wa-badge class="count" variant="success" pill data-count="lolidle-kick" hidden></wa-badge></a>
         </nav>
         <div class="empty">O LoLdle ainda não tem nada na Kick.</div>
       </section>
@@ -563,11 +640,11 @@
             <b class="brand-twitch" style="color:var(--brand-text)"><wa-icon family="brands" name="twitch"></wa-icon> Contas da Twitch</b>
             <div id="twitch-profiles"></div>
             <wa-divider></wa-divider>
-            <b class="brand-kick" style="color:var(--brand-text)"><wa-icon name="k"></wa-icon> Contas da Kick</b>
+            <b class="brand-kick" style="color:var(--brand-text)"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg> Contas da Kick</b>
             <div id="kick-profiles"></div>
           </wa-card>
           <wa-card data-game-card="pokeidle">
-            <h2 slot="header"><wa-icon name="k"></wa-icon>App da Kick (opcional)</h2>
+            <h2 slot="header"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>App da Kick (opcional)</h2>
             <div id="kick-app-status"></div>
             <div class="meta">Sem o app, o painel vê quem está ao vivo na Kick perguntando canal por canal (a cada 2 minutos). Com o app, é um pedido só a cada minuto. Para criar: <b>kick.com → Configurações → Desenvolvedor</b> (Redirect URL: <code>http://localhost</code>), depois cole os dados. Não mostre o Client Secret para ninguém.</div>
             <form id="kick-app-form" style="display:flex;flex-direction:column;gap:12px">
@@ -750,6 +827,30 @@
     if (el.querySelector('wa-dropdown[open], wa-select[open]')) return;
     el._html = html;
     el.innerHTML = html;
+    // Saiu do esboço do primeiro carregamento: o conteúdo aparece saindo do desfoque.
+    if ('skel' in el.dataset) {
+      delete el.dataset.skel;
+      el.classList.add('revealing');
+      el.addEventListener('animationend', () => el.classList.toggle('revealing', false), { once: true });
+    }
+  }
+
+  // Esboço dos cards enquanto o servidor não responde pela primeira vez.
+  const skel = (w, h = 12, round = false) => `<span class="skel${round ? ' round' : ''}" style="width:${w};height:${h}px"></span>`;
+  const repeat = (n, html) => Array.from({ length: n }, () => html).join('');
+  const SKELETONS = {
+    kpis: repeat(4, `<wa-card class="kpi">${skel('45%')}${skel('55%', 28)}${skel('75%')}</wa-card>`),
+    cards: repeat(6, `<wa-card class="channel"><div class="top">${skel('50%', 16)}<span style="flex:1"></span>${skel('84px', 20)}</div></wa-card>`),
+    accounts: repeat(2, `<wa-card class="points"><div class="skel-row">${skel('40px', 40, true)}${skel('35%', 16)}</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:18px">${repeat(3, `<div class="skel-row">${skel('55%', 14)}<span style="flex:1"></span>${skel('56px', 14)}</div>`)}</div></wa-card>`),
+    list: `<div style="display:flex;flex-direction:column;gap:12px">${repeat(4, skel('100%', 14))}</div>`,
+  };
+  for (const [id, kind] of Object.entries({ kpis: 'kpis', points: 'accounts', 'kick-points': 'accounts', 'lol-accounts': 'accounts',
+    'twitch-channels': 'cards', 'kick-channels': 'cards', 'lol-channels': 'cards', 'ov-week': 'list', 'ov-events': 'list' })) {
+    const el = $(id);
+    if (!el) continue;
+    el.innerHTML = SKELETONS[kind];
+    el.dataset.skel = '';
   }
 
   // ---------- Servidor ----------
@@ -785,6 +886,7 @@
 
   function setServerStatus(up) {
     $('server-status').classList.toggle('down', !up);
+    $('server-status').lastElementChild.className = ''; // tira o brilho do "Conectando…"
     $('server-status').lastElementChild.textContent = up ? 'Servidor rodando' : 'Servidor fora do ar';
   }
 
@@ -835,6 +937,56 @@
     renderAlerts();
     renderEvents();
     renderConfig();
+    animateNumbers();
+    placeInks();
+  }
+
+  // Números que mudaram desde a última atualização: anima só os dígitos novos.
+  // Funciona com setHTML: o elemento só é recriado quando o valor muda, e cada um é visto uma vez (_num).
+  const lastNums = new Map();
+  const calmMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const digitsOf = (s) => Number(s.replace(/\D/g, '')) || 0;
+  function animateNumbers() {
+    const before = new Map(lastNums);
+    for (const el of $$('[data-num]')) {
+      if (el._num) continue;
+      el._num = true;
+      const text = el.textContent;
+      const old = before.get(el.dataset.num);
+      lastNums.set(el.dataset.num, text);
+      if (old === undefined || old === text || calmMotion.matches) continue;
+      // O sinal ("+") fica parado; o resto alinha pela direita, porque o número cresce para a esquerda (999 → 1.000).
+      const sign = text.match(/^\D*/)[0];
+      const fixed = old.startsWith(sign) ? sign : '';
+      const size = Math.max(text.length, old.length) - fixed.length;
+      const a = old.slice(fixed.length).padStart(size);
+      const b = text.slice(fixed.length).padStart(size);
+      el.style.setProperty('--num-dir', digitsOf(text) >= digitsOf(old) ? 1 : -1);
+      el.textContent = fixed;
+      el.classList.add('num-anim');
+      for (let i = size - (text.length - fixed.length); i < size; i++) {
+        if (a[i] === b[i]) {
+          el.append(b[i]);
+          continue;
+        }
+        const slot = document.createElement('span');
+        slot.className = 'num-slot';
+        const out = document.createElement('span');
+        out.className = 'num-old';
+        out.ariaHidden = 'true';
+        out.textContent = a[i].trim();
+        const into = document.createElement('span');
+        into.className = 'num-new';
+        into.textContent = b[i];
+        slot.append(out, into);
+        el.append(slot);
+      }
+      // Terminou: volta a ser texto simples (sem o dígito velho escondido).
+      el.addEventListener('animationend', () => {
+        el.textContent = text;
+        el.classList.toggle('num-anim', false);
+      }, { once: true });
+    }
   }
 
   // ---------- Jogos ligados (Configurações → Jogos) ----------
@@ -916,7 +1068,13 @@
     return [...points(state.points?.accounts, 'twitch'), ...points(state.kick.points?.accounts, 'kick'), ...lol];
   }
 
-  const platformMark = (p) => `<span class="platform ${p}">${p === 'twitch' ? 'T' : 'K'}</span>`;
+  // Logos "mono" do theSVG (thesvg.org). As marcas são da Twitch e da Kick; aqui só indicam a plataforma.
+  const LOGO_PATHS = {
+    twitch: 'M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z',
+    kick: 'M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z',
+  };
+  const platformLogo = (p) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${LOGO_PATHS[p] ?? LOGO_PATHS.twitch}"/></svg>`;
+  const platformMark = (p) => `<span class="platform ${p}" title="${p === 'kick' ? 'Kick' : 'Twitch'}">${platformLogo(p)}</span>`;
   const plural = (n, one, many) => `${fmt(n)} ${n === 1 ? one : many}`;
 
   function renderOverview(twitchLive, kickLive) {
@@ -951,24 +1109,40 @@
 
     // Pontos, baús e Momentos são só do Pokeidle: com ele desligado, esses dois cartões saem.
     setHTML($('kpis'), `${poke ? `
-      <wa-card class="kpi"><span class="label"><wa-icon name="coins"></wa-icon>Pontos hoje</span>
+      <wa-card class="kpi"><span class="label"><wa-icon name="coins"></wa-icon>Pontos hoje</span>${sparkline()}
         ${farming.length || today.total
-          ? `<span class="value">+${fmt(today.total)}</span>
+          ? `<span class="value" data-num="kpi-today">+${fmt(today.total)}</span>
              <span class="hint">${yesterday.total ? `ontem: +${fmt(yesterday.total)}${diff > 0 ? ` · <span class="up">já passou</span>` : ''}` : 'Twitch e Kick, todas as contas'}</span>`
           : '<span class="value">–</span><span class="hint">Nenhuma conta juntando pontos</span>'}</wa-card>` : ''}
       <wa-card class="kpi"><span class="label"><wa-icon name="users"></wa-icon>Contas trabalhando</span>
         ${accounts.length
-          ? `<span class="value">${count('working')}<small>/${accounts.length}</small></span>
+          ? `<span class="value"><span data-num="kpi-working">${count('working')}</span><small>/${accounts.length}</small></span>
              <span class="hint">${[count('resting') && `${count('resting')} descansando`, count('waiting') && `${count('waiting')} esperando live`,
                count('connecting') && `${count('connecting')} conectando`].filter(Boolean).join(' · ') || 'todas ativas'}
                ${count('problem') ? `<wa-badge variant="danger" pill>${plural(count('problem'), 'precisa', 'precisam')} de você</wa-badge>` : ''}</span>`
           : '<span class="value">–</span><span class="hint">Nenhuma conta vinculada</span>'}</wa-card>
       ${poke ? `<wa-card class="kpi"><span class="label"><wa-icon name="gift"></wa-icon>Baús e Momentos hoje</span>
-        <span class="value">${fmt((r.CLAIM?.count ?? 0) + (r.COMMUNITY_MOMENT?.count ?? 0))}</span>
+        <span class="value" data-num="kpi-chests">${fmt((r.CLAIM?.count ?? 0) + (r.COMMUNITY_MOMENT?.count ?? 0))}</span>
         <span class="hint">${extras.join(' · ') || 'Pegos sozinhos nas lives da Twitch'}</span></wa-card>` : ''}
       <wa-card class="kpi"><span class="label"><span class="live-dot"></span>Lives agora</span>
-        <span class="value">${pokeLive + lolLive}</span>
+        <span class="value" data-num="kpi-live">${pokeLive + lolLive}</span>
         <span class="hint">${[poke && `Pokeidle ${pokeLive}`, lol && `LoLdle ${lolLive}`].filter(Boolean).join(' · ') || 'Nenhum jogo ligado'}</span></wa-card>`);
+  }
+
+  // Linha dos pontos dos últimos 7 dias, no canto do "Pontos hoje" (o mesmo dado das barras da semana).
+  function sparkline() {
+    const vals = Array.from({ length: 7 }, (_, i) => dayPoints(dayKeyOf(i - 6)).total);
+    const max = Math.max(...vals);
+    if (!max) return '';
+    const [W, H, pad] = [88, 32, 3];
+    const pts = vals.map((v, i) => [Math.round((i * (W - pad * 2)) / 6 + pad), Math.round(H - pad - (v / max) * (H - pad * 2))]);
+    const line = pts.map((p) => p.join(',')).join(' ');
+    const [lx, ly] = pts[6];
+    return `<span class="spark" title="Pontos dos últimos 7 dias"><svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+      <defs><linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--live);stop-opacity:.35"/><stop offset="1" style="stop-color:var(--live);stop-opacity:0"/></linearGradient></defs>
+      <polygon points="${pad},${H} ${line} ${W - pad},${H}" fill="url(#spark-fill)"/>
+      <polyline points="${line}" fill="none" style="stroke:var(--live)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${lx}" cy="${ly}" r="3" style="fill:var(--live)"/></svg></span>`;
   }
 
   // Tudo o que só o jogador resolve, com o botão que resolve. Some quando não tem nada.
@@ -993,7 +1167,7 @@
     } else if (!accounts.length) {
       items.push(`<div class="item"><span>Nenhuma conta vinculada ainda. Vincule uma para começar.</span>
         ${gameOn('pokeidle') ? `<wa-button size="small" class="brand-twitch" variant="brand" data-action="go-twitch-link"><wa-icon slot="start" family="brands" name="twitch"></wa-icon>Pokeidle na Twitch</wa-button>
-        <wa-button size="small" class="brand-kick" variant="brand" data-action="go-kick-add"><wa-icon slot="start" name="k"></wa-icon>Pokeidle na Kick</wa-button>` : ''}
+        <wa-button size="small" class="brand-kick" variant="brand" data-action="go-kick-add"><svg slot="start" class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Pokeidle na Kick</wa-button>` : ''}
         ${gameOn('lolidle') ? '<wa-button size="small" class="brand-twitch" variant="brand" data-action="go-lol-link"><wa-icon slot="start" family="brands" name="twitch"></wa-icon>LoLdle</wa-button>' : ''}</div>`);
     }
     setHTML($('attention'), items.length ? `<wa-callout variant="warning" class="attention"><wa-icon slot="icon" name="hand"></wa-icon>
@@ -1025,7 +1199,7 @@
     const earned = (x) => today.accounts[x.p === 'kick' ? `${x.a.login} (Kick)` : x.a.login];
     setHTML(el.querySelector('.ov-acc'), mine.length
       ? `<div class="ov-label">Contas · pontos hoje</div>${mine.map((x) => `<div class="row">${platformMark(x.p)}<span class="login">${esc(x.a.login)}</span>
-          ${accountStatus(x)}<span class="today" title="Pontos ganhos hoje">${earned(x) ? `+${fmt(earned(x))}` : ''}</span></div>`).join('')}`
+          ${accountStatus(x)}<span class="today" title="Pontos ganhos hoje" data-num="today:${x.p}:${esc(accountKey(x.p, x.a))}">${earned(x) ? `+${fmt(earned(x))}` : ''}</span></div>`).join('')}`
       : '<div class="empty">Nenhuma conta juntando pontos. Vincule uma em Pokeidle → Twitch ou Kick.</div>');
 
     // Quem está assistindo cada live, para ver que as contas estão onde deviam.
@@ -1232,8 +1406,8 @@
           ${c.watching ? `<span class="watch-icon ${c.error ? 'error' : ''}" title="${esc(c.error ? `Assistindo, mas não está contando: ${c.error}` : 'Assistindo: ganhando pontos por tempo assistido')}">
             <wa-icon name="${c.error ? 'triangle-exclamation' : 'eye'}" label="assistindo"></wa-icon></span>` : ''}
           <span class="amount">
-            <span class="balance" ${c.balance === null ? 'title="Lendo o saldo…"' : ''}>${c.balance === null ? '–' : fmt(c.balance)}</span>
-            ${c.gained ? `<span class="gained" title="Ganho desde que o painel abriu">+${fmt(c.gained)}</span>` : ''}
+            <span class="balance" data-num="bal:${platform}:${esc(accountKey(platform, account))}:${esc(c.name)}" ${c.balance === null ? 'title="Lendo o saldo…"' : ''}>${c.balance === null ? '<span class="skel" style="width:44px;height:14px"></span>' : fmt(c.balance)}</span>
+            ${c.gained ? `<span class="gained" title="Ganho desde que o painel abriu" data-num="gain:${platform}:${esc(accountKey(platform, account))}:${esc(c.name)}">+${fmt(c.gained)}</span>` : ''}
           </span>
           ${shopButton(platform, account, c.name)}${playButton(platform, account, c)}
         </div>`).join('') : '<div class="empty">Nenhum canal na lista.</div>'}</div>`;
@@ -1274,7 +1448,7 @@
 
     const cards = lol.accounts.map((a) => {
       const badge = a.needsRelink ? '<wa-badge variant="danger" pill>Vincule de novo</wa-badge>'
-        : !a.connected ? '<wa-badge variant="warning" pill>Conectando…</wa-badge>'
+        : !a.connected ? '<wa-badge variant="warning" pill><span class="shimmer" data-text="Conectando…">Conectando…</span></wa-badge>'
         : a.joined.length ? `<wa-badge variant="success" pill>Em ${a.joined.length} chat${a.joined.length === 1 ? '' : 's'}</wa-badge>`
         : '<wa-badge variant="neutral" pill>Esperando live</wa-badge>';
       return `<wa-card class="points">
@@ -1366,7 +1540,7 @@
         ? `<wa-callout variant="danger"><wa-icon slot="icon" name="circle-exclamation"></wa-icon>
              <div class="link-box"><div>Não deu para abrir a loja: ${esc(shop.error)}</div>
              <wa-button size="small" appearance="outlined" data-action="shop-reload">Tentar de novo</wa-button></div></wa-callout>`
-        : '<div class="empty"><wa-spinner></wa-spinner> Abrindo a loja…</div>');
+        : '<div class="empty"><wa-spinner></wa-spinner> <span class="shimmer" data-text="Abrindo a loja…">Abrindo a loja…</span></div>');
     }
     const { platform } = shop;
     const kick = platform === 'kick';
@@ -1418,7 +1592,9 @@
         </div>
         <div class="buy">
           <span class="cost">${icon}${fmt(r.cost)}</span>
-          <wa-button size="small" variant="brand" data-action="shop-redeem" data-reward="${esc(r.id)}" ${canBuy && !shop.busy ? '' : 'disabled'} ${shop.busy === r.id ? 'loading' : ''}>Resgatar</wa-button>
+          ${shop.done === r.id
+            ? '<wa-button size="small" variant="success" class="redeem-done"><svg slot="start" class="check-draw" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Resgatado</wa-button>'
+            : `<wa-button size="small" variant="brand" data-action="shop-redeem" data-reward="${esc(r.id)}" ${canBuy && !shop.busy ? '' : 'disabled'} ${shop.busy === r.id ? 'loading' : ''}>Resgatar</wa-button>`}
           ${problem && account ? `<span class="why">${esc(problem)}</span>` : ''}
         </div>
       </div>`;
@@ -1451,6 +1627,13 @@
         state = data;
         current.message = { variant: 'success', text: `Resgatado com ${login}: "${reward.title}" por ${fmt(reward.cost)} pontos.` };
         delete current.texts[rewardId];
+        // O botão mostra "✓ Resgatado" por alguns segundos e volta ao normal.
+        current.done = rewardId;
+        setTimeout(() => {
+          if (current.done !== rewardId) return;
+          current.done = null;
+          if (shop === current) renderShop();
+        }, 2500);
       } else current.message = { variant: 'danger', text: res.status === 404 ? 'Reinicie o servidor para resgatar por aqui.' : data.error || 'Algo deu errado' };
     } catch {
       current.message = { variant: 'danger', text: 'O servidor não respondeu. Veja na lista do presente 🎁 se o resgate entrou antes de tentar de novo.' };
@@ -1458,7 +1641,69 @@
     current.busy = null;
     if (shop !== current) return;
     render();
+    // No quadro seguinte: o aviso "Resgatado com…" só ganha altura depois que o Web Awesome desenha ele.
+    if (current.done === rewardId) requestAnimationFrame(() => confetti(document.querySelector('#rewards-dialog .redeem-done'), $('rewards-dialog')));
     loadShop(true); // estoque e tempo de espera podem ter mudado
+  }
+
+  // Confete saindo do botão quando o resgate dá certo. Só na ação do jogador, nunca no farm.
+  function confetti(from, host = document.body) {
+    if (!from || calmMotion.matches) return;
+    const r = from.getBoundingClientRect();
+    // Dentro da janela da loja, "fixed" conta a partir da janela (ela usa transform): mede onde fica o 0,0 dela.
+    const probe = document.createElement('span');
+    probe.className = 'confetti';
+    Object.assign(probe.style, { left: '0px', top: '0px', visibility: 'hidden' });
+    host.append(probe);
+    const origin = probe.getBoundingClientRect();
+    probe.remove();
+    const scale = origin.width / 7 || 1; // .confetti tem 7px de largura
+    const colors = ['#9146ff', '#53fc18', '#fc5e03', '#3ecf6e', '#ffd166', '#ffffff'];
+    for (let i = 0; i < 28; i++) {
+      const bit = document.createElement('span');
+      bit.className = 'confetti';
+      bit.style.left = `${(r.left + r.width / 2 - origin.left) / scale}px`;
+      bit.style.top = `${(r.top + r.height / 2 - origin.top) / scale}px`;
+      bit.style.background = colors[i % colors.length];
+      host.append(bit);
+      // Sobe num leque, perde força e cai girando.
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.9;
+      const speed = 80 + Math.random() * 110;
+      const [dx, dy] = [Math.cos(angle) * speed, Math.sin(angle) * speed];
+      const spin = (Math.random() - 0.5) * 900;
+      bit.animate([
+        { transform: 'translate(-50%, -50%) rotate(0deg)', opacity: 1 },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${spin / 2}deg)`, opacity: 1, offset: 0.4 },
+        { transform: `translate(calc(-50% + ${dx * 1.3}px), calc(-50% + ${dy * 0.3 + 160}px)) rotate(${spin}deg)`, opacity: 0 },
+      ], { duration: 1100 + Math.random() * 500, easing: 'cubic-bezier(0.2, 0.6, 0.4, 1)' }).finished.finally(() => bit.remove());
+    }
+  }
+
+  // Canal removido: o card se desfaz em fumaça antes de sair da lista. Se o servidor recusar, ele volta.
+  async function removeChannel(button, path) {
+    const card = button.closest('wa-card');
+    if (!card || calmMotion.matches) return api('DELETE', path);
+    const r = card.getBoundingClientRect();
+    for (let i = 0; i < 10; i++) {
+      const puff = document.createElement('span');
+      const size = 18 + Math.random() * 26;
+      puff.className = 'smoke';
+      Object.assign(puff.style, { width: `${size}px`, height: `${size}px`,
+        left: `${r.left + Math.random() * r.width - size / 2}px`, top: `${r.top + Math.random() * r.height - size / 2}px` });
+      document.body.append(puff);
+      puff.animate([
+        { opacity: 0, transform: 'scale(.6)' },
+        { opacity: .55, transform: 'scale(1)', offset: 0.3 },
+        { opacity: 0, transform: `translate(${(Math.random() - 0.5) * 30}px, ${-30 - Math.random() * 30}px) scale(1.6)` },
+      ], { duration: 700 + Math.random() * 300, easing: 'ease-out' }).finished.finally(() => puff.remove());
+    }
+    const fade = card.animate([
+      { opacity: 1, filter: 'blur(0)', transform: 'none' },
+      { opacity: 0, filter: 'blur(6px)', transform: 'translateY(-6px) scale(.97)' },
+    ], { duration: 420, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+    // Espera a animação, mas nunca mais que 600 ms (com a aba em segundo plano ela não anda).
+    await Promise.race([fade.finished.catch(() => {}), new Promise((r) => setTimeout(r, 600))]);
+    if (!(await api('DELETE', path))) fade.cancel();
   }
 
   $('rewards-dialog').addEventListener('wa-after-hide', (e) => {
@@ -1501,7 +1746,14 @@
     for (const kind of ['good', 'bad']) {
       const fresh = events[kind].filter((e) => e.at > seenAt(kind)).length;
       $$(`[data-events-count="${kind}"]`).forEach((b) => {
-        b.hidden = !fresh || eventsKind === kind;
+        const hidden = !fresh || eventsKind === kind;
+        if (!hidden && b._fresh !== undefined && fresh > b._fresh) {
+          b.classList.toggle('pop', false);
+          void b.offsetWidth; // recomeça a animação
+          b.classList.add('pop');
+        }
+        b._fresh = hidden ? 0 : fresh;
+        b.hidden = hidden;
         b.textContent = fresh > 99 ? '99+' : fresh;
       });
     }
@@ -1518,7 +1770,7 @@
       const text = e.text.charAt(0).toUpperCase() + e.text.slice(1);
       return `${header}<div class="event ${e.kind} ${e.at > eventsSeenBefore ? 'new' : ''}">
         <span class="icon"><wa-icon name="${eventIcon(e)}"></wa-icon></span>
-        <span class="body">${e.platform ? `<span class="platform ${esc(e.platform)}" style="display:inline-grid;width:16px;height:16px;font-size:10px;vertical-align:-2px">${e.platform === 'kick' ? 'K' : 'T'}</span> ` : ''}${e.account ? `<span class="who">${esc(e.account)}</span> · ` : ''}${esc(text)}</span>
+        <span class="body">${e.platform ? `<span class="platform ${esc(e.platform)}" style="display:inline-grid;width:16px;height:16px;font-size:10px;vertical-align:-2px">${platformLogo(e.platform)}</span> ` : ''}${e.account ? `<span class="who">${esc(e.account)}</span> · ` : ''}${esc(text)}</span>
         <span class="when">${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
       </div>`;
     }).join('') : `<div class="empty">${info.empty}</div>`);
@@ -1806,12 +2058,12 @@
       $$('.play-tip').forEach((t) => (t.hidden = true));
     }
     if (action === 'points-unlink' && confirm(`${platform === 'kick' ? 'Remover' : 'Desvincular'} ${login}? Ela para de juntar pontos. O histórico dela continua guardado.`)) api('DELETE', accountPath);
-    if (action === 'remove-twitch' && confirm(`Remover ${channel} da lista de canais oficiais?`)) api('DELETE', `channels/${encodeURIComponent(channel)}`);
-    if (action === 'remove-lolidle' && confirm(`Remover ${channel} da lista do LoLdle?`)) api('DELETE', `lolidle/channels/${encodeURIComponent(channel)}`);
+    if (action === 'remove-twitch' && confirm(`Remover ${channel} da lista de canais oficiais?`)) removeChannel(el, `channels/${encodeURIComponent(channel)}`);
+    if (action === 'remove-lolidle' && confirm(`Remover ${channel} da lista do LoLdle?`)) removeChannel(el, `lolidle/channels/${encodeURIComponent(channel)}`);
     if (action === 'lol-link') api('POST', 'lolidle/link');
     if (action === 'lol-cancel') api('DELETE', 'lolidle/link');
     if (action === 'lol-unlink' && confirm(`Desvincular ${key} do LoLdle? A conta sai dos chats.`)) api('DELETE', `lolidle/${encodeURIComponent(key)}`);
-    if (action === 'remove-kick' && confirm(`Remover ${channel} da lista da Kick?`)) api('DELETE', `kick/channels/${encodeURIComponent(channel)}`);
+    if (action === 'remove-kick' && confirm(`Remover ${channel} da lista da Kick?`)) removeChannel(el, `kick/channels/${encodeURIComponent(channel)}`);
   });
 
   // Favorito "Enviar para o IdleLive": roda no kick.com, lê o session_token (o próprio site lê ele para fazer os pedidos)
@@ -1838,15 +2090,18 @@
   // Adicionar (ou trocar o token de) uma conta da Kick.
   $('kick-add-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const token = $('kick-token').value.trim();
-    if (!token) return toast('Cole o token da conta');
+    const token = ($('kick-token').value ?? '').trim();
+    if (!token) {
+      shake($('kick-token'));
+      return toast('Cole o token da conta');
+    }
     $('kick-add-save').loading = true;
     const ok = await api('POST', 'kick/accounts', { token });
     $('kick-add-save').loading = false;
     if (ok) {
       $('kick-token').value = '';
       $('kick-add').open = false;
-    }
+    } else shake($('kick-token'));
   });
 
   document.addEventListener('change', (e) => {
@@ -1874,14 +2129,27 @@
   });
 
   // Adicionar canal: botão "Adicionar" ou Enter no campo. O texto só some se der certo.
+  // Campo com valor que não serve: treme e fica com a borda vermelha por 3 s.
+  function shake(el) {
+    if (!el) return;
+    el.classList.toggle('shake', false);
+    void el.offsetWidth; // recomeça a animação
+    el.classList.add('shake', 'is-error');
+    clearTimeout(el._errorTimer);
+    el._errorTimer = setTimeout(() => el.classList.toggle('is-error', false), 3000);
+  }
+
   async function addChannel(platform) {
     const input = document.querySelector(`[data-add="${platform}"]`);
-    const name = input.value.trim();
-    if (!name) return toast('Digite o nome do canal');
+    const name = (input.value ?? '').trim(); // campo vazio do Web Awesome vale null
+    if (!name) {
+      shake(input);
+      return toast('Digite o nome do canal');
+    }
     if (await api('POST', { kick: 'kick/channels', lolidle: 'lolidle/channels' }[platform] ?? 'channels', { name })) {
       input.value = '';
       toast(`Canal ${name} adicionado`, 'info');
-    }
+    } else shake(input);
   }
 
   document.addEventListener('keydown', (e) => {
@@ -1891,13 +2159,17 @@
 
   $('kick-app-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const clientId = $('kick-client-id').value.trim();
-    const clientSecret = $('kick-client-secret').value.trim();
-    if (!clientId || !clientSecret) return toast('Preencha o Client ID e o Client Secret');
+    const clientId = ($('kick-client-id').value ?? '').trim();
+    const clientSecret = ($('kick-client-secret').value ?? '').trim();
+    if (!clientId || !clientSecret) {
+      if (!clientId) shake($('kick-client-id'));
+      if (!clientSecret) shake($('kick-client-secret'));
+      return toast('Preencha o Client ID e o Client Secret');
+    }
     if (await api('PUT', 'kick/app', { clientId, clientSecret })) {
       $('kick-client-secret').value = '';
       toast('App da Kick salvo', 'info');
-    }
+    } else shake($('kick-client-secret'));
   });
 
   // ---------- Navegação ----------
@@ -1920,12 +2192,38 @@
   // Ícones dos jogos nos cards da Visão geral: os mesmos desenhos do menu.
   $$('[data-game-icon]').forEach((s) => (s.innerHTML = document.querySelector(`#nav a[data-page="${s.dataset.gameIcon}"] svg`)?.outerHTML ?? ''));
 
+  // Barrinha das abas Twitch | Kick. "from" é a posição da aba de antes, para ela deslizar de lá.
+  $$('.game-tabs').forEach((nav) => nav.insertAdjacentHTML('afterbegin', '<span class="tab-ink" aria-hidden="true"></span>'));
+  function placeInk(nav, from) {
+    const ink = nav.querySelector('.tab-ink');
+    const tab = nav.querySelector('a.active');
+    if (!ink || !tab || !nav.offsetParent) return;
+    // Primeira vez: aparece direto no lugar, sem crescer da esquerda.
+    from ??= ink.style.width ? null : { left: tab.offsetLeft, width: tab.offsetWidth };
+    if (from) {
+      ink.style.transition = 'none';
+      ink.style.transform = `translateX(${from.left}px)`;
+      ink.style.width = `${from.width}px`;
+      void ink.offsetWidth;
+      ink.style.transition = '';
+    }
+    ink.style.transform = `translateX(${tab.offsetLeft}px)`;
+    ink.style.width = `${tab.offsetWidth}px`;
+  }
+  const placeInks = (from) => $$('.page.active .game-tabs').forEach((nav) => placeInk(nav, from));
+  // As abas mudam de largura quando o "N ao vivo" aparece ou a fonte carrega.
+  const tabsResize = new ResizeObserver(() => placeInks());
+  $$('.game-tabs a').forEach((a) => tabsResize.observe(a));
+
   const drawer = $('drawer');
   function show(target = location.hash.slice(1)) {
     const page = titles[target] && pageOn(target) ? target : 'visao';
+    const oldTab = document.querySelector('.page.active .game-tabs a.active');
+    const from = oldTab && { left: oldTab.offsetLeft, width: oldTab.offsetWidth };
     $$('.page').forEach((p) => p.classList.toggle('active', p.id === `page-${page}`));
     $$('.nav a').forEach((a) => a.classList.toggle('active', (a.dataset.pages ?? a.dataset.page).split(' ').includes(page)));
     $$('.game-tabs a').forEach((a) => a.classList.toggle('active', a.getAttribute('href') === `#${page}`));
+    placeInks(from);
     [$('page-title').textContent, $('page-sub').textContent] = titles[page];
     if (location.hash.slice(1) !== page) history.replaceState(null, '', `#${page}`);
     drawer.open = false;

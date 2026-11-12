@@ -7,12 +7,21 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 Precisa reiniciar o servidor uma vez para valer.
 
 ### Mudanças
+- **Painel mais vivo:** quando o saldo, o "+ganho" ou os números da Visão geral mudam, só os dígitos que mudaram sobem (ganhou) ou descem; o contador de baús e erros "estoura" quando chega coisa nova; e a barrinha das abas Twitch | Kick desliza de uma aba para a outra. Quem pediu ao Windows para reduzir animações não vê nada disso. Animações adaptadas do [transitions.dev](https://transitions.dev).
+- **Logo da Kick de verdade:** o "K" de texto nas abas, no menu e nas listas virou o logo da Kick; os quadradinhos "T" viraram o logo da Twitch (logos do [theSVG](https://thesvg.org)).
+- **Mini gráfico no "Pontos hoje":** uma linha com os pontos dos últimos 7 dias, no canto do cartão da Visão geral.
+- **Resgate com ✓ e confete:** na loja, o botão "Resgatar" vira "✓ Resgatado" por alguns segundos e solta confete quando o resgate dá certo.
+- **Esboço ao abrir:** enquanto o servidor não responde, o painel mostra o formato dos cards pulsando, e os dados aparecem saindo do desfoque. O saldo que ainda está sendo lido aparece como uma barrinha pulsando no lugar do "–".
+- **Campo que treme:** canal ou token vazio ou recusado faz o campo tremer e ficar com a borda vermelha por alguns segundos.
+- **Canal sai em fumaça:** ao tirar um parceiro da lista, o card se desfaz antes de sumir. Se o servidor recusar, ele volta.
+- "Conectando…" e "Abrindo a loja…" ganharam um brilho passando no texto enquanto esperam.
 - **Histórico guarda 30 dias:** o painel guardava 60 dias de pontos, mas só mostrava 30. Agora guarda os mesmos 30 que mostra, e a Ajuda diz o mesmo. Os dias mais antigos saem do `stats.json`.
 - **Queda de internet não enche mais o 🐞:** sem internet, cada canal virava um erro "erro ao ver os pontos de #canal" (mais de 100 numa hora). Agora isso fica só na janela preta, e o aviso de internet no topo do painel continua aparecendo.
 - O painel parou de anotar os horários das lives, que não aparecem em nenhuma tela desde que as barrinhas de horário saíram. O que já estava anotado sai do `stats.json`.
 
 ### Correções
 - **"+ganho" depois de um resgate:** o "+ganho" dos cards caía para zero quando a conta resgatava uma recompensa e só voltava a subir depois de recuperar tudo o que gastou. Agora ele continua mostrando o que a conta ganhou desde que o painel abriu, na Twitch e na Kick, mesmo se o resgate foi feito pelo navegador.
+- **"Adicionar" com o campo vazio:** clicar em "Adicionar" sem digitar o nome do canal não fazia nada. Agora aparece o aviso para preencher.
 
 ## 10/11/2026
 

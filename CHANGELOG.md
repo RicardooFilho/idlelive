@@ -2,6 +2,15 @@
 
 Mudanças do IdleLive, da mais recente para a mais antiga.
 
+## 15/11/2026
+
+### Mudanças
+- **Confirmações no próprio painel:** a caixinha cinza do navegador que perguntava antes de remover canal, desvincular conta, resgatar, desligar jogo, reiniciar, atualizar e trocar de navegador virou uma janela do painel, toda na cor da seção (roxo na Twitch, verde na Kick, laranja no resto). O botão diz o que vai acontecer ("Remover", "Resgatar"…) e o que não dá para desfazer ganha um ícone de aviso. No resgate, a recompensa e o preço aparecem em destaque. Cancelar, Esc ou clicar fora cancelam.
+
+### Correções
+- **Loja sem recompensas de outro jogo:** as recompensas do Bloodbound (como "Bloodbound: +5% XP") apareciam na loja por terem "XP" no nome. Agora ficam de fora, como já acontecia com as do LoLdle.
+- O contorno que mostra o botão selecionado (ao usar o Tab) agora segue a cor da seção; antes era sempre laranja.
+
 ## 11/11/2026
 
 Precisa reiniciar o servidor uma vez para valer.

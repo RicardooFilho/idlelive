@@ -37,6 +37,9 @@
     --wa-color-brand-on-normal: var(--brand-text);
     --wa-color-brand-on-quiet: var(--brand-text);
     --wa-color-focus: var(--brand);
+    /* O Web Awesome monta o contorno de foco na raiz (sempre laranja): remonta aqui com a cor da seção. */
+    --wa-focus-ring-color: var(--brand);
+    --wa-focus-ring: var(--wa-focus-ring-style, solid) var(--wa-focus-ring-width, .1875rem) var(--brand);
     --wa-form-control-activated-color: var(--brand);
   }
 
@@ -46,6 +49,22 @@
   :not(:defined) { visibility: hidden; }
   /* Jogo desligado: o "hidden" vale mesmo em quem tem display próprio (links do menu, cards). */
   [hidden] { display: none !important; }
+  /* Diálogo de confirmação: faixa, ícone e botão na cor da seção (roxo, verde ou laranja). */
+  #confirm-dialog { --width: min(440px, 92vw); }
+  #confirm-dialog::part(dialog) { border-top: 3px solid var(--brand); }
+  .confirm-title { display: flex; align-items: center; gap: 12px; }
+  .confirm-icon {
+    width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center;
+    background: var(--brand-soft); color: var(--brand-text); font-size: 16px;
+  }
+  .confirm-summary {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px;
+    padding: 10px 14px; border-radius: 10px; background: var(--brand-soft); border-left: 3px solid var(--brand);
+    font-weight: 600;
+  }
+  .confirm-summary b { color: var(--brand-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  /* As quebras de linha (\n) da mensagem aparecem. */
+  .confirm-text { margin: 0; white-space: pre-line; line-height: 1.5; color: var(--wa-color-text-quiet); }
 
   .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
 
@@ -805,6 +824,13 @@
 </wa-dialog>
 <wa-dialog id="points-dialog" label="Pontos do canal" class="brand-twitch" light-dismiss><div class="points-wrap" id="points-all"></div></wa-dialog>
 <wa-dialog id="rewards-dialog" label="Loja" class="brand-twitch" light-dismiss><div id="rewards"></div></wa-dialog>
+<wa-dialog id="confirm-dialog" label="Confirmar" light-dismiss>
+  <span slot="label" class="confirm-title"><span class="confirm-icon"><wa-icon id="confirm-icon" name="circle-question"></wa-icon></span><span id="confirm-title"></span></span>
+  <div id="confirm-summary" class="confirm-summary" hidden><span id="confirm-what"></span><b id="confirm-how-much"></b></div>
+  <p id="confirm-text" class="confirm-text"></p>
+  <wa-button slot="footer" appearance="plain" data-dialog="close">Cancelar</wa-button>
+  <wa-button slot="footer" variant="brand" id="confirm-yes" autofocus>Confirmar</wa-button>
+</wa-dialog>
 <div class="toast" id="toast"></div>
 <div id="no-ui" style="position:fixed;inset:0;display:none;place-items:center;padding:24px;font:16px/1.5 system-ui,sans-serif;color:#eee;background:#111;text-align:center">
   <div><b>O visual do painel não carregou.</b><br>Ele vem da internet: confira a conexão e recarregue a página (F5).<br>O farm continua rodando na janela preta.</div>
@@ -899,6 +925,37 @@
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => (el.style.display = 'none'), 4000);
   }
+
+  // Confirmação no próprio painel, no lugar do confirm() do navegador. Responde true só no botão de confirmar;
+  // Cancelar, Esc ou clique fora respondem false. danger = ícone de aviso (não dá para desfazer).
+  // summary = [o quê, quanto], em destaque acima do texto (ex.: recompensa e preço).
+  // A cor segue a seção aberta, ou brand ('twitch', 'kick', 'orange') quando a ação é de outra plataforma.
+  let confirmDone = null;
+  function ask({ title, text, ok = 'Confirmar', danger = false, brand, summary }) {
+    confirmDone?.(false); // uma pergunta nova fecha a anterior como "não"
+    const dialog = $('confirm-dialog');
+    const page = document.querySelector('.page.active')?.id ?? '';
+    brand ??= /kick/.test(page) ? 'kick' : /twitch|lolidle/.test(page) ? 'twitch' : 'orange';
+    dialog.className = `brand-${brand}`;
+    dialog.label = title;
+    $('confirm-title').textContent = title;
+    $('confirm-icon').name = danger ? 'triangle-exclamation' : 'circle-question';
+    $('confirm-summary').hidden = !summary;
+    [$('confirm-what').textContent, $('confirm-how-much').textContent] = summary ?? ['', ''];
+    $('confirm-text').textContent = text;
+    $('confirm-yes').textContent = ok;
+    dialog.open = true;
+    return new Promise((resolve) => {
+      confirmDone = (answer) => {
+        confirmDone = null;
+        dialog.open = false;
+        resolve(answer);
+      };
+    });
+  }
+  $('confirm-yes').addEventListener('click', () => confirmDone?.(true));
+  // O wa-hide de menus e dicas lá dentro também sobe até aqui: só conta o do próprio diálogo.
+  $('confirm-dialog').addEventListener('wa-hide', (e) => e.target === e.currentTarget && confirmDone?.(false));
 
   const viewersBadge = (c) => c.live
     ? `<wa-badge class="viewers" variant="danger" appearance="filled-outlined" pill><wa-icon name="user" slot="start"></wa-icon>${fmt(c.viewers)} assistindo</wa-badge>`
@@ -1022,11 +1079,16 @@
     const { game } = sw.dataset;
     const name = game === 'pokeidle' ? 'Pokeidle' : 'LoLdle';
     const enabled = sw.checked;
-    if (!enabled && !confirm(`Desligar o ${name}? Ele some do painel e as contas dele param até você ligar de novo. Nada é apagado.`)) {
+    gameBusy = true; // enquanto pergunta, a atualização de 5 s não religa a chave
+    if (!enabled && !(await ask({
+      title: `Desligar o ${name}?`,
+      text: 'Ele some do painel e as contas dele param até você ligar de novo. Nada é apagado.',
+      ok: 'Desligar', danger: true,
+    }))) {
+      gameBusy = false;
       sw.checked = true;
       return;
     }
-    gameBusy = true;
     const ok = await api('PUT', 'games', { game, enabled });
     gameBusy = false;
     if (!ok) sw.checked = !enabled;
@@ -1486,11 +1548,12 @@
   let shopFilter = null;
   // A loja mostra só o que é do Pokeidle: "Pokeidle" no título ou na descrição, ou um dos bônus dos filtros.
   // O resto do canal (sons, VIP, pedidos ao streamer) fica de fora.
-  // As do LoL Idle (que também falam de XP) ficam de fora, a não ser que citem o Pokeidle.
+  // As de outros jogos que também dão XP (LoL Idle, Bloodbound) ficam de fora, a não ser que citem o Pokeidle.
+  const OTHER_GAMES = /lol\s*idle|loldle|blood\s*bound/i;
   const isPokeIdle = (r) => {
     const text = `${r.title} ${r.prompt}`;
     if (/poke\s*idle/i.test(text)) return true;
-    return !/lol\s*idle|loldle/i.test(text) && SHOP_FILTERS.some((f) => f.match.test(r.title));
+    return !OTHER_GAMES.test(text) && SHOP_FILTERS.some((f) => f.match.test(r.title));
   };
 
   const shopAccounts = (platform) => (platform === 'kick' ? state.kick?.points?.accounts : state.points?.accounts) ?? [];
@@ -1613,7 +1676,12 @@
     }
     const { platform, channel, key } = shop;
     const login = shopAccounts(platform).find((a) => accountKey(platform, a) === key)?.login ?? key;
-    if (!confirm(`Resgatar "${reward.title}" por ${fmt(reward.cost)} pontos com a conta ${login}${platform === 'kick' ? ' da Kick' : ''}?\n\nNão dá para desfazer: os pontos só voltam se o streamer devolver.`)) return;
+    if (!(await ask({
+      title: 'Resgatar recompensa?',
+      summary: [reward.title, `${fmt(reward.cost)} pontos`],
+      text: `Com a conta ${login}${platform === 'kick' ? ' da Kick' : ''}. Não dá para desfazer: os pontos só voltam se o streamer devolver.`,
+      ok: 'Resgatar', danger: true, brand: platform,
+    }))) return;
     const current = shop;
     Object.assign(current, { busy: rewardId, message: null });
     renderShop();
@@ -1682,7 +1750,8 @@
   // Canal removido: o card se desfaz em fumaça antes de sair da lista. Se o servidor recusar, ele volta.
   async function removeChannel(button, path) {
     const card = button.closest('wa-card');
-    if (!card || calmMotion.matches) return api('DELETE', path);
+    // isConnected: o card pode ter sido redesenhado enquanto o diálogo de confirmação estava aberto.
+    if (!card?.isConnected || calmMotion.matches) return api('DELETE', path);
     const r = card.getBoundingClientRect();
     for (let i = 0; i < 10; i++) {
       const puff = document.createElement('span');
@@ -1943,7 +2012,11 @@
 
   // Pede para o servidor reiniciar e recarrega a página quando ele voltar.
   async function restartServer() {
-    if (!confirm('Reiniciar o servidor? As contas de pontos param por alguns segundos e voltam sozinhas.')) return;
+    if (!(await ask({
+      title: 'Reiniciar o servidor?',
+      text: 'As contas de pontos param por alguns segundos e voltam sozinhas.',
+      ok: 'Reiniciar', brand: 'orange',
+    }))) return;
     $$('[data-restart]').forEach((b) => (b.loading = true));
     clearInterval(poller);
     await fetch('/api/restart', { method: 'POST' }).catch(() => {});
@@ -1954,7 +2027,11 @@
   // Baixa a versão nova do GitHub. Com o iniciar.bat, o servidor reinicia sozinho e a página recarrega.
   async function installUpdate() {
     const u = state.update;
-    if (!confirm(`Atualizar o IdleLive para a versão ${u.latest}? As contas de pontos param por alguns segundos e voltam sozinhas. Suas contas e canais continuam.`)) return;
+    if (!(await ask({
+      title: `Atualizar para a versão ${u.latest}?`,
+      text: 'As contas de pontos param por alguns segundos e voltam sozinhas. Suas contas e canais continuam.',
+      ok: 'Atualizar', brand: 'orange',
+    }))) return;
     $$('[data-action="update-install"]').forEach((b) => (b.loading = true));
     clearInterval(poller);
     let data;
@@ -1991,7 +2068,7 @@
     api('POST', `${path}/open`, { channel });
   });
 
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
     const nav = e.target.closest('a[data-page]');
     if (nav) {
       e.preventDefault();
@@ -2057,13 +2134,18 @@
       } catch {}
       $$('.play-tip').forEach((t) => (t.hidden = true));
     }
-    if (action === 'points-unlink' && confirm(`${platform === 'kick' ? 'Remover' : 'Desvincular'} ${login}? Ela para de juntar pontos. O histórico dela continua guardado.`)) api('DELETE', accountPath);
-    if (action === 'remove-twitch' && confirm(`Remover ${channel} da lista de canais oficiais?`)) removeChannel(el, `channels/${encodeURIComponent(channel)}`);
-    if (action === 'remove-lolidle' && confirm(`Remover ${channel} da lista do LoLdle?`)) removeChannel(el, `lolidle/channels/${encodeURIComponent(channel)}`);
     if (action === 'lol-link') api('POST', 'lolidle/link');
     if (action === 'lol-cancel') api('DELETE', 'lolidle/link');
-    if (action === 'lol-unlink' && confirm(`Desvincular ${key} do LoLdle? A conta sai dos chats.`)) api('DELETE', `lolidle/${encodeURIComponent(key)}`);
-    if (action === 'remove-kick' && confirm(`Remover ${channel} da lista da Kick?`)) removeChannel(el, `kick/channels/${encodeURIComponent(channel)}`);
+    if (action === 'points-unlink') {
+      const verb = platform === 'kick' ? 'Remover' : 'Desvincular';
+      if (await ask({ title: `${verb} ${login}?`, text: 'Ela para de juntar pontos. O histórico dela continua guardado.', ok: verb, danger: true, brand: platform || 'twitch' })) api('DELETE', accountPath);
+    }
+    if (action === 'lol-unlink' && await ask({ title: `Desvincular ${key} do LoLdle?`, text: 'A conta sai dos chats e para de dar o bônus do LoLdle.', ok: 'Desvincular', danger: true })) api('DELETE', `lolidle/${encodeURIComponent(key)}`);
+    const removeList = { 'remove-twitch': ['canais oficiais', 'channels', 'twitch'], 'remove-lolidle': ['canais do LoLdle', 'lolidle/channels', undefined], 'remove-kick': ['canais da Kick', 'kick/channels', 'kick'] }[action];
+    if (removeList) {
+      const [list, path, brand] = removeList;
+      if (await ask({ title: `Remover ${channel}?`, text: `O canal sai da lista de ${list}. Dá para adicionar de novo depois.`, ok: 'Remover', danger: true, brand })) removeChannel(el, `${path}/${encodeURIComponent(channel)}`);
+    }
   });
 
   // Favorito "Enviar para o IdleLive": roda no kick.com, lê o session_token (o próprio site lê ele para fazer os pedidos)
@@ -2080,7 +2162,11 @@
 
   // Token que chegou pelo favorito: pergunta antes de adicionar (outro site poderia abrir este endereço).
   async function addKickFromBookmark(token) {
-    if (!confirm('Adicionar a conta da Kick que veio do favorito "Enviar para o IdleLive"?')) return;
+    if (!(await ask({
+      title: 'Adicionar conta da Kick?',
+      text: 'Uma conta da Kick chegou pelo favorito "Enviar para o IdleLive". Se não foi você que clicou nele agora, cancele.',
+      ok: 'Adicionar', brand: 'kick',
+    }))) return;
     const before = new Set((state?.kick.points?.accounts ?? []).map((a) => String(a.id)));
     if (!(await api('POST', 'kick/accounts', { token }))) return;
     const added = state.kick.points?.accounts.find((a) => !before.has(String(a.id)));
@@ -2104,7 +2190,7 @@
     } else shake($('kick-token'));
   });
 
-  document.addEventListener('change', (e) => {
+  document.addEventListener('change', async (e) => {
     const t = e.target;
     if (t.matches('[data-autostart]')) api('PUT', 'autostart', { enabled: t.checked });
     if (t.matches('[data-game]')) toggleGame(t);
@@ -2120,11 +2206,17 @@
       if (t.value !== current) api('PUT', `${path}/profile`, { profile: t.value === 'none' ? null : t.value });
     }
     if (t.matches('#browser-select') && t.value && t.value !== state.kick.browser) {
-      if (!confirm('Trocar de navegador apaga os perfis escolhidos para as contas (os perfis são de cada navegador). Continuar?')) {
+      // Guarda a escolha antes de perguntar: a atualização de 5 s volta o campo para o navegador atual.
+      const browser = t.value;
+      if (!(await ask({
+        title: 'Trocar de navegador?',
+        text: 'Os perfis escolhidos para as contas são apagados, porque cada navegador tem os seus. Depois é só escolher de novo.',
+        ok: 'Trocar', danger: true, brand: 'orange',
+      }))) {
         t.value = state.kick.browser;
         return;
       }
-      api('PUT', 'kick/browser', { browser: t.value });
+      api('PUT', 'kick/browser', { browser });
     }
   });
 

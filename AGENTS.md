@@ -7,7 +7,7 @@ Leia antes de mexer no projeto. Elas valem para qualquer agente (Claude, Copilot
 IdleLive é um painel local (Node.js) para jogadores de jogos idle que dão bônus por assistir lives de parceiros:
 - **Twitch:** mostra quem está ao vivo e até 4 contas juntam **pontos do canal** nas lives dos parceiros (`src/points.js`, baseado no Twitch Channel Points Miner v2). O jogo dá o bônus de XP para quem resgata com esses pontos;
 - **Kick:** lista as lives dos parceiros e até 4 contas juntam **pontos do canal** em segundo plano (`src/kickpoints.js`, baseado no Kick Channel Points Miner de Baillora). O login é o token da conta, colado no painel;
-- **LoLdle:** até 5 contas da Twitch ficam em silêncio no **chat** (IRC) dos parceiros que estão ao vivo (`src/lolidle.js` e `src/chat.js`). É a presença no chat que dá o bônus desse jogo; não assistem a live nem juntam pontos.
+- **LoLdle:** até 5 contas da Twitch ficam em silêncio no **chat** (IRC) dos parceiros que estão ao vivo (`src/lolidle.js` e `src/chat.js`). É a presença no chat que dá o bônus desse jogo na Twitch; não assistem a live nem juntam pontos. Na Kick, até 5 contas próprias (`kick.lolidleAccounts`) juntam pontos nos canais de `config.lolidleKickChannels`, com o mesmo `KickMiner` do Pokeidle (`game: 'lolidle'`).
 
 Cada jogo (Pokeidle e LoLdle) pode ser desligado em Configurações → Jogos (`gameEnabled` em `src/store.js`).
 

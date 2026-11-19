@@ -12,7 +12,7 @@ const POINTS_FILE = path.join(DATA_DIR, 'points.json');
 const LOLIDLE_FILE = path.join(DATA_DIR, 'lolidle.json');
 
 export const MAX_ACCOUNTS = 4; // contas de pontos, na Twitch e na Kick
-export const MAX_LOL_ACCOUNTS = 5; // contas do LoLdle (só ficam no chat)
+export const MAX_LOL_ACCOUNTS = 5; // contas do LoLdle: até 5 no chat da Twitch e até 5 na Kick
 
 // Lê um JSON. Se o arquivo estiver quebrado (ex.: o PC desligou no meio de uma gravação antiga), guarda uma cópia
 // com ".quebrado" no nome e segue com o valor padrão, em vez de o painel não abrir.
@@ -39,12 +39,15 @@ export const config = readJson(CONFIG_FILE, {});
 config.channels ??= [];
 config.kickChannels ??= [];
 config.lolidleChannels ??= []; // canais da Twitch do LoLdle (só presença no chat)
+config.lolidleKickChannels ??= []; // canais da Kick do LoLdle (pontos do canal, como no Pokeidle)
 
-// { clientId, clientSecret, browser: 'chrome' | 'brave' | 'edge', accounts: [{ id, username, token, profile, needsRelink }] }
-// App da Kick (opcional), navegador do botão ▶ e as contas da Kick que juntam pontos (login pelo token da conta).
+// { clientId, clientSecret, browser: 'chrome' | 'brave' | 'edge', accounts: [{ id, username, token, profile, needsRelink }], lolidleAccounts: [...] }
+// App da Kick (opcional), navegador do botão ▶ e as contas da Kick que juntam pontos (login pelo token da conta):
+// accounts nos canais do Pokeidle, lolidleAccounts nos do LoLdle.
 export const kick = readJson(KICK_FILE, {});
 delete kick.profiles; // perfis das janelas antigas da Kick, que não existem mais
 kick.accounts ??= [];
+kick.lolidleAccounts ??= [];
 
 // [{ login, userId, accessToken, refreshToken, deviceId, needsRelink, streakDone: [ids das lives com a sequência garantida] }]
 // Contas que juntam pontos do canal (login do app de TV da Twitch). Versões antigas guardavam uma conta só, como objeto.

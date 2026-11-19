@@ -347,3 +347,63 @@ test('alerts: sem WebSocket (Node antigo), avisa que o farm da Kick está deslig
   globalThis.WebSocket = class {};
   assert.equal(node(miner.alerts()).length, 0);
 });
+
+// ---------- LoLdle na Kick ----------
+
+test('LoLdle: acontecimentos com "LoLdle:", histórico separado e token recusado aponta para LoLdle → Kick', async () => {
+  const acc = new KickAccount({ id: 21, username: 'klol', token: 'tok' }, { log: () => {}, game: 'lolidle' });
+  Object.defineProperty(acc, 'resting', { value: false });
+  let balance = 100;
+  respond = (url) => (url.endsWith('/points') ? json({ data: { points: balance } }) : json({}));
+  await acc.checkChannel('lolcanal');
+  balance = 150;
+  await acc.checkChannel('lolcanal');
+  assert.equal(pointsHistory()[0].accounts['klol (LoLdle Kick)'].WATCH.points, 50);
+  assert.equal(pointsHistory()[0].accounts['klol (Kick)'], undefined);
+
+  acc.report('good', 'seguiu #lolcanal', 'lolcanal');
+  assert.ok(recentEvents().good.some((e) => e.text === 'LoLdle: seguiu #lolcanal' && e.platform === 'kick'));
+
+  respond = () => json({}, 401);
+  await acc.checkChannel('lolcanal');
+  assert.equal(acc.account.needsRelink, true);
+  assert.ok(recentEvents().bad.some((e) => e.text === 'LoLdle: o token foi recusado; cole um token novo em LoLdle → Kick'));
+  assert.match(acc.alerts()[0].text, /LoLdle → Kick/);
+});
+
+test('LoLdle: contas próprias e a mesma conta não entra nos dois jogos', async () => {
+  const { KickMiner } = await import('../src/kickpoints.js');
+  const { kick } = await import('../src/store.js');
+  respond = (url) => (url.endsWith('/v1/user') ? json({ id: 31, username: 'kdupla' }) : json({}));
+  const poke = new KickMiner({ log: () => {} });
+  const lol = new KickMiner({ log: () => {}, game: 'lolidle', saved: kick.lolidleAccounts, isTaken: (id) => poke.has(id) && 'Pokeidle → Kick' });
+  poke.isTaken = (id) => lol.has(id) && 'LoLdle → Kick';
+
+  await lol.addAccount('tok-lol');
+  assert.deepEqual(kick.lolidleAccounts.map((a) => a.id), [31]);
+  assert.equal(kick.accounts.length, 0);
+  assert.equal(lol.accounts[0].game, 'lolidle');
+  await assert.rejects(poke.addAccount('tok-lol'), /já está em LoLdle → Kick/);
+
+  // Mesma conta de novo no mesmo jogo: só troca o token.
+  await lol.addAccount('tok-novo');
+  assert.equal(kick.lolidleAccounts.length, 1);
+  assert.equal(kick.lolidleAccounts[0].token, 'tok-novo');
+
+  lol.removeAccount(31);
+  assert.equal(kick.lolidleAccounts.length, 0);
+});
+
+test('LoLdle: até 5 contas da Kick; o Pokeidle continua com 4', async () => {
+  const { KickMiner } = await import('../src/kickpoints.js');
+  const { kick } = await import('../src/store.js');
+  let next = 40;
+  respond = (url) => (url.endsWith('/v1/user') ? json({ id: next, username: `k${next}` }) : json({}));
+  const lol = new KickMiner({ log: () => {}, game: 'lolidle', saved: kick.lolidleAccounts });
+  assert.equal(lol.state().max, 5);
+  assert.equal(new KickMiner({ log: () => {} }).state().max, 4);
+  for (; next < 45; next++) await lol.addAccount(`tok${next}`);
+  assert.equal(kick.lolidleAccounts.length, 5);
+  await assert.rejects(lol.addAccount('tok45'), /Limite de 5 contas/);
+  kick.lolidleAccounts.length = 0;
+});

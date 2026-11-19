@@ -2,7 +2,7 @@
 // Baseado no Kick Channel Points Miner (github.com/Baillora/Kick_Channel_Points_Miner): abre a mesma conexão de
 // espectador que o player do site abre e manda o aviso de "assistindo" de tempos em tempos.
 // Mesmas travas da Twitch (human.js): descanso diário, tempos aleatórios e poucas leituras de saldo.
-import { kick, saveKick, MAX_ACCOUNTS } from './store.js';
+import { kick, saveKick, MAX_ACCOUNTS, MAX_LOL_ACCOUNTS } from './store.js';
 import { fetchKickUser, fetchKickPoints, fetchKickRewards, redeemKickReward, fetchViewerToken, followKickChannel, cleanKickToken } from './kick.js';
 import { isNetworkError } from './twitch.js';
 import { redeemProblem, setBalance } from './points.js';
@@ -19,6 +19,14 @@ const FAILS_ALERT = 3;
 const FOLLOW_CHECKS = 3; // leituras logo depois do follow em que a diferença de saldo conta como bônus de follow
 const SILENCE_LIMIT = 90 * 1000; // sem nada da Kick nesse tempo, a conexão está "morta" (PC hibernou, roteador caiu)
 const STABLE_AFTER = 60 * 1000; // a espera entre reconexões só volta ao mínimo depois de a conexão ficar de pé esse tempo
+
+// O farm da Kick serve aos dois jogos, cada um com as suas contas e canais. Muda só o texto:
+// os acontecimentos do LoLdle começam com "LoLdle:" (é assim que o painel separa os jogos) e,
+// no histórico, as contas do LoLdle não se misturam com as do Pokeidle (a mesma conta pode estar nos dois).
+export const KICK_GAMES = {
+  pokeidle: { log: 'Kick', event: '', where: 'Pokeidle → Kick', name: 'Pokeidle', history: 'Kick' },
+  lolidle: { log: 'LoLdle Kick', event: 'LoLdle: ', where: 'LoLdle → Kick', name: 'LoLdle', history: 'LoLdle Kick' },
+};
 
 // Uma conexão de espectador numa live (wss://websockets.kick.com/viewer/v1/connect).
 export class KickWatch {
@@ -153,9 +161,11 @@ export class KickWatch {
 
 // Uma conta da Kick: escolhe as próprias lives pelos próprios saldos.
 export class KickAccount {
-  constructor(account, { log }) {
+  constructor(account, { log, game = 'pokeidle' }) {
     this.account = account; // objeto salvo em kick.json: { id, username, token, profile, needsRelink }
     this.baseLog = log;
+    this.game = game;
+    this.text = KICK_GAMES[game];
     this.live = []; // [{ slug, channelId, userId, livestreamId }]
     this.all = [];
     this.channels = new Map(); // canal -> { balance, startBalance, nextCheck }
@@ -173,13 +183,13 @@ export class KickAccount {
   }
 
   log(msg) {
-    this.baseLog(`Kick (${this.account.username}): ${msg}`);
+    this.baseLog(`${this.text.log} (${this.account.username}): ${msg}`);
   }
 
   // Escreve na janela preta e anota na lista de erros do topo do painel.
   report(kind, msg, channel = null) {
     this.log(msg);
-    addEvent({ kind, platform: 'kick', account: this.account.username, channel, text: msg });
+    addEvent({ kind, platform: 'kick', account: this.account.username, channel, text: `${this.text.event}${msg}` });
   }
 
   get active() {
@@ -241,7 +251,7 @@ export class KickAccount {
   markRelink() {
     if (this.account.needsRelink) return;
     this.netFails = 0;
-    this.report('bad', 'o token foi recusado; cole um token novo em Pokeidle → Kick');
+    this.report('bad', `o token foi recusado; cole um token novo em ${this.text.where}`);
     this.account.needsRelink = true;
     saveKick();
     for (const w of this.watches.values()) w.stop();
@@ -391,7 +401,7 @@ export class KickAccount {
     // ou como follow se a conta acabou de seguir o canal (o bônus pode demorar, então vale por algumas leituras).
     const gain = ch.balance === null ? 0 : balance - ch.balance;
     const reason = ch.followChecks > 0 ? 'FOLLOW' : 'WATCH';
-    if (gain > 0) recordPoints(`${this.account.username} (Kick)`, reason, gain);
+    if (gain > 0) recordPoints(`${this.account.username} (${this.text.history})`, reason, gain);
     if (ch.followChecks > 0) {
       ch.followChecks = gain > 0 ? 0 : ch.followChecks - 1;
       if (ch.followChecks > 0) ch.nextCheck = Date.now() + random(FOLLOW_CHECK); // o bônus ainda não caiu: olha de novo logo
@@ -437,7 +447,7 @@ export class KickAccount {
 
   alerts({ offline = false } = {}) {
     const who = this.account.username;
-    if (this.account.needsRelink) return [{ variant: 'danger', text: `O token da conta ${who} da Kick foi recusado. Cole um token novo em Pokeidle → Kick.` }];
+    if (this.account.needsRelink) return [{ variant: 'danger', text: `O token da conta ${who} da Kick foi recusado. Cole um token novo em ${this.text.where}.` }];
     if (offline) return [];
     if (this.siteFails >= FAILS_ALERT) return [{ variant: 'danger', text: `A Kick está recusando os pedidos da conta ${who}: ${this.siteError}. Os pontos dela podem não estar contando.` }];
     return [];
@@ -469,21 +479,36 @@ export class KickAccount {
   }
 }
 
-// Todas as contas da Kick. O login é o token da conta, colado no painel (a Kick não tem login por código).
+// Todas as contas da Kick de um jogo. O login é o token da conta, colado no painel (a Kick não tem login por código).
+// Pokeidle: contas em kick.accounts; LoLdle: em kick.lolidleAccounts. isTaken diz se a conta já está no outro jogo.
 export class KickMiner {
-  constructor({ log }) {
+  constructor({ log, game = 'pokeidle', saved = kick.accounts, isTaken = () => false }) {
     this.log = log;
+    this.max = game === 'lolidle' ? MAX_LOL_ACCOUNTS : MAX_ACCOUNTS; // Pokeidle 4, LoLdle 5
+    this.game = game;
+    this.text = KICK_GAMES[game];
+    this.saved = saved;
+    this.isTaken = isTaken;
     this.live = [];
     this.all = [];
     this.started = false;
-    this.enabled = true; // Pokeidle ligado em Configurações → Jogos
-    kick.accounts ??= [];
-    this.accounts = kick.accounts.map((a) => new KickAccount(a, { log }));
+    this.enabled = true; // jogo ligado em Configurações → Jogos
+    this.accounts = saved.map((a) => this.makeAccount(a));
+  }
+
+  makeAccount(account) {
+    return new KickAccount(account, { log: this.log, game: this.game });
+  }
+
+  has(id) {
+    return this.accounts.some((a) => String(a.account.id) === String(id));
   }
 
   start() {
     this.started = true;
-    if (typeof WebSocket === 'undefined') this.log('Kick: este Node.js não tem WebSocket (precisa da versão 22 ou mais nova), então o farm da Kick fica desligado');
+    if (typeof WebSocket === 'undefined') {
+      if (this.accounts.length) this.log(`${this.text.log}: este Node.js não tem WebSocket (precisa da versão 22 ou mais nova), então o farm da Kick fica desligado`);
+    }
     else if (this.enabled) for (const a of this.accounts) a.start();
   }
 
@@ -497,9 +522,9 @@ export class KickMiner {
       return;
     }
     for (const a of this.accounts) a.stop();
-    this.accounts = this.accounts.map((a) => new KickAccount(a.account, { log: this.log }));
+    this.accounts = this.accounts.map((a) => this.makeAccount(a.account));
     for (const a of this.accounts) a.setLive(this.live, this.all);
-    this.log('Kick: Pokeidle desligado, contas da Kick paradas');
+    if (this.accounts.length) this.log(`${this.text.log}: ${this.text.name} desligado, contas da Kick paradas`);
   }
 
   setLive(list, all) {
@@ -530,11 +555,14 @@ export class KickMiner {
       existing.log('token atualizado');
       return;
     }
-    if (this.accounts.length >= MAX_ACCOUNTS) throw new Error(`Limite de ${MAX_ACCOUNTS} contas atingido`);
+    // A Kick só conta 2 lives por conta: a mesma conta nos dois jogos dividiria esse limite (e o mesmo token).
+    const other = this.isTaken(user.id);
+    if (other) throw new Error(`A conta ${user.username} já está em ${other}. Para trocar o token dela, adicione por lá; aqui, use outra conta da Kick.`);
+    if (this.accounts.length >= this.max) throw new Error(`Limite de ${this.max} contas atingido`);
     const account = { id: user.id, username: user.username, token };
-    kick.accounts.push(account);
+    this.saved.push(account);
     saveKick();
-    const miner = new KickAccount(account, { log: this.log });
+    const miner = this.makeAccount(account);
     this.accounts.push(miner);
     miner.setLive(this.live, this.all);
     if (this.started && this.enabled && typeof WebSocket !== 'undefined') miner.start();
@@ -546,7 +574,7 @@ export class KickMiner {
     miner.stop();
     miner.log('desvinculada');
     this.accounts.splice(this.accounts.indexOf(miner), 1);
-    kick.accounts.splice(kick.accounts.indexOf(miner.account), 1);
+    this.saved.splice(this.saved.indexOf(miner.account), 1);
     saveKick();
   }
 
@@ -573,6 +601,6 @@ export class KickMiner {
   }
 
   state() {
-    return { max: MAX_ACCOUNTS, accounts: this.accounts.map((a) => a.state()) };
+    return { max: this.max, accounts: this.accounts.map((a) => a.state()) };
   }
 }

@@ -34,6 +34,10 @@ let liveError = null; // mensagem da última falha, para o aviso no painel
 let liveOffline = false; // a última falha foi falta de internet?
 const miner = new PointsMiner({ log });
 const kickMiner = new KickMiner({ log });
+// Contas da Kick do LoLdle: as mesmas regras do Pokeidle, com contas e canais próprios.
+// Uma conta não fica nos dois jogos ao mesmo tempo (a Kick só conta 2 lives por conta).
+const lolKickMiner = new KickMiner({ log, game: 'lolidle', saved: kick.lolidleAccounts, isTaken: (id) => kickMiner.has(id) && 'Pokeidle → Kick' });
+kickMiner.isTaken = (id) => lolKickMiner.has(id) && 'LoLdle → Kick';
 const lolMiner = new LolIdleMiner({ log });
 const updater = new Updater({ log });
 
@@ -42,6 +46,7 @@ function applyGames() {
   miner.setEnabled(gameEnabled('pokeidle'));
   kickMiner.setEnabled(gameEnabled('pokeidle'));
   lolMiner.setEnabled(gameEnabled('lolidle'));
+  lolKickMiner.setEnabled(gameEnabled('lolidle'));
 }
 applyGames();
 
@@ -84,13 +89,19 @@ const KICK_SCAN_INTERVAL = 2 * 60 * 1000; // sem o app da Kick, checa canal por 
 // O app da Kick (API oficial) é opcional: ele diz quem está ao vivo num pedido só. Sem ele, o painel pergunta canal por canal.
 const kickConfigured = () => !!(kick.clientId && kick.clientSecret);
 
+// Canais da Kick consultados: os do Pokeidle e os do LoLdle (um canal pode estar nas duas listas), só dos jogos ligados.
+const kickChannelsToScan = () => [...new Set([
+  ...(gameEnabled('pokeidle') ? config.kickChannels : []),
+  ...(gameEnabled('lolidle') ? config.lolidleKickChannels : []),
+])];
+
 // Um canal com erro não derruba a lista inteira: ele fica de fora (ou com os números antigos) e os outros seguem.
 // Só se todos falharem o erro sobe, para virar aviso no painel.
-async function scanKickLive() {
+async function scanKickLive(slugs) {
   const next = new Map();
   const errors = [];
   if (kickConfigured()) {
-    const official = await fetchKickLive(kick, config.kickChannels);
+    const official = await fetchKickLive(kick, slugs);
     for (const [slug, info] of official) {
       let ids = kickIds.get(slug);
       if (!ids || ids.key !== info.startTime) {
@@ -110,7 +121,7 @@ async function scanKickLive() {
   } else {
     if (Date.now() - kickScanAt < KICK_SCAN_INTERVAL) return kickLive;
     kickScanAt = Date.now();
-    for (const slug of config.kickChannels) {
+    for (const slug of slugs) {
       try {
         const channel = await fetchKickChannel(slug);
         if (channel.livestreamId) next.set(slug, channel);
@@ -121,7 +132,7 @@ async function scanKickLive() {
       }
       await sleep(300);
     }
-    if (errors.length === config.kickChannels.length) throw errors[0];
+    if (errors.length === slugs.length) throw errors[0];
   }
   if (errors.length) {
     log(`Kick: ${errors.length} canal(is) não responderam agora (${errors[0].message})`);
@@ -132,8 +143,9 @@ async function scanKickLive() {
 
 async function updateKickLive() {
   try {
-    // A Kick só é usada pelo Pokeidle: com ele desligado, nem consulta.
-    kickLive = config.kickChannels.length && gameEnabled('pokeidle') ? await scanKickLive() : new Map();
+    // Com os dois jogos desligados (ou sem canais), nem consulta.
+    const slugs = kickChannelsToScan();
+    kickLive = slugs.length ? await scanKickLive(slugs) : new Map();
     kickError = null;
     kickOffline = false;
   } catch (err) {
@@ -145,11 +157,12 @@ async function updateKickLive() {
 }
 
 function syncKick() {
-  kickMiner.setLive(
-    config.kickChannels.filter((slug) => kickLive.get(slug)?.livestreamId).map((slug) => ({ slug, ...kickLive.get(slug) })),
-    config.kickChannels,
-  );
+  for (const [m, channels] of [[kickMiner, config.kickChannels], [lolKickMiner, config.lolidleKickChannels]]) {
+    m.setLive(channels.filter((slug) => kickLive.get(slug)?.livestreamId).map((slug) => ({ slug, ...kickLive.get(slug) })), channels);
+  }
 }
+
+const kickChannelsState = (channels) => channels.map((name) => ({ name, live: kickLive.has(name), viewers: kickLive.get(name)?.viewers ?? 0 }));
 
 // Navegador escolhido no painel; sem escolha, o primeiro instalado (Chrome, Brave, Edge). Usado pelo ▶ das duas plataformas.
 const currentBrowser = () => kick.browser ?? installedBrowsers()[0]?.id ?? null;
@@ -165,21 +178,22 @@ function kickState() {
     browserFound: browsers.some((b) => b.id === browser),
     availableProfiles: listProfiles(browser),
     points: kickMiner.state(),
-    channels: config.kickChannels.map((name) => ({
-      name,
-      live: kickLive.has(name),
-      viewers: kickLive.get(name)?.viewers ?? 0,
-    })),
+    channels: kickChannelsState(config.kickChannels),
   };
 }
 
-// Rotas /api/kick/<ação>/<id>/<sub>.
-async function handleKick(req, res, url) {
+// Rotas da Kick: /api/kick/<ação>/<id>/<sub> (Pokeidle, mais o app e o navegador) e /api/lolkick/<ação>/<id>/<sub> (LoLdle).
+// As contas, a loja e os canais funcionam igual nos dois jogos; muda só o miner e a lista de canais.
+async function handleKick(req, res, url, game = 'pokeidle') {
   const [, , , action, rawId, rawSub] = url.pathname.split('/');
   const id = rawId && decodeURIComponent(rawId);
   const sub = rawSub && decodeURIComponent(rawSub);
+  const lol = game === 'lolidle';
+  const accounts = lol ? lolKickMiner : kickMiner;
+  const listKey = lol ? 'lolidleKickChannels' : 'kickChannels';
+  const inList = (channel) => config[listKey].includes(channel);
 
-  if (req.method === 'PUT' && action === 'app') {
+  if (!lol && req.method === 'PUT' && action === 'app') {
     const { clientId, clientSecret } = await readBody(req);
     kick.clientId = String(clientId ?? '').trim();
     kick.clientSecret = String(clientSecret ?? '').trim();
@@ -189,13 +203,13 @@ async function handleKick(req, res, url) {
     return send(res, 200, state());
   }
 
-  if (req.method === 'PUT' && action === 'browser') {
+  if (!lol && req.method === 'PUT' && action === 'browser') {
     const { browser } = await readBody(req);
     if (!installedBrowsers().some((b) => b.id === browser)) return send(res, 400, { error: 'Navegador não encontrado neste PC' });
     if (browser !== currentBrowser()) {
       // Os perfis são de cada navegador: ao trocar, os perfis das contas são escolhidos de novo.
       kick.browser = browser;
-      for (const a of kick.accounts ?? []) a.profile = null;
+      for (const a of [...kick.accounts, ...kick.lolidleAccounts]) a.profile = null;
       for (const a of pointsAccounts) a.profile = null;
       saveKick();
       savePoints();
@@ -206,32 +220,32 @@ async function handleKick(req, res, url) {
 
   if (action === 'accounts') {
     if (req.method === 'POST' && !id) {
-      await kickMiner.addAccount((await readBody(req)).token);
+      await accounts.addAccount((await readBody(req)).token);
       return send(res, 200, state());
     }
     if (req.method === 'DELETE' && id && !sub) {
-      kickMiner.removeAccount(id);
+      accounts.removeAccount(id);
       return send(res, 200, state());
     }
     if (req.method === 'PUT' && sub === 'profile') {
       const { profile } = await readBody(req);
       if (profile && !listProfiles(currentBrowser()).some((p) => p.dir === profile)) return send(res, 400, { error: 'Perfil não encontrado' });
-      kickMiner.setProfile(id, profile);
+      accounts.setProfile(id, profile);
       return send(res, 200, state());
     }
     if (req.method === 'POST' && sub === 'open') {
       const channel = normalizeChannel((await readBody(req)).channel ?? '');
-      if (!config.kickChannels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
-      openInProfile(currentBrowser(), kickMiner.profileOf(id), `https://kick.com/${channel}`);
+      if (!inList(channel)) return send(res, 400, { error: 'Canal não está na lista' });
+      openInProfile(currentBrowser(), accounts.profileOf(id), `https://kick.com/${channel}`);
       log(`Kick: abrindo #${channel} no navegador`);
       return send(res, 200, state());
     }
     if (req.method === 'POST' && sub === 'redeem') {
       const { channel: raw, rewardId, text } = await readBody(req);
       const channel = normalizeChannel(raw ?? '');
-      if (!config.kickChannels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
+      if (!inList(channel)) return send(res, 400, { error: 'Canal não está na lista' });
       try {
-        const reward = await kickMiner.find(id).redeem(channel, String(rewardId ?? ''), String(text ?? ''));
+        const reward = await accounts.find(id).redeem(channel, String(rewardId ?? ''), String(text ?? ''));
         return send(res, 200, { ...state(), redeemed: { title: reward.title, cost: reward.cost } });
       } catch (err) {
         return send(res, 400, { error: `Não deu para resgatar: ${err.message}` });
@@ -242,7 +256,7 @@ async function handleKick(req, res, url) {
   // Loja de um canal da Kick: recompensas lidas sem login (o saldo de cada conta vem do state).
   if (req.method === 'GET' && action === 'rewards' && id) {
     const channel = normalizeChannel(id);
-    if (!config.kickChannels.includes(channel)) return send(res, 400, { error: 'Canal não está na lista' });
+    if (!inList(channel)) return send(res, 400, { error: 'Canal não está na lista' });
     return send(res, 200, { channel, ...(await fetchKickRewards(channel)) });
   }
 
@@ -250,8 +264,8 @@ async function handleKick(req, res, url) {
     if (req.method === 'POST') {
       const name = normalizeChannel((await readBody(req)).name ?? '');
       if (!/^[\w-]{3,25}$/.test(name)) return send(res, 400, { error: 'Nome de canal inválido' });
-      if (!config.kickChannels.includes(name)) {
-        config.kickChannels.push(name);
+      if (!inList(name)) {
+        config[listKey].push(name);
         saveConfig();
         kickScanAt = 0;
         await updateKickLive();
@@ -260,8 +274,9 @@ async function handleKick(req, res, url) {
     }
 
     if (req.method === 'DELETE' && id) {
-      config.kickChannels = config.kickChannels.filter((c) => c !== id);
-      kickLive.delete(id);
+      config[listKey] = config[listKey].filter((c) => c !== id);
+      // Só sai de kickLive se não estiver também na lista do outro jogo.
+      if (![...config.kickChannels, ...config.lolidleKickChannels].includes(id)) kickLive.delete(id);
       saveConfig();
       syncKick();
       return send(res, 200, state());
@@ -293,6 +308,7 @@ function state() {
     lolidle: {
       ...lolMiner.state(),
       channels: config.lolidleChannels.map((name) => ({ name, live: live.has(name), viewers: live.get(name)?.viewers ?? 0 })),
+      kick: { points: lolKickMiner.state(), channels: kickChannelsState(config.lolidleKickChannels) },
     },
   };
 }
@@ -300,7 +316,7 @@ function state() {
 // Problemas para mostrar no topo do painel: [{ variant: 'danger' | 'warning', text }].
 // Sem internet vira um aviso só, em vez de um por conta dizendo que a Twitch recusou.
 function alerts() {
-  const offline = liveOffline || miner.offline || kickOffline || kickMiner.offline;
+  const offline = liveOffline || miner.offline || kickOffline || kickMiner.offline || lolKickMiner.offline;
   const list = [];
   if (offline) {
     list.push({ variant: 'warning', text: 'Sem conexão com a internet. Os pontos não contam enquanto ela estiver fora; o painel volta sozinho quando ela voltar.' });
@@ -308,7 +324,9 @@ function alerts() {
     if (liveError) list.push({ variant: 'danger', text: `Não deu para ver quem está ao vivo na Twitch: ${liveError}` });
     if (kickError) list.push({ variant: 'danger', text: `Não deu para ver quem está ao vivo na Kick: ${kickError}` });
   }
-  return [...list, ...miner.alerts({ offline }), ...kickMiner.alerts({ offline })];
+  // O aviso de "atualize o Node.js" vem igual dos dois jogos: entra uma vez só.
+  const kickAlerts = [...kickMiner.alerts({ offline }), ...lolKickMiner.alerts({ offline })].filter((a, i, all) => all.findIndex((b) => b.text === a.text) === i);
+  return [...list, ...miner.alerts({ offline }), ...kickAlerts];
 }
 
 async function readBody(req) {
@@ -328,6 +346,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'GET' && resource === 'state') return send(res, 200, state());
   if (resource === 'kick') return handleKick(req, res, url);
+  if (resource === 'lolkick') return handleKick(req, res, url, 'lolidle');
 
   if (req.method === 'POST' && resource === 'restart') {
     if (!CAN_RESTART) return send(res, 400, { error: 'Para reiniciar por aqui, abra o painel pelo iniciar.bat' });
@@ -375,12 +394,10 @@ async function handleApi(req, res, url) {
     applyGames();
     log(`${game === 'pokeidle' ? 'Pokeidle' : 'LoLdle'} ${enabled ? 'ligado' : 'desligado'}`);
     // Vê quem está ao vivo de novo: ligou, as contas começam sem esperar o próximo minuto;
-    // desligou, as lives daquele jogo saem do painel (com o Pokeidle desligado, a Kick nem é consultada).
+    // desligou, as lives daquele jogo saem do painel (com os dois desligados, a Kick nem é consultada).
     await safeUpdateLive();
-    if (game === 'pokeidle') {
-      kickScanAt = 0;
-      await updateKickLive();
-    }
+    kickScanAt = 0;
+    await updateKickLive();
     return send(res, 200, state());
   }
 
@@ -529,6 +546,7 @@ await safeUpdateLive();
 await updateKickLive();
 miner.start();
 kickMiner.start();
+lolKickMiner.start();
 lolMiner.start();
 updater.start();
 setInterval(safeUpdateLive, LIVE_INTERVAL);

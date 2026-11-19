@@ -2,6 +2,24 @@
 
 Mudanças do IdleLive, da mais recente para a mais antiga.
 
+## 18/11/2026
+
+### Novidades
+- **Resgatar várias de uma vez na loja:** cada recompensa tem um campo de quantidade ao lado do **Resgatar** (até 24, ou o que o saldo da conta pagar; fica travado em 1 quando o saldo só paga uma). Com 4, por exemplo, o painel pede uma confirmação só e resgata 4 vezes, uma de cada vez e com uma pausa curta entre elas, mostrando "Resgatando 2 de 4…". Se um resgate falhar (saldo, estoque ou tempo de espera da recompensa), os seguintes não saem e o aviso diz quantos entraram. Fechar a loja para os que faltam. Vale para a Twitch e para a Kick, nos dois jogos.
+
+## 17/11/2026
+
+Precisa reiniciar o servidor uma vez para usar.
+
+### Novidades
+- **LoLdle na Kick:** a aba **LoLdle → Kick** agora funciona igual à **Pokeidle → Kick**. Tem a própria lista de canais parceiros do LoLdle na Kick e até 5 contas da Kick (coladas pelo token) que assistem em segundo plano, seguem os canais e juntam os pontos do canal, com descanso diário e os mesmos cuidados do Pokeidle. O botão da loja mostra as recompensas do LoLdle e resgata com a conta escolhida, e o ▶ abre a live no perfil do navegador escolhido em **Configurações → Navegador e perfis**. Uma conta da Kick fica só num dos jogos, porque a Kick conta no máximo 2 lives por conta.
+- **Parceiros do LoLdle na Kick:** a lista já vem com os 39 canais do LoLdle que têm pontos ativos na Kick. Quem já usa o painel adiciona pelo campo **Adicionar canal**, porque a atualização não mexe na lista de canais.
+- A Visão geral mostra as contas e as lives do LoLdle na Kick junto com as da Twitch, e o contador do LoLdle no menu soma as duas plataformas.
+
+### Mudanças
+- Os cards **Navegador e perfis** e **App da Kick** das Configurações aparecem também com só o LoLdle ligado.
+- **Favorito "Enviar para o IdleLive":** com os dois jogos ligados, o painel pergunta em qual jogo a conta da Kick vai entrar (**Pokeidle** ou **LoLdle**) e abre a aba desse jogo. Antes, ele sempre levava para o Pokeidle.
+
 ## 15/11/2026
 
 ### Mudanças

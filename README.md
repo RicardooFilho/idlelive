@@ -82,7 +82,7 @@ Para o botão **▶** abrir a live já logada na conta certa: crie um perfil no 
 A Kick não tem login por código: cada conta entra pelo **token** dela, que fica no navegador.
 1. Em **Pokeidle → Kick**, em **Pontos do canal**, clique em **+ Adicionar conta**.
 2. Mostre a barra de favoritos (**Ctrl+Shift+B**) e arraste o botão **⚡ Enviar para o IdleLive** para ela. Só na primeira vez (em cada navegador ou perfil).
-3. Abra **kick.com** no perfil da conta, já logado, e clique no favorito **Enviar para o IdleLive**. O painel abre e pergunta se pode adicionar a conta. Repita para cada conta, até 4.
+3. Abra **kick.com** no perfil da conta, já logado, e clique no favorito **Enviar para o IdleLive**. O painel abre e pergunta em qual jogo a conta vai entrar (**Pokeidle** ou **LoLdle**, com os dois ligados). Repita para cada conta: até 4 no Pokeidle e até 5 no LoLdle.
 
 Se o favorito não funcionar, dá para fazer à mão: no kick.com aperte **F12** → aba **Application** → **Cookies → https://kick.com**, copie o valor de `session_token` e cole na janela **Adicionar conta**.
 
@@ -93,6 +93,11 @@ O bônus do LoLdle vem de estar no **chat** das lives dos parceiros da Twitch.
 1. Em **LoLdle → Twitch**, clique em **+ Vincular conta** e confirme o código, como no Pokeidle. Pode ser a mesma conta do Pokeidle. Até 5 contas.
 2. As contas entram em silêncio no chat dos canais ao vivo e saem quando a live acaba. Não mandam mensagem.
 3. No jogo, ligue a conta da Twitch (Bônus da Twitch) para ele te encontrar no chat.
+
+Na **Kick**, o LoLdle funciona igual ao Pokeidle na Kick:
+1. Em **LoLdle → Kick**, adicione os canais parceiros do LoLdle na Kick (campo **Adicionar canal**).
+2. Clique em **+ Adicionar conta** e cole o token da conta, do mesmo jeito do Pokeidle. Até 5 contas. Use contas **diferentes** das do Pokeidle na Kick: a Kick só conta 2 lives por conta, então a mesma conta não entra nos dois jogos.
+3. As contas assistem em segundo plano e juntam os pontos do canal. O botão da loja mostra as recompensas do LoLdle para resgatar por aqui.
 
 Opcional: em **Configurações → App da Kick**, cole o Client ID e o Client Secret de um app da Kick (**kick.com → Configurações → Desenvolvedor**, Redirect URL `http://localhost`). Com ele, o painel vê quem está ao vivo num pedido só, em vez de canal por canal.
 
@@ -105,7 +110,7 @@ Esses arquivos são criados na pasta do projeto e **nunca devem ser enviados par
 
 | Arquivo | O que guarda |
 |---|---|
-| `kick.json` | Tokens das contas da Kick, app da Kick e navegador escolhido |
+| `kick.json` | Tokens das contas da Kick (do Pokeidle e do LoLdle), app da Kick e navegador escolhido |
 | `stats.json` | Histórico de pontos por dia, dos últimos 30 dias |
 | `points.json` | Login das contas de pontos do canal (tokens) |
 | `lolidle.json` | Login das contas do LoLdle, que ficam no chat (tokens) |
@@ -147,7 +152,7 @@ public/favicon.ico     ícone do IdleLive
 src/twitch.js          login por código, tokens e status das lives (GQL, sem login)
 src/points.js          pontos do canal: minutos assistidos, baús, Momentos e conexão em tempo real (PubSub)
 src/kick.js            API da Kick: lives, números do canal, conta, saldo e token de espectador
-src/kickpoints.js      pontos do canal na Kick: conexão de espectador e saldos
+src/kickpoints.js      pontos do canal na Kick (Pokeidle e LoLdle): conexão de espectador e saldos
 src/lolidle.js         LoLdle: contas da Twitch no chat das lives dos parceiros
 src/chat.js            conexão de chat da Twitch (IRC), sem mandar mensagem
 src/human.js           travas comuns às duas plataformas (descanso, tempos aleatórios)

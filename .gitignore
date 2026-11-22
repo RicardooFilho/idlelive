@@ -4,6 +4,7 @@ kick.json
 stats.json
 points.json
 lolidle.json
+votes.json
 *.json.tmp
 *.json.quebrado-*
 eventos.jsonl*

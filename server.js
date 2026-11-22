@@ -16,6 +16,7 @@ import { LolIdleMiner } from './src/lolidle.js';
 import { sleep } from './src/human.js';
 import { addEvent, recentEvents } from './src/events.js';
 import { Updater } from './src/update.js';
+import { addVoter, removeVoter, setVoterProfile, clearVoterProfiles, openVote, votesState } from './src/votes.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const LIVE_INTERVAL = 60 * 1000;
@@ -213,6 +214,7 @@ async function handleKick(req, res, url, game = 'pokeidle') {
       for (const a of pointsAccounts) a.profile = null;
       saveKick();
       savePoints();
+      clearVoterProfiles();
       log(`Navegador trocado para ${browserName(browser)}`);
     }
     return send(res, 200, state());
@@ -305,6 +307,7 @@ function state() {
     alerts: alerts(),
     events: recentEvents(),
     kick: kickState(),
+    votes: votesState(),
     lolidle: {
       ...lolMiner.state(),
       channels: config.lolidleChannels.map((name) => ({ name, live: live.has(name), viewers: live.get(name)?.viewers ?? 0 })),
@@ -405,6 +408,33 @@ async function handleApi(req, res, url) {
     const { enabled } = await readBody(req);
     setAutostart(!!enabled);
     log(enabled ? 'Painel vai abrir junto com o Windows' : 'Painel não abre mais junto com o Windows');
+    return send(res, 200, state());
+  }
+
+  // Votos no idlehub: /api/votes (adicionar), /api/votes/<id> (remover), /api/votes/<id>/profile (perfil do navegador)
+  // e /api/votes/<id>/open (abrir a página de voto nesse perfil, com o nick preenchido).
+  if (resource === 'votes') {
+    const sub = rawSub && decodeURIComponent(rawSub);
+    const knownProfile = (profile) => !profile || listProfiles(currentBrowser()).some((p) => p.dir === profile);
+    try {
+      if (req.method === 'POST' && !id) {
+        const { game, player, profile } = await readBody(req);
+        if (!knownProfile(profile)) return send(res, 400, { error: 'Perfil não encontrado' });
+        addVoter({ game, player, profile });
+      } else if (req.method === 'DELETE' && id && !sub) removeVoter(id);
+      else if (req.method === 'PUT' && sub === 'profile') {
+        const { profile } = await readBody(req);
+        if (!knownProfile(profile)) return send(res, 400, { error: 'Perfil não encontrado' });
+        setVoterProfile(id, profile);
+      } else if (req.method === 'POST' && sub === 'open') {
+        const voter = votesState().voters.find((v) => v.id === id);
+        if (!voter) return send(res, 400, { error: 'Voto não encontrado' });
+        openInProfile(currentBrowser(), voter.profile, openVote(id));
+        log(`Votos: abrindo a página de voto de ${voter.player}`);
+      } else return send(res, 404, { error: 'Rota não encontrada' });
+    } catch (err) {
+      return send(res, 400, { error: err.message });
+    }
     return send(res, 200, state());
   }
 

@@ -67,27 +67,87 @@
   .confirm-text { margin: 0; white-space: pre-line; line-height: 1.5; color: var(--wa-color-text-quiet); }
 
   .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+  /* Sidebar recolhida: só os ícones. A classe "anim" só entra no clique, para não animar ao abrir o painel. */
+  .app.nav-collapsed { --sidebar-w: 80px; }
+  .app.anim { transition: grid-template-columns 280ms cubic-bezier(0.22, 1, 0.36, 1); }
+  /* Durante a animação, os textos que ainda não cabem ficam escondidos dentro do menu. */
+  .app.anim .nav { overflow: hidden; }
 
-  /* Sidebar */
+  /* Sidebar: um cartão solto da borda, com o botão de recolher na beirada. */
   .sidebar {
-    position: sticky; top: 0; height: 100vh; box-sizing: border-box;
+    position: sticky; top: 10px; z-index: 6; height: calc(100vh - 20px); box-sizing: border-box; margin: 10px 0 10px 10px;
     display: flex; flex-direction: column; gap: 4px; padding: 18px 14px;
-    background: var(--wa-color-surface-default); border-right: 1px solid var(--wa-color-surface-border);
+    background: var(--wa-color-surface-default); border: 1px solid var(--wa-color-surface-border); border-radius: 16px;
   }
-  .logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; font-weight: 700; font-size: 18px; }
+  .nav-toggle {
+    position: absolute; top: 26px; right: -12px; z-index: 2; width: 24px; height: 24px; padding: 0;
+    display: grid; place-items: center; border-radius: 50%; cursor: pointer;
+    background: var(--wa-color-surface-default); border: 1px solid var(--wa-color-surface-border); color: var(--wa-color-text-quiet);
+  }
+  .nav-toggle:hover { color: var(--wa-color-text-normal); }
+  .nav-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .nav-toggle svg { width: 12px; height: 12px; transition: rotate 280ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .nav-collapsed .nav-toggle svg { rotate: 180deg; }
+  .logo { display: flex; align-items: center; gap: 10px; padding: 4px 6px 18px; font-weight: 700; font-size: 18px; overflow: hidden; white-space: nowrap; }
   /* Ícone em pixel art: "pixelated" mantém os pixels nítidos ao aumentar. */
-  .logo img { width: 32px; height: 32px; image-rendering: pixelated; }
-  .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); padding: 14px 10px 6px; }
+  .logo img { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
+  .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); padding: 14px 10px 6px; overflow: hidden; white-space: nowrap; }
   .nav a {
-    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
-    color: var(--wa-color-text-quiet); text-decoration: none; font-size: 14px;
+    position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 13px; border-radius: 8px;
+    color: var(--wa-color-text-quiet); text-decoration: none; font-size: 14px; white-space: nowrap;
   }
   .nav a:hover { background: var(--wa-color-neutral-fill-quiet); color: var(--wa-color-text-normal); }
   .nav a.active { background: var(--brand-soft); color: var(--wa-color-text-normal); font-weight: 600; box-shadow: inset 3px 0 0 var(--brand); }
-  .nav a wa-icon { width: 18px; }
+  .nav a wa-icon { width: 18px; flex: none; }
   /* Ícones dos jogos, desenhados aqui (o Font Awesome grátis não tem) */
   .nav-svg { width: 18px; height: 18px; flex: none; }
   .nav a .count { margin-left: auto; }
+
+  /* Twitch | Kick de cada jogo, em árvore embaixo do jogo aberto. */
+  .nav-group { position: relative; }
+  .nav-sub { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .nav-group:has(> a.active) .nav-sub { grid-template-rows: 1fr; }
+  .nav-sub-list { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; margin-left: 22px; padding-left: 12px; border-left: 1px solid var(--wa-color-surface-border); }
+  .nav-sub-list > :first-child { margin-top: 4px; }
+  .nav-sub-list > :last-child { margin-bottom: 4px; }
+  .nav-sub-title { display: none; }
+  .nav .nav-sub a { padding: 7px 10px; font-size: 13px; }
+  .nav .nav-sub a.active { background: var(--brand-soft); color: var(--brand-text); box-shadow: none; }
+  .nav .nav-sub .brand-logo, .nav .nav-sub wa-icon { width: 14px; }
+
+  /* Recolhida: os textos somem, viram dica ao passar o mouse, e a árvore dos jogos vira um menu flutuante. */
+  .nav-collapsed .sidebar { padding-left: 12px; padding-right: 12px; }
+  .nav-collapsed .logo span, .nav-collapsed .sidebar-foot > :not(.server-status), .nav-collapsed .server-status > :not(.live-dot) { display: none; }
+  .nav-collapsed .server-status { justify-content: center; }
+  .nav-collapsed .nav-label { height: 0; padding: 0; margin: 10px 8px; border-top: 1px solid var(--wa-color-surface-border); color: transparent; }
+  /* 18px do ícone + 13px de cada lado (o painel usa border-box: a largura já conta o padding). */
+  .nav-collapsed .nav > a, .nav-collapsed .nav-group > a { box-sizing: border-box; width: 44px; }
+  .nav-collapsed .nav > a .count, .nav-collapsed .nav-group > a .count { display: none; }
+  .nav-text { transition: opacity 160ms ease-out 120ms; }
+  .nav-collapsed .nav-text {
+    position: absolute; left: calc(100% + 14px); top: 50%; translate: 0 -50%; z-index: 30; pointer-events: none;
+    padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--wa-color-text-normal);
+    background: var(--wa-color-surface-raised); border: 1px solid var(--wa-color-surface-border); box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+    opacity: 0; transition: none;
+  }
+  .nav-collapsed .nav > a:is(:hover, :focus-visible) .nav-text { opacity: 1; transition: opacity 120ms ease-out; }
+  .nav-collapsed .nav-group > a .nav-text { display: none; }
+  .nav-collapsed .nav-sub {
+    position: absolute; left: calc(100% + 14px); top: -6px; z-index: 30; display: block; min-width: 190px;
+    padding: 6px; border-radius: 12px; background: var(--wa-color-surface-raised);
+    border: 1px solid var(--wa-color-surface-border); box-shadow: 0 12px 32px rgba(0, 0, 0, .4);
+    opacity: 0; visibility: hidden; translate: -6px 0;
+    transition: opacity 140ms ease-out, translate 180ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 180ms;
+  }
+  /* Ponte invisível entre o ícone e o menu, para o mouse não "cair" no caminho. */
+  .nav-collapsed .nav-sub::before { content: ''; position: absolute; top: 0; bottom: 0; left: -16px; width: 16px; }
+  .nav-collapsed .nav-group:is(:hover, :focus-within) .nav-sub { opacity: 1; visibility: visible; translate: 0 0; transition-delay: 0s; }
+  .nav-collapsed .nav-sub-list { margin: 0; padding: 0; border: 0; overflow: visible; }
+  .nav-collapsed .nav-sub-list > * { margin: 0; }
+  .nav-collapsed .nav-sub-title { display: block; padding: 6px 10px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); }
+  @media (prefers-reduced-motion: reduce) {
+    .app.anim, .nav-toggle svg, .nav-sub, .nav-text, .nav-collapsed .nav-sub { transition: none !important; }
+  }
   /* Abas Twitch | Kick dentro de cada jogo */
   .game-tabs { position: relative; display: flex; gap: 6px; border-bottom: 1px solid var(--wa-color-surface-border); margin-bottom: 4px; }
   .game-tabs a {
@@ -103,7 +163,7 @@
     transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), width 250ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   @media (prefers-reduced-motion: reduce) { .tab-ink { transition: none !important; } }
-  .sidebar-foot { margin-top: auto; padding: 12px 10px 0; border-top: 1px solid var(--wa-color-surface-border); font-size: 12px; color: var(--wa-color-text-quiet); display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-foot { margin-top: auto; padding: 12px 10px 0; white-space: nowrap; overflow: hidden; border-top: 1px solid var(--wa-color-surface-border); font-size: 12px; color: var(--wa-color-text-quiet); display: flex; flex-direction: column; gap: 8px; }
   .server-status { display: flex; align-items: center; gap: 8px; }
   .server-status.down { color: #ff6b6b; }
   .server-status.down .live-dot { background: #ff6b6b; box-shadow: none; }
@@ -168,6 +228,17 @@
   .game-head h2 { margin: 0; }
   .game-head > wa-button { margin-left: auto; }
   .game-head .nav-svg { display: block; }
+
+  /* Votar (idlehub) */
+  #votes-warning wa-callout { display: block; margin-bottom: 12px; }
+  .vote-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--wa-color-surface-border); }
+  .vote-who { flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: 2px; }
+  .vote-who b { overflow-wrap: anywhere; }
+  .vote-ready { color: var(--live); }
+  .vote-row wa-select { width: 200px; }
+  .vote-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .vote-add wa-input { flex: 1; min-width: 140px; }
+  .vote-add wa-select { width: 200px; }
   .ov-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); margin-bottom: 2px; }
   .ov-acc .row, .ov-live .row { padding: 8px 0; }
   .ov-acc .login { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -179,6 +250,9 @@
   .attention .item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
   .attention .item + .item { border-top: 1px solid var(--wa-color-surface-border); }
   .attention .item > span { flex: 1; min-width: 200px; }
+  .attention a.meta { margin-left: 6px; }
+  /* Avisos vazios da Visão geral não ocupam espaço entre os cards. */
+  #page-visao > :empty { display: none; }
 
   /* Barras dos últimos 7 dias */
   .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 150px; }
@@ -460,16 +534,23 @@
 </head>
 <body>
 <div class="app">
+  <script>
+    // Sidebar recolhida da última vez: aplica antes de desenhar, para não abrir aberta e fechar na frente do jogador.
+    try { if (localStorage.getItem('navCollapsed') === '1') document.currentScript.parentElement.classList.add('nav-collapsed'); } catch {}
+  </script>
   <aside class="sidebar">
-    <div class="logo"><img src="/favicon.ico" alt="">IdleLive</div>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Recolher menu" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="logo"><img src="/favicon.ico" alt=""><span>IdleLive</span></div>
     <nav class="nav" id="nav">
-      <a href="#visao" data-page="visao"><wa-icon name="gauge-high"></wa-icon>Visão geral</a>
+      <a href="#visao" data-page="visao"><wa-icon name="gauge-high"></wa-icon><span class="nav-text">Visão geral</span></a>
       <div class="nav-label" data-nav-games>Jogos</div>
-      <a href="#twitch" data-page="twitch" data-pages="twitch kick"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12a10 10 0 0 1 20 0z" fill="#e3350d"/><path d="M2 12a10 10 0 0 0 20 0z" fill="#f2f2f2"/><g fill="none" stroke="#16181d" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></g><circle cx="12" cy="12" r="3.2" fill="#f2f2f2" stroke="#16181d" stroke-width="1.6"/></svg>Pokeidle <wa-badge class="count" variant="success" pill data-count="pokeidle" hidden></wa-badge></a>
-      <a href="#lolidle" data-page="lolidle" data-pages="lolidle lolidle-kick"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="#c28f2c" d="m1.912 0 1.212 2.474v19.053L1.912 24h14.73l1.337-4.682H8.33V0ZM12 1.516c-.913 0-1.798.112-2.648.312v1.74a9.738 9.738 0 0 1 2.648-.368c5.267 0 9.536 4.184 9.536 9.348a9.203 9.203 0 0 1-2.3 6.086l-.273.954-.602 2.112c2.952-1.993 4.89-5.335 4.89-9.122C23.25 6.468 18.213 1.516 12 1.516Zm0 2.673c-.924 0-1.814.148-2.648.414v13.713h8.817a8.246 8.246 0 0 0 2.36-5.768c0-4.617-3.818-8.359-8.529-8.359zM2.104 7.312A10.858 10.858 0 0 0 .75 12.576c0 1.906.492 3.7 1.355 5.266z"/></svg>LoLdle <wa-badge class="count" variant="success" pill data-count="lolidle-all" hidden></wa-badge></a>
+      <div class="nav-group"><a href="#twitch" data-page="twitch" data-pages="twitch kick"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12a10 10 0 0 1 20 0z" fill="#e3350d"/><path d="M2 12a10 10 0 0 0 20 0z" fill="#f2f2f2"/><g fill="none" stroke="#16181d" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></g><circle cx="12" cy="12" r="3.2" fill="#f2f2f2" stroke="#16181d" stroke-width="1.6"/></svg><span class="nav-text">Pokeidle</span> <wa-badge class="count" variant="success" pill data-count="pokeidle" hidden></wa-badge></a><div class="nav-sub"><div class="nav-sub-list"><div class="nav-sub-title">Pokeidle</div><a href="#twitch" data-page="twitch" class="brand-twitch"><wa-icon family="brands" name="twitch"></wa-icon>Twitch <wa-badge class="count" variant="success" pill data-count="twitch" hidden></wa-badge></a><a href="#kick" data-page="kick" class="brand-kick"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Kick <wa-badge class="count" variant="success" pill data-count="kick" hidden></wa-badge></a></div></div></div>
+      <div class="nav-group"><a href="#lolidle" data-page="lolidle" data-pages="lolidle lolidle-kick"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="#c28f2c" d="m1.912 0 1.212 2.474v19.053L1.912 24h14.73l1.337-4.682H8.33V0ZM12 1.516c-.913 0-1.798.112-2.648.312v1.74a9.738 9.738 0 0 1 2.648-.368c5.267 0 9.536 4.184 9.536 9.348a9.203 9.203 0 0 1-2.3 6.086l-.273.954-.602 2.112c2.952-1.993 4.89-5.335 4.89-9.122C23.25 6.468 18.213 1.516 12 1.516Zm0 2.673c-.924 0-1.814.148-2.648.414v13.713h8.817a8.246 8.246 0 0 0 2.36-5.768c0-4.617-3.818-8.359-8.529-8.359zM2.104 7.312A10.858 10.858 0 0 0 .75 12.576c0 1.906.492 3.7 1.355 5.266z"/></svg><span class="nav-text">LoLdle</span> <wa-badge class="count" variant="success" pill data-count="lolidle-all" hidden></wa-badge></a><div class="nav-sub"><div class="nav-sub-list"><div class="nav-sub-title">LoLdle</div><a href="#lolidle" data-page="lolidle" class="brand-twitch"><wa-icon family="brands" name="twitch"></wa-icon>Twitch <wa-badge class="count" variant="success" pill data-count="lolidle" hidden></wa-badge></a><a href="#lolidle-kick" data-page="lolidle-kick" class="brand-kick"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Kick <wa-badge class="count" variant="success" pill data-count="lolidle-kick" hidden></wa-badge></a></div></div></div>
+      <div class="nav-label" data-nav-games>Auxiliar</div>
+      <a href="#votos" data-page="votos"><wa-icon name="check-to-slot"></wa-icon><span class="nav-text">Votar</span> <wa-badge class="count" variant="success" pill data-count="votos" hidden></wa-badge></a>
       <div class="nav-label">Acompanhar</div>
-      <a href="#historico" data-page="historico"><wa-icon name="chart-column"></wa-icon>Histórico</a>
-      <a href="#config" data-page="config"><wa-icon name="gear"></wa-icon>Configurações</a>
+      <a href="#historico" data-page="historico"><wa-icon name="chart-column"></wa-icon><span class="nav-text">Histórico</span></a>
+      <a href="#config" data-page="config"><wa-icon name="gear"></wa-icon><span class="nav-text">Configurações</span></a>
     </nav>
     <div class="sidebar-foot">
       <div class="server-status" id="server-status"><span class="live-dot"></span><span class="shimmer" data-text="Conectando…">Conectando…</span></div>
@@ -501,6 +582,7 @@
       <section class="page" id="page-visao">
         <div class="kpis" id="kpis"></div>
         <div id="attention"></div>
+        <div id="ov-votes"></div>
         <!-- Um card por jogo, na mesma ordem do menu. -->
         <div class="games">
           <wa-card class="game" data-game-card="pokeidle">
@@ -635,6 +717,39 @@
         </div>
       </section>
 
+      <!-- Votar no idlehub -->
+      <section class="page" id="page-votos">
+        <div>
+        <h2><wa-icon name="check-to-slot"></wa-icon>Votos no idlehub.io
+          <wa-button class="help-btn" appearance="plain" size="small" data-action="vote-help" title="Como funcionam os votos"><wa-icon name="circle-info" label="Como funciona"></wa-icon></wa-button></h2>
+        <div id="votes-warning"></div>
+        <div class="games">
+          <wa-card data-game-card="pokeidle">
+            <div slot="header" class="game-head"><span data-game-icon="twitch"></span><h2>Pokeidle</h2>
+              <wa-badge variant="success" pill data-votes-ready="pokeidle" hidden></wa-badge>
+              <wa-button size="small" variant="brand" appearance="outlined" data-action="vote-all" data-vote-game="pokeidle" title="Abre a página de voto de todos os nicks que já podem votar"><wa-icon slot="start" name="check-double"></wa-icon>Abrir todos</wa-button></div>
+            <div id="votes-pokeidle"></div>
+            <div class="vote-add">
+              <wa-input size="small" placeholder="Nick no Pokeidle" data-vote-player="pokeidle" maxlength="32"><wa-icon slot="start" name="user"></wa-icon></wa-input>
+              <wa-select size="small" data-vote-new-profile="pokeidle" value="none"></wa-select>
+              <wa-button size="small" variant="brand" data-action="vote-add" data-vote-game="pokeidle">Adicionar</wa-button>
+            </div>
+          </wa-card>
+          <wa-card data-game-card="lolidle">
+            <div slot="header" class="game-head"><span data-game-icon="lolidle"></span><h2>LoLdle</h2>
+              <wa-badge variant="success" pill data-votes-ready="lolidle" hidden></wa-badge>
+              <wa-button size="small" variant="brand" appearance="outlined" data-action="vote-all" data-vote-game="lolidle" title="Abre a página de voto de todos os nicks que já podem votar"><wa-icon slot="start" name="check-double"></wa-icon>Abrir todos</wa-button></div>
+            <div id="votes-lolidle"></div>
+            <div class="vote-add">
+              <wa-input size="small" placeholder="Nick no LoLdle" data-vote-player="lolidle" maxlength="32"><wa-icon slot="start" name="user"></wa-icon></wa-input>
+              <wa-select size="small" data-vote-new-profile="lolidle" value="none"></wa-select>
+              <wa-button size="small" variant="brand" data-action="vote-add" data-vote-game="lolidle">Adicionar</wa-button>
+            </div>
+          </wa-card>
+        </div>
+        </div>
+      </section>
+
       <!-- Histórico -->
       <section class="page" id="page-historico">
         <wa-card>
@@ -711,6 +826,23 @@
   <div class="meta" id="events-intro" style="margin-bottom:12px"></div>
   <div id="events-list"></div>
 </wa-drawer>
+<wa-dialog id="vote-help" label="Como funcionam os votos" class="brand-orange" light-dismiss>
+  <div class="farm-help">
+    <section>
+      <h3><wa-icon name="check-to-slot"></wa-icon>O que o botão faz</h3>
+      <p>Cada botão <b>Votar</b> abre a página de voto do idlehub.io no perfil do navegador escolhido, já com o nick preenchido. Lá é só clicar em <b>Votar</b>.</p>
+    </section>
+    <section>
+      <h3><wa-icon name="right-to-bracket"></wa-icon>Primeira vez</h3>
+      <p>Entre com o Google ou o Discord no idlehub.io em cada perfil do navegador. O login fica guardado e não precisa entrar de novo.</p>
+    </section>
+    <section>
+      <h3><wa-icon name="clock"></wa-icon>A cada 24 h</h3>
+      <p>O idlehub aceita um voto por conta a cada 24 h. O painel avisa quando cada nick libera de novo, contando da última vez que você abriu a página de voto.</p>
+    </section>
+  </div>
+</wa-dialog>
+
 <wa-dialog id="farm-help" label="Como funciona o farm de pontos" class="brand-twitch" light-dismiss>
   <div class="farm-help">
     <section>
@@ -1038,6 +1170,7 @@
     renderAlerts();
     renderEvents();
     renderConfig();
+    renderVotes();
     animateNumbers();
     placeInks();
   }
@@ -1096,7 +1229,8 @@
   const gameOn = (game) => state?.games?.[game] !== false;
   // Jogo de cada página. O Histórico só tem pontos do canal, que são do Pokeidle.
   const PAGE_GAME = { twitch: 'pokeidle', kick: 'pokeidle', historico: 'pokeidle', lolidle: 'lolidle', 'lolidle-kick': 'lolidle' };
-  const pageOn = (page) => !PAGE_GAME[page] || gameOn(PAGE_GAME[page]);
+  // A página de votos tem os dois jogos: some só com os dois desligados.
+  const pageOn = (page) => (page === 'votos' ? gameOn('pokeidle') || gameOn('lolidle') : !PAGE_GAME[page] || gameOn(PAGE_GAME[page]));
   // Os acontecimentos do LoLdle começam com "LoLdle:"; o resto é do Pokeidle.
   const eventGame = (e) => (/^loldle:/i.test(e.text) ? 'lolidle' : 'pokeidle');
   const visibleEvents = (kind) => (state.events?.[kind] ?? []).filter((e) => gameOn(eventGame(e)));
@@ -1191,6 +1325,7 @@
     const yesterday = dayPoints(dayKeyOf(-1));
     renderOverviewKpis(accounts, today, yesterday, twitchLive, kickLive);
     renderAttention(accounts);
+    renderOverviewVotes();
     // Os cards dos jogos desligados ficam escondidos (renderGames); não precisa desenhar.
     if (gameOn('pokeidle')) {
       renderOverviewPokeidle(accounts, today, twitchLive, kickLive);
@@ -1283,6 +1418,22 @@
     }
     setHTML($('attention'), items.length ? `<wa-callout variant="warning" class="attention"><wa-icon slot="icon" name="hand"></wa-icon>
       <div><b>Precisa de você</b>${items.join('')}</div></wa-callout>` : '');
+  }
+
+  // Votos do idlehub que já podem ser feitos, com atalho para votar sem abrir a página Votar.
+  function renderOverviewVotes() {
+    const items = [['pokeidle', 'Pokeidle', 'twitch'], ['lolidle', 'LoLdle', 'lolidle']].filter(([game]) => gameOn(game)).map(([game, name, page]) => {
+      const ready = votersOf(game).filter(voteReady);
+      if (!ready.length) return '';
+      const icon = document.querySelector(`#nav a[data-page="${page}"] svg`)?.outerHTML ?? '';
+      const button = ready.length === 1
+        ? `<wa-button size="small" variant="brand" data-action="vote-open" data-key="${esc(ready[0].id)}"><wa-icon slot="start" name="check-to-slot"></wa-icon>Votar</wa-button>`
+        : `<wa-button size="small" variant="brand" data-action="vote-all" data-vote-game="${game}"><wa-icon slot="start" name="check-double"></wa-icon>Abrir todos</wa-button>`;
+      return `<div class="item">${icon}<span>${plural(ready.length, 'voto pronto', 'votos prontos')} no ${name}
+        <span class="meta">(${ready.map((v) => esc(v.player)).join(', ')})</span></span>${button}</div>`;
+    }).join('');
+    setHTML($('ov-votes'), items ? `<wa-callout variant="brand" class="attention brand-orange"><wa-icon slot="icon" name="check-to-slot"></wa-icon>
+      <div><b>Votos no idlehub.io</b> <a href="#votos" data-page="votos" class="meta">ver todos</a>${items}</div></wa-callout>` : '');
   }
 
   // Situação de uma conta numa linha (o texto curto da Visão geral).
@@ -2025,6 +2176,87 @@
     return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
   }
 
+  // ---------- Votar (idlehub) ----------
+
+  // Servidor antigo não manda "votes": lista vazia.
+  const votersOf = (game) => (state.votes?.voters ?? []).filter((v) => v.game === game);
+  const voteReady = (v) => !v.readyAt || v.readyAt <= Date.now();
+  // "5 h 12 min", "40 min" ou "menos de 1 min".
+  function duration(ms) {
+    const min = Math.ceil(ms / 60000);
+    if (min <= 1) return 'menos de 1 min';
+    const h = Math.floor(min / 60);
+    return h ? `${h} h${min % 60 ? ` ${min % 60} min` : ''}` : `${min} min`;
+  }
+  const profileOptions = (profiles) => `<wa-option value="none">Qualquer perfil (o último que usei)</wa-option>
+    ${profiles.map((p) => `<wa-option value="${esc(p.dir)}">${esc(p.name)}</wa-option>`).join('')}`;
+
+  function renderVotes() {
+    const k = state.kick;
+    const profiles = k.availableProfiles ?? [];
+    setHTML($('votes-warning'), k.browserFound === false
+      ? '<wa-callout variant="warning" size="small"><wa-icon slot="icon" name="triangle-exclamation"></wa-icon>Nenhum navegador encontrado (Chrome, Brave ou Edge). Sem ele, os botões não abrem a página de voto.</wa-callout>' : '');
+    let readyTotal = 0;
+    for (const game of ['pokeidle', 'lolidle']) {
+      const list = votersOf(game);
+      const ready = list.filter(voteReady).length;
+      if (gameOn(game)) readyTotal += ready;
+      $$(`[data-votes-ready="${game}"]`).forEach((b) => { b.textContent = `${ready} pronto${ready === 1 ? '' : 's'}`; b.hidden = !ready; });
+      $$(`[data-action="vote-all"][data-vote-game="${game}"]`).forEach((b) => (b.disabled = ready < 2));
+      setHTML($(`votes-${game}`), list.length ? list.map((v) => `<div class="vote-row">
+          <div class="vote-who"><b>${esc(v.player)}</b>
+            ${voteReady(v) ? `<span class="meta vote-ready"><wa-icon name="circle-check"></wa-icon> Pode votar</span>`
+              : `<span class="meta">Libera em ${duration(v.readyAt - Date.now())}</span>`}</div>
+          <wa-select size="small" data-vote-profile="${esc(v.id)}" title="Perfil do navegador logado no idlehub">${profileOptions(profiles)}</wa-select>
+          <wa-button size="small" variant="brand" appearance="${voteReady(v) ? 'accent' : 'outlined'}" data-action="vote-open" data-key="${esc(v.id)}"><wa-icon slot="start" name="check-to-slot"></wa-icon>Votar</wa-button>
+          <wa-button size="small" appearance="plain" data-action="vote-remove" data-key="${esc(v.id)}" title="Tirar da lista"><wa-icon name="xmark" label="Tirar da lista"></wa-icon></wa-button>
+        </div>`).join('')
+        : '<div class="empty">Adicione o nick que vai receber o voto e o perfil do navegador que vota por ele.</div>');
+      for (const v of list) {
+        const select = document.querySelector(`[data-vote-profile="${CSS.escape(v.id)}"]`);
+        if (select && select.value !== (v.profile ?? 'none')) select.value = v.profile ?? 'none';
+      }
+      const add = document.querySelector(`[data-vote-new-profile="${game}"]`);
+      setHTML(add, profileOptions(profiles));
+      if (!add.value) add.value = 'none';
+    }
+    $$('[data-count="votos"]').forEach((b) => { b.textContent = `${readyTotal} pronto${readyTotal === 1 ? '' : 's'}`; b.hidden = !readyTotal; });
+  }
+
+  async function addVoter(game) {
+    const input = document.querySelector(`[data-vote-player="${game}"]`);
+    const select = document.querySelector(`[data-vote-new-profile="${game}"]`);
+    const player = (input.value ?? '').trim();
+    if (!player) return shake(input);
+    const profile = select.value && select.value !== 'none' ? select.value : null;
+    if (await api('POST', 'votes', { game, player, profile })) {
+      input.value = '';
+      toast(`${player} adicionado`, 'info');
+    } else shake(input);
+  }
+
+  // Abre a página de voto no perfil do nick. Ainda sem liberar: pergunta antes, porque o voto pode não contar.
+  async function openVote(id) {
+    const v = state.votes?.voters?.find((x) => x.id === id);
+    if (!v) return;
+    if (!voteReady(v) && !(await ask({
+      title: `Votar com ${v.player} de novo?`,
+      text: `A página de voto foi aberta há menos de 24 h. Se você votou nela, o idlehub só aceita outro voto daqui a ${duration(v.readyAt - Date.now())}.`,
+      ok: 'Abrir mesmo assim',
+    }))) return;
+    if (await api('POST', `votes/${encodeURIComponent(id)}/open`)) toast(`Página de voto de ${v.player} aberta no navegador: é só clicar em Votar.`, 'info');
+  }
+
+  // Abre todos os que já podem votar, um de cada vez, para o navegador não se perder com várias janelas juntas.
+  async function openAllVotes(game) {
+    const list = votersOf(game).filter(voteReady);
+    for (const [i, v] of list.entries()) {
+      if (i) await new Promise((r) => setTimeout(r, 800));
+      if (!(await api('POST', `votes/${encodeURIComponent(v.id)}/open`))) return;
+    }
+    if (list.length) toast(`${list.length} páginas de voto abertas: é só clicar em Votar em cada uma.`, 'info');
+  }
+
   function renderHistory() {
     const days = state.pointsHistory ?? [];
     // Contas vinculadas primeiro, depois as que só aparecem no histórico (desvinculadas).
@@ -2201,6 +2433,13 @@
     const { action, channel, login, platform, key } = el.dataset;
     const path = accountPath(platform || 'twitch', key);
     if (action === 'points-link') api('POST', 'points/link');
+    if (action === 'vote-add') addVoter(el.dataset.voteGame);
+    if (action === 'vote-open') openVote(key);
+    if (action === 'vote-all') openAllVotes(el.dataset.voteGame);
+    if (action === 'vote-remove') {
+      const v = state.votes?.voters?.find((x) => x.id === key);
+      if (v && await ask({ title: `Tirar ${v.player} da lista?`, text: 'O botão de voto desse nick some. Dá para adicionar de novo quando quiser.', ok: 'Tirar', danger: true })) api('DELETE', `votes/${encodeURIComponent(key)}`);
+    }
     if (action === 'events') openEvents(el.dataset.kind);
     if (action === 'update-install') installUpdate();
     if (action === 'update-check') api('POST', 'update/check').then((ok) => ok && toast(state.update?.available ? `Saiu a versão ${state.update.latest}.` : state.update?.error ? 'Não deu para procurar agora. Tente mais tarde.' : 'Você já está na versão mais nova.', state.update?.error ? 'error' : 'info'));
@@ -2222,6 +2461,7 @@
     }
     if (action === 'add-channel') addChannel(platform);
     if (action === 'farm-help') $('farm-help').open = true;
+    if (action === 'vote-help') $('vote-help').open = true;
     if (action === 'points-expand') {
       dialogAccount = { platform, key };
       render();
@@ -2335,6 +2575,11 @@
       const current = accountsOf(platform).find((a) => accountKey(platform, a) === key)?.profile ?? 'none';
       if (t.value !== current) api('PUT', `${accountPath(platform, key)}/profile`, { profile: t.value === 'none' ? null : t.value });
     }
+    if (t.matches('[data-vote-profile]')) {
+      const id = t.dataset.voteProfile;
+      const current = state.votes?.voters?.find((v) => v.id === id)?.profile ?? 'none';
+      if (t.value && t.value !== current) api('PUT', `votes/${encodeURIComponent(id)}/profile`, { profile: t.value === 'none' ? null : t.value });
+    }
     if (t.matches('#browser-select') && t.value && t.value !== state.kick.browser) {
       // Guarda a escolha antes de perguntar: a atualização de 5 s volta o campo para o navegador atual.
       const browser = t.value;
@@ -2377,6 +2622,8 @@
   document.addEventListener('keydown', (e) => {
     const input = e.target.closest?.('[data-add]');
     if (input && e.key === 'Enter') addChannel(input.dataset.add);
+    const voteInput = e.target.closest?.('[data-vote-player]');
+    if (voteInput && e.key === 'Enter') addVoter(voteInput.dataset.votePlayer);
   });
 
   $('kick-app-form').addEventListener('submit', async (e) => {
@@ -2402,6 +2649,7 @@
     kick: ['Pokeidle', 'Pontos do canal nas lives dos parceiros da Kick'],
     lolidle: ['LoLdle', 'Contas da Twitch no chat das lives dos parceiros'],
     'lolidle-kick': ['LoLdle', 'Pontos do canal nas lives dos parceiros da Kick'],
+    votos: ['Votar', 'Votos no idlehub.io, cada um no seu perfil do navegador'],
     historico: ['Histórico', 'Pontos ganhos por dia, na Twitch e na Kick, e de onde vieram'],
     config: ['Configurações', 'Jogos, iniciar com o Windows, reiniciar, atualizar, navegador e app da Kick'],
   };
@@ -2464,6 +2712,25 @@
     if (!customElements.get('wa-card')) $('no-ui').style.display = 'grid';
   }, 8000);
   $('menu-btn').addEventListener('click', () => (drawer.open = true));
+
+  // Botão da beirada: recolhe a sidebar só nos ícones (ou abre de novo) e lembra a escolha.
+  const app = document.querySelector('.app');
+  const syncNavToggle = () => {
+    const collapsed = app.classList.contains('nav-collapsed');
+    $('nav-toggle').setAttribute('aria-expanded', String(!collapsed));
+    $('nav-toggle').setAttribute('aria-label', collapsed ? 'Abrir menu' : 'Recolher menu');
+  };
+  let navAnimEnd;
+  $('nav-toggle').addEventListener('click', () => {
+    app.classList.add('anim');
+    const collapsed = app.classList.toggle('nav-collapsed');
+    syncNavToggle();
+    try { localStorage.setItem('navCollapsed', collapsed ? '1' : '0'); } catch {}
+    // Tira a "anim" no fim, para abrir o painel de novo não animar e os menus flutuantes voltarem a aparecer.
+    clearTimeout(navAnimEnd);
+    navAnimEnd = setTimeout(() => app.classList.remove('anim'), 300);
+  });
+  syncNavToggle();
 
   $('server-host').textContent = location.host;
   api('GET', 'state').then(() => bookmarkToken && addKickFromBookmark(bookmarkToken));

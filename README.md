@@ -101,6 +101,9 @@ Na **Kick**, o LoLdle funciona igual ao Pokeidle na Kick:
 
 Opcional: em **Configurações → App da Kick**, cole o Client ID e o Client Secret de um app da Kick (**kick.com → Configurações → Desenvolvedor**, Redirect URL `http://localhost`). Com ele, o painel vê quem está ao vivo num pedido só, em vez de canal por canal.
 
+### Votar no idlehub.io
+Na página **Votar**, adicione o nick que recebe o voto em cada jogo e escolha o perfil do navegador logado no idlehub.io (Google ou Discord) que vota por ele. O botão **Votar** abre a página de voto nesse perfil, já com o nick preenchido: é só clicar em **Votar** no site. O idlehub aceita um voto por conta a cada 24 h, e o painel mostra quando cada um libera de novo.
+
 ### Lista de parceiros
 O painel já vem com os parceiros atuais. Se o jogo adicionar ou remover algum, use o campo **Adicionar canal** em cima de cada lista. Para remover, clique no **✕** do canal.
 
@@ -114,6 +117,7 @@ Esses arquivos são criados na pasta do projeto e **nunca devem ser enviados par
 | `stats.json` | Histórico de pontos por dia, dos últimos 30 dias |
 | `points.json` | Login das contas de pontos do canal (tokens) |
 | `lolidle.json` | Login das contas do LoLdle, que ficam no chat (tokens) |
+| `votes.json` | Nicks e perfis do navegador da página Votar |
 | `eventos.jsonl` | Erros e baús/Momentos/raids dos últimos 30 dias (as listas do topo) |
 
 Se você usava uma versão antiga, o `accounts.json` (contas do chat) não é mais usado e pode ser apagado.

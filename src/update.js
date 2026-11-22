@@ -12,7 +12,7 @@ const LAUNCHER = 'iniciar.bat';
 
 // Arquivos do jogador: nunca são trocados, mesmo se um dia vierem na release. O config.json vem com a lista de
 // parceiros, mas depois é do jogador (canais que ele adicionou ou tirou), então só é criado se ainda não existir.
-const PROTECTED = new Set(['accounts.json', 'kick.json', 'points.json', 'lolidle.json', 'stats.json', '.token.json', 'eventos.jsonl']);
+const PROTECTED = new Set(['accounts.json', 'kick.json', 'points.json', 'lolidle.json', 'stats.json', '.token.json', 'eventos.jsonl', 'votes.json']);
 const KEEP_IF_EXISTS = new Set(['config.json']);
 
 // "1.10.0" > "1.9.2". Aceita "v" na frente; partes que faltam contam como 0.

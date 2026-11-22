@@ -2,6 +2,14 @@
 
 Mudanças do IdleLive, da mais recente para a mais antiga.
 
+## 22/11/2026
+
+### Novidades
+- **Votar no idlehub.io:** página nova **Votar** no menu, numa seção nova **Auxiliar**, com o Pokeidle e o LoLdle. Adicione o nick do jogo e o perfil do navegador que vota por ele: o botão **Votar** abre a página de voto já nesse perfil e com o nick preenchido, e só falta clicar em Votar no site. O painel mostra quem já pode votar de novo (24 h) e tem um botão para abrir todos os prontos de uma vez. A Visão geral avisa quando há votos prontos, com atalho para votar dali.
+
+### Mudanças
+- **Menu lateral novo:** o menu virou um cartão com um botão redondo na beirada que o recolhe só nos ícones (e abre de novo). O painel lembra a escolha. Recolhido, passar o mouse num ícone mostra o nome. No Pokeidle e no LoLdle, o menu mostra **Twitch** e **Kick** embaixo do jogo aberto, com quantas lives cada um tem; recolhido, eles aparecem num menu flutuante ao passar o mouse no ícone do jogo.
+
 ## 18/11/2026
 
 ### Novidades

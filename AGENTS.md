@@ -27,6 +27,7 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 - Node.js 20+, ES modules, **sem dependências**. Não adicione pacotes do npm. Use `fetch`, `node:tls`, `node:http`, `WebSocket` etc. O `WebSocket` global só existe no Node 22+: sem ele, a conexão em tempo real (`PubSub` em `src/points.js`) fica desligada e o resto continua funcionando.
 - O painel é um arquivo só (`public/index.html`), sem framework e sem build. Os componentes são do **Web Awesome 3.14.0** (`<wa-button>`, `<wa-card>`…) e a fonte é Montserrat, ambos via CDN com versão fixa. Não troque por React/Tailwind nem adicione etapa de build.
 - Cores: roxo (`--twitch`) na página Twitch, verde (`--kick`) na Kick e laranja (`--orange`, #fc5e03) no resto. A cor "brand" do Web Awesome é trocada por seção no CSS. Use `variant="brand"` em vez de cores fixas.
+- Os padrões visuais do painel (botões, avisos, janelas, ícones, textos) estão no [DESIGN.md](DESIGN.md). Siga-o ao criar ou mudar uma tela. Mudou um padrão visual? Atualize o `DESIGN.md`.
 - O painel atualiza a cada 5 s. Use `setHTML()`, que só troca o HTML quando ele muda, para não fechar menus abertos nem piscar.
 - Siga o estilo do código ao redor: comentários curtos e em português explicando o *porquê*, nomes em inglês, `const`, arrow functions, 2 espaços.
 - Textos da interface e mensagens de log são em **português do Brasil**, simples, para quem não é programador.

@@ -9,6 +9,7 @@ Mudanças do IdleLive, da mais recente para a mais antiga.
 
 ### Mudanças
 - **Menu lateral novo:** o menu virou um cartão com um botão redondo na beirada que o recolhe só nos ícones (e abre de novo). O painel lembra a escolha. Recolhido, passar o mouse num ícone mostra o nome. No Pokeidle e no LoLdle, o menu mostra **Twitch** e **Kick** embaixo do jogo aberto, com quantas lives cada um tem; recolhido, eles aparecem num menu flutuante ao passar o mouse no ícone do jogo.
+- O código para vincular uma conta da Twitch aparece em roxo, como o resto da área da Twitch, em vez de laranja.
 
 ## 18/11/2026
 

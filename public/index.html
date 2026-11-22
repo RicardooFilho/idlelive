@@ -16,6 +16,9 @@
     --kick: #53fc18;
     --orange: #fc5e03;
     --live: #3ecf6e;
+    /* Vermelho de erro: texto e ícones (--error-text), fundo de contador e aviso (--error-fill). */
+    --error-text: #ff6b6b;
+    --error-fill: #c62828;
     --sidebar-w: 248px;
     --wa-font-family-body: 'Montserrat', system-ui, sans-serif;
     --wa-font-family-heading: 'Montserrat', system-ui, sans-serif;
@@ -165,8 +168,8 @@
   @media (prefers-reduced-motion: reduce) { .tab-ink { transition: none !important; } }
   .sidebar-foot { margin-top: auto; padding: 12px 10px 0; white-space: nowrap; overflow: hidden; border-top: 1px solid var(--wa-color-surface-border); font-size: 12px; color: var(--wa-color-text-quiet); display: flex; flex-direction: column; gap: 8px; }
   .server-status { display: flex; align-items: center; gap: 8px; }
-  .server-status.down { color: #ff6b6b; }
-  .server-status.down .live-dot { background: #ff6b6b; box-shadow: none; }
+  .server-status.down { color: var(--error-text); }
+  .server-status.down .live-dot { background: var(--error-text); box-shadow: none; }
 
   /* Header */
   .main { min-width: 0; }
@@ -268,7 +271,7 @@
   #ov-events .event:last-child { border-bottom: none; }
 
   /* Espectadores em vermelho, como o contador da Twitch. */
-  .viewers { --wa-color-danger-fill-quiet: rgba(235, 4, 0, .16); --wa-color-danger-border-quiet: rgba(255, 90, 90, .45); --wa-color-danger-on-quiet: #ff6b6b; }
+  .viewers { --wa-color-danger-fill-quiet: rgba(235, 4, 0, .16); --wa-color-danger-border-quiet: rgba(255, 90, 90, .45); --wa-color-danger-on-quiet: var(--error-text); }
 
   /* Grades: 4 por linha em telas largas (vai para 3, 2, 1 conforme a tela diminui). */
   .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); }
@@ -360,21 +363,21 @@
   .steps code { font-size: 12px; }
 
   /* Código para vincular conta da Twitch */
-  .code { font: 700 24px/1 ui-monospace, Consolas, monospace; letter-spacing: .14em; color: var(--orange); }
+  .code { font: 700 24px/1 ui-monospace, Consolas, monospace; letter-spacing: .14em; color: var(--brand-text); }
   .link-box { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .link-box > div { flex: 1; min-width: 240px; }
-  .link-box a { color: #c9a8ff; }
+  .link-box a { color: var(--brand-text); }
 
   /* Botões de acontecimentos no topo (erros e coisas boas), com o número de novos. */
   .events-btn { position: relative; }
   .events-btn::part(base) { padding: 0 8px; font-size: 18px; }
-  .events-btn.bad { color: #ff6b6b; }
+  .events-btn.bad { color: var(--error-text); }
   .events-btn.good { color: var(--live); }
   .events-count {
     position: absolute; top: -4px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
     border-radius: 99px; font: 700 11px/18px 'Montserrat', sans-serif; text-align: center; pointer-events: none;
   }
-  .events-btn.bad .events-count { background: #c62828; color: #fff; }
+  .events-btn.bad .events-count { background: var(--error-fill); color: #fff; }
   .events-btn.good .events-count { background: var(--live); color: #062a12; }
   /* Transitions.dev — Notification badge: entra na diagonal e "estoura" quando chega evento novo. */
   .events-count.pop {
@@ -451,7 +454,7 @@
   .event-day:first-child { margin-top: 0; }
   .event { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--wa-color-surface-border); font-size: 13px; line-height: 1.4; }
   .event .icon { flex: none; width: 18px; padding-top: 2px; text-align: center; }
-  .event.bad .icon { color: #ff6b6b; }
+  .event.bad .icon { color: var(--error-text); }
   .event.good .icon { color: var(--live); }
   .event .body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .event .who { font-weight: 600; }
@@ -517,7 +520,7 @@
 
   .toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 20;
-    background: #c62828; color: #fff; padding: 10px 16px; border-radius: 10px; display: none;
+    background: var(--error-fill); color: #fff; padding: 10px 16px; border-radius: 10px; display: none;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .4); font-size: 14px;
   }
   .toast.info { background: #2b2d36; border: 1px solid var(--wa-color-surface-border); }
@@ -1403,7 +1406,7 @@
     });
     const freshErrors = visibleEvents('bad').filter((e) => e.at > seenAt('bad')).length;
     if (freshErrors) {
-      items.push(`<div class="item"><wa-icon name="bug" style="color:#ff6b6b"></wa-icon><span>${plural(freshErrors, 'erro novo', 'erros novos')} da Twitch ou da Kick desde a última vez que você olhou.</span>
+      items.push(`<div class="item"><wa-icon name="bug" style="color:var(--error-text)"></wa-icon><span>${plural(freshErrors, 'erro novo', 'erros novos')} da Twitch ou da Kick desde a última vez que você olhou.</span>
         <wa-button size="small" appearance="outlined" data-action="events" data-kind="bad">Ver erros</wa-button></div>`);
     }
     if (!gameOn('pokeidle') && !gameOn('lolidle')) {

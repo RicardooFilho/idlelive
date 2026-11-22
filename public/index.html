@@ -55,14 +55,14 @@
   /* Diálogo de confirmação: faixa, ícone e botão na cor da seção (roxo, verde ou laranja). */
   #confirm-dialog { --width: min(440px, 92vw); }
   #confirm-dialog::part(dialog) { border-top: 3px solid var(--brand); }
-  .confirm-title { display: flex; align-items: center; gap: 12px; }
+  .confirm-title { display: flex; align-items: center; gap: var(--wa-space-s); }
   .confirm-icon {
     width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center;
     background: var(--brand-soft); color: var(--brand-text); font-size: 16px;
   }
   .confirm-summary {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px;
-    padding: 10px 14px; border-radius: 10px; background: var(--brand-soft); border-left: 3px solid var(--brand);
+    display: flex; align-items: baseline; justify-content: space-between; gap: var(--wa-space-s); margin-bottom: var(--wa-space-m);
+    padding: var(--wa-space-s) var(--wa-space-m); border-radius: 10px; background: var(--brand-soft); border-left: 3px solid var(--brand);
     font-weight: 600;
   }
   .confirm-summary b { color: var(--brand-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -71,15 +71,17 @@
 
   .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
   /* Sidebar recolhida: só os ícones. A classe "anim" só entra no clique, para não animar ao abrir o painel. */
-  .app.nav-collapsed { --sidebar-w: 80px; }
+  /* 76px = margem (8) + borda (1) + padding (12) dos dois lados + 42px do link (ícone de 18 + 12 de cada lado). */
+  .app.nav-collapsed { --sidebar-w: 76px; }
   .app.anim { transition: grid-template-columns 280ms cubic-bezier(0.22, 1, 0.36, 1); }
   /* Durante a animação, os textos que ainda não cabem ficam escondidos dentro do menu. */
   .app.anim .nav { overflow: hidden; }
 
   /* Sidebar: um cartão solto da borda, com o botão de recolher na beirada. */
   .sidebar {
-    position: sticky; top: 10px; z-index: 6; height: calc(100vh - 20px); box-sizing: border-box; margin: 10px 0 10px 10px;
-    display: flex; flex-direction: column; gap: 4px; padding: 18px 14px;
+    position: sticky; top: var(--wa-space-xs); z-index: 6; height: calc(100vh - 2 * var(--wa-space-xs)); box-sizing: border-box;
+    margin: var(--wa-space-xs) 0 var(--wa-space-xs) var(--wa-space-xs);
+    display: flex; flex-direction: column; gap: var(--wa-space-2xs); padding: var(--wa-space-m) var(--wa-space-s);
     background: var(--wa-color-surface-default); border: 1px solid var(--wa-color-surface-border); border-radius: 16px;
   }
   .nav-toggle {
@@ -91,12 +93,13 @@
   .nav-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   .nav-toggle svg { width: 12px; height: 12px; transition: rotate 280ms cubic-bezier(0.22, 1, 0.36, 1); }
   .nav-collapsed .nav-toggle svg { rotate: 180deg; }
-  .logo { display: flex; align-items: center; gap: 10px; padding: 4px 6px 18px; font-weight: 700; font-size: 18px; overflow: hidden; white-space: nowrap; }
+  /* 5px à esquerda: o centro do logo (32px) fica na mesma linha do centro dos ícones do menu (12 + 9). */
+  .logo { display: flex; align-items: center; gap: var(--wa-space-xs); padding: var(--wa-space-2xs) 0 var(--wa-space-m) 5px; font-weight: 700; font-size: 18px; overflow: hidden; white-space: nowrap; }
   /* Ícone em pixel art: "pixelated" mantém os pixels nítidos ao aumentar. */
   .logo img { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
-  .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); padding: 14px 10px 6px; overflow: hidden; white-space: nowrap; }
+  .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); padding: var(--wa-space-m) var(--wa-space-s) var(--wa-space-2xs); overflow: hidden; white-space: nowrap; }
   .nav a {
-    position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 13px; border-radius: 8px;
+    position: relative; display: flex; align-items: center; gap: var(--wa-space-xs); padding: var(--wa-space-xs) var(--wa-space-s); border-radius: 8px;
     color: var(--wa-color-text-quiet); text-decoration: none; font-size: 14px; white-space: nowrap;
   }
   .nav a:hover { background: var(--wa-color-neutral-fill-quiet); color: var(--wa-color-text-normal); }
@@ -110,34 +113,35 @@
   .nav-group { position: relative; }
   .nav-sub { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1); }
   .nav-group:has(> a.active) .nav-sub { grid-template-rows: 1fr; }
-  .nav-sub-list { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; margin-left: 22px; padding-left: 12px; border-left: 1px solid var(--wa-color-surface-border); }
-  .nav-sub-list > :first-child { margin-top: 4px; }
-  .nav-sub-list > :last-child { margin-bottom: 4px; }
+  .nav-sub-list { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--wa-space-3xs);
+    /* A linha da árvore passa embaixo do centro do ícone do jogo (padding do link + metade do ícone). */
+    margin-left: calc(var(--wa-space-s) + 9px); padding-left: var(--wa-space-s); border-left: 1px solid var(--wa-color-surface-border); }
+  .nav-sub-list > :first-child { margin-top: var(--wa-space-2xs); }
+  .nav-sub-list > :last-child { margin-bottom: var(--wa-space-2xs); }
   .nav-sub-title { display: none; }
-  .nav .nav-sub a { padding: 7px 10px; font-size: 13px; }
+  .nav .nav-sub a { padding: var(--wa-space-xs) var(--wa-space-s); font-size: 13px; }
   .nav .nav-sub a.active { background: var(--brand-soft); color: var(--brand-text); box-shadow: none; }
   .nav .nav-sub .brand-logo, .nav .nav-sub wa-icon { width: 14px; }
 
   /* Recolhida: os textos somem, viram dica ao passar o mouse, e a árvore dos jogos vira um menu flutuante. */
-  .nav-collapsed .sidebar { padding-left: 12px; padding-right: 12px; }
   .nav-collapsed .logo span, .nav-collapsed .sidebar-foot > :not(.server-status), .nav-collapsed .server-status > :not(.live-dot) { display: none; }
   .nav-collapsed .server-status { justify-content: center; }
-  .nav-collapsed .nav-label { height: 0; padding: 0; margin: 10px 8px; border-top: 1px solid var(--wa-color-surface-border); color: transparent; }
-  /* 18px do ícone + 13px de cada lado (o painel usa border-box: a largura já conta o padding). */
-  .nav-collapsed .nav > a, .nav-collapsed .nav-group > a { box-sizing: border-box; width: 44px; }
+  .nav-collapsed .nav-label { height: 0; padding: 0; margin: var(--wa-space-s) var(--wa-space-xs); border-top: 1px solid var(--wa-color-surface-border); color: transparent; }
+  /* 18px do ícone + 12px de cada lado (o painel usa border-box: a largura já conta o padding). */
+  .nav-collapsed .nav > a, .nav-collapsed .nav-group > a { box-sizing: border-box; width: 42px; }
   .nav-collapsed .nav > a .count, .nav-collapsed .nav-group > a .count { display: none; }
   .nav-text { transition: opacity 160ms ease-out 120ms; }
   .nav-collapsed .nav-text {
-    position: absolute; left: calc(100% + 14px); top: 50%; translate: 0 -50%; z-index: 30; pointer-events: none;
-    padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--wa-color-text-normal);
+    position: absolute; left: calc(100% + var(--wa-space-s)); top: 50%; translate: 0 -50%; z-index: 30; pointer-events: none;
+    padding: var(--wa-space-2xs) var(--wa-space-xs); border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--wa-color-text-normal);
     background: var(--wa-color-surface-raised); border: 1px solid var(--wa-color-surface-border); box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
     opacity: 0; transition: none;
   }
   .nav-collapsed .nav > a:is(:hover, :focus-visible) .nav-text { opacity: 1; transition: opacity 120ms ease-out; }
   .nav-collapsed .nav-group > a .nav-text { display: none; }
   .nav-collapsed .nav-sub {
-    position: absolute; left: calc(100% + 14px); top: -6px; z-index: 30; display: block; min-width: 190px;
-    padding: 6px; border-radius: 12px; background: var(--wa-color-surface-raised);
+    position: absolute; left: calc(100% + var(--wa-space-s)); top: calc(-1 * var(--wa-space-2xs)); z-index: 30; display: block; min-width: 190px;
+    padding: var(--wa-space-2xs); border-radius: 12px; background: var(--wa-color-surface-raised);
     border: 1px solid var(--wa-color-surface-border); box-shadow: 0 12px 32px rgba(0, 0, 0, .4);
     opacity: 0; visibility: hidden; translate: -6px 0;
     transition: opacity 140ms ease-out, translate 180ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 180ms;
@@ -147,14 +151,14 @@
   .nav-collapsed .nav-group:is(:hover, :focus-within) .nav-sub { opacity: 1; visibility: visible; translate: 0 0; transition-delay: 0s; }
   .nav-collapsed .nav-sub-list { margin: 0; padding: 0; border: 0; overflow: visible; }
   .nav-collapsed .nav-sub-list > * { margin: 0; }
-  .nav-collapsed .nav-sub-title { display: block; padding: 6px 10px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); }
+  .nav-collapsed .nav-sub-title { display: block; padding: var(--wa-space-xs) var(--wa-space-s) var(--wa-space-2xs); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); }
   @media (prefers-reduced-motion: reduce) {
     .app.anim, .nav-toggle svg, .nav-sub, .nav-text, .nav-collapsed .nav-sub { transition: none !important; }
   }
   /* Abas Twitch | Kick dentro de cada jogo */
-  .game-tabs { position: relative; display: flex; gap: 6px; border-bottom: 1px solid var(--wa-color-surface-border); margin-bottom: 4px; }
+  .game-tabs { position: relative; display: flex; gap: var(--wa-space-2xs); border-bottom: 1px solid var(--wa-color-surface-border); margin-bottom: var(--wa-space-2xs); }
   .game-tabs a {
-    display: flex; align-items: center; gap: 8px; padding: 10px 16px; margin-bottom: -1px;
+    display: flex; align-items: center; gap: var(--wa-space-xs); padding: var(--wa-space-s) var(--wa-space-m); margin-bottom: -1px;
     color: var(--wa-color-text-quiet); text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent;
   }
   .game-tabs a:hover { color: var(--wa-color-text-normal); }
@@ -166,8 +170,8 @@
     transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), width 250ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   @media (prefers-reduced-motion: reduce) { .tab-ink { transition: none !important; } }
-  .sidebar-foot { margin-top: auto; padding: 12px 10px 0; white-space: nowrap; overflow: hidden; border-top: 1px solid var(--wa-color-surface-border); font-size: 12px; color: var(--wa-color-text-quiet); display: flex; flex-direction: column; gap: 8px; }
-  .server-status { display: flex; align-items: center; gap: 8px; }
+  .sidebar-foot { margin-top: auto; padding: var(--wa-space-s) var(--wa-space-s) 0; white-space: nowrap; overflow: hidden; border-top: 1px solid var(--wa-color-surface-border); font-size: 12px; color: var(--wa-color-text-quiet); display: flex; flex-direction: column; gap: var(--wa-space-xs); }
+  .server-status { display: flex; align-items: center; gap: var(--wa-space-xs); }
   .server-status.down { color: var(--error-text); }
   .server-status.down .live-dot { background: var(--error-text); box-shadow: none; }
 
@@ -175,37 +179,37 @@
   .main { min-width: 0; }
   header {
     position: sticky; top: 0; z-index: 5;
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-    padding: 14px 28px; backdrop-filter: blur(10px);
+    display: flex; align-items: center; gap: var(--wa-space-m); flex-wrap: wrap;
+    padding: var(--wa-space-s) var(--wa-space-l); backdrop-filter: blur(10px);
     background: color-mix(in srgb, var(--wa-color-surface-lowered) 80%, transparent);
     border-bottom: 1px solid var(--wa-color-surface-border);
   }
   header h1 { font-size: 20px; margin: 0; }
   header .sub { font-size: 13px; color: var(--wa-color-text-quiet); }
-  header .actions { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  header .actions { margin-left: auto; display: flex; align-items: center; gap: var(--wa-space-xs); flex-wrap: wrap; }
   .menu-btn { display: none; }
 
   /* Sem largura máxima: o conteúdo vai até a mesma margem do cabeçalho (alinhado com o botão Hub). */
-  .content { padding: 24px 28px 48px; }
-  .page { display: none; flex-direction: column; gap: 24px; }
+  .content { padding: var(--wa-space-l) var(--wa-space-l) var(--wa-space-3xl); }
+  .page { display: none; flex-direction: column; gap: var(--wa-space-l); }
   .page.active { display: flex; }
-  h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  h2 { font-size: 15px; margin: 0 0 var(--wa-space-s); display: flex; align-items: center; gap: var(--wa-space-xs); }
   /* Títulos dos cards centralizados na altura do cabeçalho. */
   wa-card h2[slot="header"] { margin: 0; min-height: 28px; line-height: 1; }
   .meta { font-size: 12px; color: var(--wa-color-text-quiet); }
 
   /* Resumo (visão geral) */
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
-  .kpi::part(body) { display: flex; flex-direction: column; gap: 6px; }
-  .kpi .label { font-size: 12px; color: var(--wa-color-text-quiet); display: flex; align-items: center; gap: 6px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--wa-space-m); }
+  .kpi::part(body) { display: flex; flex-direction: column; gap: var(--wa-space-2xs); }
+  .kpi .label { font-size: 12px; color: var(--wa-color-text-quiet); display: flex; align-items: center; gap: var(--wa-space-xs); }
   .kpi .value { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .kpi .value small { font-size: 16px; color: var(--wa-color-text-quiet); }
-  .kpi .hint { font-size: 12px; color: var(--wa-color-text-quiet); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .kpi .hint { font-size: 12px; color: var(--wa-color-text-quiet); display: flex; align-items: center; gap: var(--wa-space-xs); flex-wrap: wrap; }
 
-  .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--wa-space-m); }
 
   /* Listas */
-  .row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--wa-color-surface-border); }
+  .row { display: flex; align-items: center; gap: var(--wa-space-s); padding: var(--wa-space-s) 0; border-bottom: 1px solid var(--wa-color-surface-border); }
   .row:last-child { border-bottom: none; }
   .row .name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .platform { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font: 800 12px/1 system-ui; flex: none; }
@@ -217,7 +221,7 @@
   .unfollowed { animation: follow-blink 1.1s ease-in-out infinite; }
   @keyframes follow-blink { 50% { opacity: .2; } }
   @media (prefers-reduced-motion: reduce) { .unfollowed { animation: none; opacity: .4; } }
-  .empty { color: var(--wa-color-text-quiet); font-size: 13px; padding: 8px 0; }
+  .empty { color: var(--wa-color-text-quiet); font-size: 13px; padding: var(--wa-space-xs) 0; }
 
   /* Lives da Visão geral: rolam sem mostrar a barra, com um degradê embaixo indicando que tem mais. */
   .scroll-list { max-height: 300px; overflow-y: auto; scrollbar-width: none; }
@@ -225,41 +229,42 @@
   .scroll-list::-webkit-scrollbar { display: none; }
 
   /* Visão geral: cards dos jogos */
-  .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
-  .game::part(body) { display: flex; flex-direction: column; gap: 16px; }
-  .game-head { display: flex; align-items: center; gap: 8px; }
+  .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: var(--wa-space-m); }
+  .game::part(body) { display: flex; flex-direction: column; gap: var(--wa-space-m); }
+  .game-head { display: flex; align-items: center; gap: var(--wa-space-xs); }
   .game-head h2 { margin: 0; }
   .game-head > wa-button { margin-left: auto; }
   .game-head .nav-svg { display: block; }
 
   /* Votar (idlehub) */
-  #votes-warning wa-callout { display: block; margin-bottom: 12px; }
-  .vote-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--wa-color-surface-border); }
-  .vote-who { flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: 2px; }
+  #votes-warning wa-callout { display: block; margin-bottom: var(--wa-space-s); }
+  .vote-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--wa-space-s); padding: var(--wa-space-s) 0; border-bottom: 1px solid var(--wa-color-surface-border); }
+  .vote-who { flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: var(--wa-space-3xs); }
   .vote-who b { overflow-wrap: anywhere; }
   .vote-ready { color: var(--live); }
   .vote-row wa-select { width: 200px; }
-  .vote-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .vote-add { display: flex; flex-wrap: wrap; gap: var(--wa-space-xs); margin-top: var(--wa-space-m); }
   .vote-add wa-input { flex: 1; min-width: 140px; }
   .vote-add wa-select { width: 200px; }
-  .ov-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); margin-bottom: 2px; }
-  .ov-acc .row, .ov-live .row { padding: 8px 0; }
+  .ov-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); margin-bottom: var(--wa-space-2xs); }
+  /* Listas da Visão geral mais compactas que as das páginas. */
+  .ov-acc .row, .ov-live .row { padding: var(--wa-space-xs) 0; }
   .ov-acc .login { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .ov-acc .today { font-size: 13px; font-weight: 700; color: var(--live); font-variant-numeric: tabular-nums; }
   .ov-live .who { font-size: 12px; color: var(--brand-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
   .kpi .up { color: var(--live); }
 
   /* Precisa de você: só aparece quando tem algo para resolver. */
-  .attention .item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
+  .attention .item { display: flex; align-items: center; gap: var(--wa-space-xs); flex-wrap: wrap; padding: var(--wa-space-xs) 0; }
   .attention .item + .item { border-top: 1px solid var(--wa-color-surface-border); }
   .attention .item > span { flex: 1; min-width: 200px; }
-  .attention a.meta { margin-left: 6px; }
+  .attention a.meta { margin-left: var(--wa-space-xs); }
   /* Avisos vazios da Visão geral não ocupam espaço entre os cards. */
   #page-visao > :empty { display: none; }
 
   /* Barras dos últimos 7 dias */
-  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 150px; }
-  .week .day { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; min-width: 0; }
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--wa-space-xs); align-items: end; height: 150px; }
+  .week .day { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: var(--wa-space-2xs); height: 100%; min-width: 0; }
   /* Trilho: ocupa a sobra da coluna, e a barra cresce dentro dele (sem o trilho, o flex achata todas iguais). */
   .week .track { flex: 1; min-height: 0; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
   .week .bar { width: 100%; max-width: 44px; border-radius: 6px 6px 2px 2px; background: var(--brand-soft); min-height: 3px; }
@@ -267,59 +272,60 @@
   .week .val { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--wa-color-text-quiet); white-space: nowrap; }
   .week .day.today .val { color: var(--wa-color-text-normal); }
   .week .lbl { font-size: 11px; color: var(--wa-color-text-quiet); }
-  .week-foot { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+  .week-foot { display: flex; gap: var(--wa-space-m); flex-wrap: wrap; margin-top: var(--wa-space-s); }
   #ov-events .event:last-child { border-bottom: none; }
 
   /* Espectadores em vermelho, como o contador da Twitch. */
   .viewers { --wa-color-danger-fill-quiet: rgba(235, 4, 0, .16); --wa-color-danger-border-quiet: rgba(255, 90, 90, .45); --wa-color-danger-on-quiet: var(--error-text); }
 
   /* Grades: 4 por linha em telas largas (vai para 3, 2, 1 conforme a tela diminui). */
-  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); }
+  .cards { display: grid; gap: var(--wa-space-m); grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); }
   @media (min-width: 1500px) { .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
   /* Conta de pontos */
-  .account .head { display: flex; align-items: center; gap: 12px; }
-  .account .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .account .head { display: flex; align-items: center; gap: var(--wa-space-s); }
+  .account .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--wa-space-2xs); }
   .account .who wa-badge { align-self: flex-start; }
   .account .login { font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
   /* Pontos do canal */
-  .points::part(body) { display: flex; flex-direction: column; gap: 12px; }
+  .points::part(body) { display: flex; flex-direction: column; gap: var(--wa-space-s); }
   .points .row .balance { font-weight: 700; font-variant-numeric: tabular-nums; }
   /* Canal offline: bolinha apagada e nome mais fraco. */
   .points .off-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wa-color-surface-border); flex: none; }
   .points .row.off .name { color: var(--wa-color-text-quiet); font-weight: 500; }
-  .play-tip { margin: -4px 0 12px; }
+  .play-tip { margin: calc(-1 * var(--wa-space-2xs)) 0 var(--wa-space-s); }
   .points-more { display: flex; justify-content: center; margin-top: auto; }
   /* Cards das contas do LoLdle: nome, situação e os chats em que a conta está. */
-  .lol-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .lol-head { display: flex; align-items: center; gap: var(--wa-space-xs); flex-wrap: wrap; }
   .lol-head .login { font-weight: 700; margin-right: auto; }
-  .lol-chats { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; }
-  .lol-chats > span { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+  .lol-chats { display: flex; flex-wrap: wrap; gap: var(--wa-space-2xs) var(--wa-space-m); margin-top: var(--wa-space-s); }
+  .lol-chats > span { display: inline-flex; align-items: center; gap: var(--wa-space-xs); font-weight: 600; }
   /* Até 4 contas de pontos lado a lado (2 em telas médias, 1 no celular). */
-  .points-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+  .points-grid { display: grid; gap: var(--wa-space-m); grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
   @media (min-width: 1500px) { .points-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .points-grid > .points::part(body) { height: 100%; box-sizing: border-box; }
   .points.add::part(body) { align-items: center; justify-content: center; min-height: 200px; }
   .points.add { --wa-panel-border-style: dashed; }
   /* Janela "Como funciona" dos pontos. */
-  .streak { color: var(--live); font-size: 11px; margin-left: 6px; vertical-align: 1px; }
-  .help-btn::part(base) { padding: 0 4px; height: 24px; color: var(--wa-color-text-quiet); }
+  .streak { color: var(--live); font-size: 11px; margin-left: var(--wa-space-2xs); vertical-align: 1px; }
+  .help-btn::part(base) { padding: 0 var(--wa-space-2xs); height: 24px; color: var(--wa-color-text-quiet); }
   .help-btn:hover::part(base) { color: var(--brand-text); }
   #farm-help { --width: min(680px, 94vw); }
-  .farm-help { font-size: 14px; line-height: 1.55; display: flex; flex-direction: column; gap: 18px; }
-  .farm-help section { display: flex; flex-direction: column; gap: 6px; }
-  .farm-help h3 { margin: 0; font-size: 14px; display: flex; align-items: center; gap: 8px; color: var(--brand-text); }
+  .farm-help { font-size: 14px; line-height: 1.55; display: flex; flex-direction: column; gap: var(--wa-space-l); }
+  .farm-help section { display: flex; flex-direction: column; gap: var(--wa-space-xs); }
+  .farm-help h3 { margin: 0; font-size: 14px; display: flex; align-items: center; gap: var(--wa-space-xs); color: var(--brand-text); }
   .farm-help p, .farm-help ul { margin: 0; }
-  .farm-help ul { padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+  /* Recuo de 20px nas listas: espaço para o marcador (•, 1., 10.). */
+  .farm-help ul { padding-left: 20px; display: flex; flex-direction: column; gap: var(--wa-space-2xs); }
   .farm-help table { border-collapse: collapse; font-size: 13px; }
-  .farm-help td { padding: 4px 14px 4px 0; border-bottom: 1px solid var(--wa-color-surface-border); }
+  .farm-help td { padding: var(--wa-space-2xs) var(--wa-space-m) var(--wa-space-2xs) 0; border-bottom: 1px solid var(--wa-color-surface-border); }
   .farm-help tr:last-child td { border-bottom: none; }
   .farm-help td.num { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   /* Janela com todos os canais e seus pontos. */
   #points-dialog { --width: min(820px, 94vw); }
   .points-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .points-table th, .points-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--wa-color-surface-border); white-space: nowrap; }
+  .points-table th, .points-table td { text-align: left; padding: var(--wa-space-xs) var(--wa-space-s); border-bottom: 1px solid var(--wa-color-surface-border); white-space: nowrap; }
   .points-table th { font-size: 12px; color: var(--wa-color-text-quiet); font-weight: 500; }
   .points-table tr:last-child td { border-bottom: none; }
   .points-table .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -331,9 +337,9 @@
   /* Linha de canal nos cards de pontos: compacta, para o nome do streamer caber inteiro.
      "Assistindo" vira um ícone e o ganho fica embaixo do saldo. */
   /* Altura fixa: com ou sem o "+ganho" embaixo do saldo, toda linha (e todo card) fica do mesmo tamanho. */
-  .points-row { gap: 8px; height: 52px; padding: 0; box-sizing: border-box; }
+  .points-row { gap: var(--wa-space-xs); height: 52px; padding: 0; box-sizing: border-box; }
   .points-row .name { white-space: nowrap; }
-  .points-row .streak { flex: none; margin-left: -4px; }
+  .points-row .streak { flex: none; margin-left: calc(-1 * var(--wa-space-2xs)); }
   .points-row .watch-icon { flex: none; color: var(--brand-text); font-size: 14px; display: grid; place-items: center; }
   .points-row .watch-icon.error { color: var(--wa-color-warning-fill-loud, #f5a524); }
   .points-row .amount { flex: none; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
@@ -341,8 +347,8 @@
   .points .gained { font-size: 12px; font-weight: 600; color: var(--live); font-variant-numeric: tabular-nums; }
 
   /* Canais */
-  .channel::part(body) { display: flex; flex-direction: column; gap: 10px; }
-  .channel .top { display: flex; align-items: center; gap: 10px; }
+  .channel::part(body) { display: flex; flex-direction: column; gap: var(--wa-space-xs); }
+  .channel .top { display: flex; align-items: center; gap: var(--wa-space-xs); }
   .channel .top .name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .channel.offline { opacity: .7; }
   .channel.offline:hover { opacity: 1; }
@@ -350,31 +356,32 @@
   @media (hover: none) { .channel .remove { opacity: .6; } }
   .channel:hover .remove { opacity: 1; }
 
-  .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .toolbar { display: flex; align-items: center; gap: var(--wa-space-xs); flex-wrap: wrap; margin-bottom: var(--wa-space-m); }
   .toolbar wa-input { flex: 1; min-width: 200px; max-width: 320px; }
   /* Janela de adicionar conta da Kick */
   .bookmarklet {
-    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; cursor: grab;
+    display: inline-flex; align-items: center; gap: var(--wa-space-xs); padding: var(--wa-space-xs) var(--wa-space-m); border-radius: 8px; cursor: grab;
     background: var(--kick); color: #0b1a05; font-weight: 700; text-decoration: none; font-size: 14px;
   }
   .bookmarklet:active { cursor: grabbing; }
   .farm-help h4 { margin: 0; font-size: 14px; }
-  .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; }
+  .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--wa-space-xs); font-size: 14px; line-height: 1.5; }
   .steps code { font-size: 12px; }
 
   /* Código para vincular conta da Twitch */
   .code { font: 700 24px/1 ui-monospace, Consolas, monospace; letter-spacing: .14em; color: var(--brand-text); }
-  .link-box { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .link-box { display: flex; align-items: center; gap: var(--wa-space-m); flex-wrap: wrap; }
   .link-box > div { flex: 1; min-width: 240px; }
   .link-box a { color: var(--brand-text); }
 
   /* Botões de acontecimentos no topo (erros e coisas boas), com o número de novos. */
   .events-btn { position: relative; }
-  .events-btn::part(base) { padding: 0 8px; font-size: 18px; }
+  .events-btn::part(base) { padding: 0 var(--wa-space-xs); font-size: 18px; }
   .events-btn.bad { color: var(--error-text); }
   .events-btn.good { color: var(--live); }
+  /* top/right: posição do número sobre o canto do ícone (ajuste ótico). */
   .events-count {
-    position: absolute; top: -4px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+    position: absolute; top: -4px; right: -6px; min-width: 18px; height: 18px; padding: 0 var(--wa-space-2xs); box-sizing: border-box;
     border-radius: 99px; font: 700 11px/18px 'Montserrat', sans-serif; text-align: center; pointer-events: none;
   }
   .events-btn.bad .events-count { background: var(--error-fill); color: #fff; }
@@ -407,7 +414,7 @@
      depois o conteúdo aparece saindo do desfoque. */
   .skel { display: block; border-radius: 6px; background: var(--wa-color-neutral-fill-quiet); animation: skel-pulse 1000ms ease-in-out infinite; }
   .skel.round { border-radius: 50%; flex: none; }
-  .skel-row { display: flex; align-items: center; gap: 12px; }
+  .skel-row { display: flex; align-items: center; gap: var(--wa-space-s); }
   @keyframes skel-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
   .revealing { animation: skel-reveal 400ms ease-in-out both; }
   @keyframes skel-reveal { from { opacity: 0; filter: blur(2px); } }
@@ -450,10 +457,10 @@
     .check-draw path { animation: none; stroke-dashoffset: 0; }
   }
   /* Lista na gaveta da direita. */
-  .event-day { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); margin: 16px 0 6px; }
+  .event-day { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--wa-color-text-quiet); margin: var(--wa-space-m) 0 var(--wa-space-2xs); }
   .event-day:first-child { margin-top: 0; }
-  .event { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--wa-color-surface-border); font-size: 13px; line-height: 1.4; }
-  .event .icon { flex: none; width: 18px; padding-top: 2px; text-align: center; }
+  .event { display: flex; gap: var(--wa-space-xs); align-items: flex-start; padding: var(--wa-space-xs) 0; border-bottom: 1px solid var(--wa-color-surface-border); font-size: 13px; line-height: 1.4; }
+  .event .icon { flex: none; width: 18px; padding-top: var(--wa-space-3xs); text-align: center; }
   .event.bad .icon { color: var(--error-text); }
   .event.good .icon { color: var(--live); }
   .event .body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -462,39 +469,39 @@
   .event.new { background: linear-gradient(90deg, var(--brand-soft), transparent 60%); }
 
   /* Avisos no topo de todas as páginas. */
-  #alerts { display: flex; flex-direction: column; gap: 10px; }
-  #alerts:not(:empty) { margin-bottom: 20px; }
+  #alerts { display: flex; flex-direction: column; gap: var(--wa-space-xs); }
+  #alerts:not(:empty) { margin-bottom: var(--wa-space-l); }
 
   /* Botão ▶ das linhas de pontos: discreto, aparece mais forte no hover. */
   .play { flex: none; }
-  .play::part(base) { padding: 0 4px; height: 24px; color: var(--wa-color-text-quiet); }
+  .play::part(base) { padding: 0 var(--wa-space-2xs); height: 24px; color: var(--wa-color-text-quiet); }
   .play:hover::part(base) { color: var(--brand-text); }
 
   /* Loja: recompensas de um canal da Twitch. */
   #rewards-dialog { --width: min(800px, 94vw); }
   /* Contas em colunas iguais: todas numa linha (até 4); em tela estreita, 2 por linha. */
-  .shop-accounts { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 8px; margin-bottom: 6px; }
+  .shop-accounts { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: var(--wa-space-xs); margin-bottom: var(--wa-space-2xs); }
   .shop-accounts wa-button { width: 100%; min-width: 0; }
-  .shop-accounts wa-button::part(base) { width: 100%; padding-inline: 10px; }
-  .shop-accounts wa-button::part(label) { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
+  .shop-accounts wa-button::part(base) { width: 100%; padding-inline: var(--wa-space-xs); }
+  .shop-accounts wa-button::part(label) { display: flex; gap: var(--wa-space-2xs); min-width: 0; overflow: hidden; }
   .shop-accounts .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .shop-accounts .bal { flex: none; opacity: .85; }
   .shop-accounts .meta { grid-column: 1 / -1; }
-  .shop-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 2px; }
-  .reward { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--wa-color-surface-border); }
+  .shop-filters { display: flex; gap: var(--wa-space-xs); flex-wrap: wrap; margin: var(--wa-space-s) 0 var(--wa-space-3xs); }
+  .reward { display: flex; gap: var(--wa-space-s); align-items: flex-start; padding: var(--wa-space-s) 0; border-bottom: 1px solid var(--wa-color-surface-border); }
   .reward:last-child { border-bottom: none; }
   .reward.unavailable .pic, .reward.unavailable .info { opacity: .55; }
   .reward .pic { width: 44px; height: 44px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--brand-soft); }
   .reward .pic img { width: 28px; height: 28px; }
-  .reward .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .reward .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--wa-space-2xs); }
   .reward .title { font-weight: 600; overflow-wrap: anywhere; }
   .reward .desc { font-size: 13px; color: var(--wa-color-text-quiet); overflow-wrap: anywhere; white-space: pre-line; }
-  .reward .tags { display: flex; gap: 6px; flex-wrap: wrap; }
-  .reward .buy { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-  .reward .cost { font-weight: 700; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .reward .tags { display: flex; gap: var(--wa-space-2xs); flex-wrap: wrap; }
+  .reward .buy { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: var(--wa-space-xs); }
+  .reward .cost { font-weight: 700; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: var(--wa-space-2xs); white-space: nowrap; }
   .reward .cost img { width: 16px; height: 16px; }
   .reward .why { font-size: 12px; color: var(--wa-color-text-quiet); text-align: right; }
-  .reward .buy-row { display: flex; gap: 6px; align-items: center; }
+  .reward .buy-row { display: flex; gap: var(--wa-space-xs); align-items: center; }
   .reward .qty { width: 72px; }
   @media (max-width: 520px) {
     .reward { flex-wrap: wrap; }
@@ -505,7 +512,7 @@
   /* Histórico de pontos */
   .history { overflow-x: auto; }
   .history table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .history th, .history td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--wa-color-surface-border); white-space: nowrap; }
+  .history th, .history td { text-align: left; padding: var(--wa-space-xs) var(--wa-space-s); border-bottom: 1px solid var(--wa-color-surface-border); white-space: nowrap; }
   .history th { font-size: 12px; color: var(--wa-color-text-quiet); font-weight: 500; }
   .history tr:last-child td { border-bottom: none; }
   .history .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -513,14 +520,14 @@
   .history td.total { font-weight: 700; }
   .history .detail { display: block; font-size: 11px; color: var(--wa-color-text-quiet); }
 
-  .settings { display: flex; flex-direction: column; gap: 16px; max-width: 680px; }
-  .settings wa-card::part(body) { display: flex; flex-direction: column; gap: 14px; }
-  .setting-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .settings { display: flex; flex-direction: column; gap: var(--wa-space-m); max-width: 680px; }
+  .settings wa-card::part(body) { display: flex; flex-direction: column; gap: var(--wa-space-m); }
+  .setting-row { display: flex; align-items: center; gap: var(--wa-space-s); flex-wrap: wrap; }
   .setting-row > span { flex: 1; min-width: 200px; }
 
   .toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 20;
-    background: var(--error-fill); color: #fff; padding: 10px 16px; border-radius: 10px; display: none;
+    background: var(--error-fill); color: #fff; padding: var(--wa-space-s) var(--wa-space-m); border-radius: 10px; display: none;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .4); font-size: 14px;
   }
   .toast.info { background: #2b2d36; border: 1px solid var(--wa-color-surface-border); }
@@ -529,7 +536,7 @@
     .app { grid-template-columns: 1fr; }
     .app > .sidebar { display: none; }
     .menu-btn { display: inline-flex; }
-    header, .content { padding-left: 16px; padding-right: 16px; }
+    header, .content { padding-left: var(--wa-space-m); padding-right: var(--wa-space-m); }
     .grid-2 { grid-template-columns: 1fr; }
     header .actions wa-switch { display: none; }
   }
@@ -678,7 +685,7 @@
         </nav>
         <div>
           <h2><wa-icon name="comments"></wa-icon>Contas no chat</h2>
-          <p class="meta" style="margin-top:-6px">Cada conta entra em silêncio no chat dos canais do LoLdle que estão ao vivo e sai quando a live acaba. Não manda mensagem e não assiste a live.</p>
+          <p class="meta" style="margin-top:calc(-1 * var(--wa-space-2xs))">Cada conta entra em silêncio no chat dos canais do LoLdle que estão ao vivo e sai quando a live acaba. Não manda mensagem e não assiste a live.</p>
           <div id="lol-link"></div>
           <div class="points-grid" id="lol-accounts"></div>
         </div>
@@ -701,7 +708,7 @@
         <div>
           <h2><wa-icon name="coins"></wa-icon>Pontos do canal
             <wa-button class="help-btn" appearance="plain" size="small" data-action="kick-help" title="Como funciona o farm na Kick"><wa-icon name="circle-info" label="Como funciona"></wa-icon></wa-button></h2>
-          <p class="meta" style="margin-top:-6px">Igual ao Pokeidle na Kick: cada conta assiste em segundo plano até 2 lives dos canais do LoLdle e junta os pontos do canal para você resgatar o bônus. Use contas diferentes das do Pokeidle.</p>
+          <p class="meta" style="margin-top:calc(-1 * var(--wa-space-2xs))">Igual ao Pokeidle na Kick: cada conta assiste em segundo plano até 2 lives dos canais do LoLdle e junta os pontos do canal para você resgatar o bônus. Use contas diferentes das do Pokeidle.</p>
           <div class="meta play-tip" hidden><wa-icon name="store"></wa-icon> abre a loja do canal para resgatar as recompensas por aqui; <wa-icon name="play"></wa-icon> abre a live no navegador, na conta certa.</div>
           <div class="points-grid" id="lolkick-points"></div>
         </div>
@@ -812,7 +819,7 @@
             <h2 slot="header"><svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>App da Kick (opcional)</h2>
             <div id="kick-app-status"></div>
             <div class="meta">Sem o app, o painel vê quem está ao vivo na Kick perguntando canal por canal (a cada 2 minutos). Com o app, é um pedido só a cada minuto. Para criar: <b>kick.com → Configurações → Desenvolvedor</b> (Redirect URL: <code>http://localhost</code>), depois cole os dados. Não mostre o Client Secret para ninguém.</div>
-            <form id="kick-app-form" style="display:flex;flex-direction:column;gap:12px">
+            <form id="kick-app-form" style="display:flex;flex-direction:column;gap:var(--wa-space-s)">
               <wa-input label="Client ID" size="small" id="kick-client-id" autocomplete="off"></wa-input>
               <wa-input label="Client Secret" type="password" password-toggle size="small" id="kick-client-secret" autocomplete="off"></wa-input>
               <div><wa-button variant="brand" size="small" type="submit">Salvar</wa-button></div>
@@ -826,7 +833,7 @@
 
 <wa-drawer id="drawer" placement="start" label="IdleLive" style="--size: 280px"></wa-drawer>
 <wa-drawer id="events-drawer" placement="end" style="--size: min(440px, 100vw)">
-  <div class="meta" id="events-intro" style="margin-bottom:12px"></div>
+  <div class="meta" id="events-intro" style="margin-bottom:var(--wa-space-s)"></div>
   <div id="events-list"></div>
 </wa-drawer>
 <wa-dialog id="vote-help" label="Como funcionam os votos" class="brand-orange" light-dismiss>
@@ -928,7 +935,7 @@
       <h4>Jeito fácil: favorito</h4>
       <ol class="steps">
         <li>Mostre a barra de favoritos do navegador (<b>Ctrl+Shift+B</b>) e <b>arraste</b> este botão para ela (só na primeira vez):
-          <div style="margin:8px 0"><a class="bookmarklet" id="kick-bookmarklet" href="#">⚡ Enviar para o IdleLive</a></div></li>
+          <div style="margin:var(--wa-space-xs) 0"><a class="bookmarklet" id="kick-bookmarklet" href="#">⚡ Enviar para o IdleLive</a></div></li>
         <li>Abra <b>kick.com</b> no perfil do navegador da conta, já logado.</li>
         <li>Clique no favorito <b>Enviar para o IdleLive</b>. O painel abre e pergunta se pode adicionar a conta.</li>
       </ol>
@@ -944,7 +951,7 @@
       </ol>
       <p class="meta">Também serve o valor do cabeçalho <code>Authorization</code> de qualquer pedido do kick.com (aba Network). O token fica só no seu PC, no <code>kick.json</code>. Não mostre ele para ninguém: quem tem o token entra na conta.</p>
     </section>
-    <form id="kick-add-form" style="display:flex;flex-direction:column;gap:12px">
+    <form id="kick-add-form" style="display:flex;flex-direction:column;gap:var(--wa-space-s)">
       <wa-input label="Token da conta" type="password" password-toggle id="kick-token" autocomplete="off"></wa-input>
       <div><wa-button variant="brand" type="submit" id="kick-add-save">Adicionar</wa-button></div>
     </form>
@@ -1042,8 +1049,8 @@
     kpis: repeat(4, `<wa-card class="kpi">${skel('45%')}${skel('55%', 28)}${skel('75%')}</wa-card>`),
     cards: repeat(6, `<wa-card class="channel"><div class="top">${skel('50%', 16)}<span style="flex:1"></span>${skel('84px', 20)}</div></wa-card>`),
     accounts: repeat(2, `<wa-card class="points"><div class="skel-row">${skel('40px', 40, true)}${skel('35%', 16)}</div>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-top:18px">${repeat(3, `<div class="skel-row">${skel('55%', 14)}<span style="flex:1"></span>${skel('56px', 14)}</div>`)}</div></wa-card>`),
-    list: `<div style="display:flex;flex-direction:column;gap:12px">${repeat(4, skel('100%', 14))}</div>`,
+      <div style="display:flex;flex-direction:column;gap:var(--wa-space-s);margin-top:var(--wa-space-m)">${repeat(3, `<div class="skel-row">${skel('55%', 14)}<span style="flex:1"></span>${skel('56px', 14)}</div>`)}</div></wa-card>`),
+    list: `<div style="display:flex;flex-direction:column;gap:var(--wa-space-s)">${repeat(4, skel('100%', 14))}</div>`,
   };
   for (const [id, kind] of Object.entries({ kpis: 'kpis', points: 'accounts', 'kick-points': 'accounts', 'lol-accounts': 'accounts', 'lolkick-points': 'accounts',
     'twitch-channels': 'cards', 'kick-channels': 'cards', 'lol-channels': 'cards', 'lolkick-channels': 'cards', 'ov-week': 'list', 'ov-events': 'list' })) {
@@ -1607,7 +1614,7 @@
       setHTML($('points-link'), '');
       return setHTML($('points'), '<div class="empty">Reinicie o servidor para usar os pontos do canal.</div>');
     }
-    setHTML($('points-link'), p.pendingLink ? `<div style="margin-bottom:14px">${linkCallout(p.pendingLink, 'points-cancel')}</div>` : '');
+    setHTML($('points-link'), p.pendingLink ? `<div style="margin-bottom:var(--wa-space-m)">${linkCallout(p.pendingLink, 'points-cancel')}</div>` : '');
     const cards = p.accounts.map((a) => pointsCard('twitch', a));
     for (let i = p.accounts.length; i < p.max; i++) {
       cards.push(`<wa-card class="points add"><wa-button variant="brand" data-action="points-link" ${p.pendingLink && !p.pendingLink.error ? 'disabled' : ''}>
@@ -1716,7 +1723,7 @@
     const liveCount = lol.channels.filter((c) => c.live).length;
     $$('[data-count="lolidle"]').forEach((b) => { b.textContent = `${liveCount} ao vivo`; b.hidden = !liveCount; });
     if (!lol.kick) $$('[data-count="lolidle-all"]').forEach((b) => { b.textContent = `${liveCount} ao vivo`; b.hidden = !liveCount; });
-    setHTML($('lol-link'), lol.pendingLink ? `<div style="margin-bottom:14px">${linkCallout(lol.pendingLink, 'lol-cancel')}</div>` : '');
+    setHTML($('lol-link'), lol.pendingLink ? `<div style="margin-bottom:var(--wa-space-m)">${linkCallout(lol.pendingLink, 'lol-cancel')}</div>` : '');
 
     const cards = lol.accounts.map((a) => {
       const badge = a.needsRelink ? '<wa-badge variant="danger" pill>Vincule de novo</wa-badge>'
@@ -1865,7 +1872,7 @@
       : `<wa-callout variant="neutral" size="small"><wa-icon slot="icon" name="circle-info"></wa-icon>${kick ? 'Adicione' : 'Vincule'} uma conta em ${whereOf(platform)} para resgatar por aqui.</wa-callout>`;
     const relink = account?.needsRelink
       ? `<wa-callout variant="danger" size="small"><wa-icon slot="icon" name="circle-exclamation"></wa-icon>${kick ? 'Cole um token novo para esta conta' : 'Esta conta precisa ser vinculada de novo'} antes de resgatar.</wa-callout>` : '';
-    const message = shop.message ? `<wa-callout variant="${shop.message.variant}" size="small" style="margin:8px 0">
+    const message = shop.message ? `<wa-callout variant="${shop.message.variant}" size="small" style="margin:var(--wa-space-xs) 0">
         <wa-icon slot="icon" name="${{ success: 'circle-check', neutral: 'hourglass-half' }[shop.message.variant] ?? 'circle-exclamation'}"></wa-icon>${esc(shop.message.text)}</wa-callout>` : '';
 
     // Só mostra os filtros que têm alguma recompensa neste canal.
@@ -2279,7 +2286,7 @@
         const total = logins.reduce((t, l) => t + sumPoints(d.accounts[l]), 0);
         return `<tr><td>${dayLabel(d.day)}</td>${cells.join('')}<td class="num total">+${fmt(total)}</td></tr>`;
       }).join('')}
-    </table><div class="meta" style="margin-top:8px">Toque ou passe o mouse num valor para ver de onde vieram os pontos. O resumo dos últimos 7 dias está logo abaixo.</div>`);
+    </table><div class="meta" style="margin-top:var(--wa-space-xs)">Toque ou passe o mouse num valor para ver de onde vieram os pontos. O resumo dos últimos 7 dias está logo abaixo.</div>`);
 
     // Soma dos últimos 7 dias, por motivo e por conta.
     const week = {};

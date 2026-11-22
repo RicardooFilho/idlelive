@@ -29,9 +29,28 @@ Cada seção tem uma cor de destaque, que vira a cor "brand" do Web Awesome:
   - `--error-text` (texto e ícones) e `--error-fill` (fundo): erros e o contador de espectadores (`.viewers`, como na Twitch).
   - `--wa-color-*` do Web Awesome (`success`, `warning`, `danger`, `neutral`) para estados.
 
+## Espaçamento
+
+Todo espaço (`gap`, `padding`, `margin`) vem da escala do Web Awesome, que anda de 4 em 4px. Use as variáveis, não o número:
+
+| Variável | px | Uso típico |
+|---|---|---|
+| `--wa-space-3xs` | 2 | entre itens bem colados (subitens do menu) |
+| `--wa-space-2xs` | 4 | rótulo e o que ele nomeia, espaço interno de menus flutuantes |
+| `--wa-space-xs` | 8 | ícone e texto, botões lado a lado, título e descrição |
+| `--wa-space-s` | 12 | itens de uma linha (`.row`), padding lateral dos links do menu |
+| `--wa-space-m` | 16 | entre cards de uma grade, padding de blocos |
+| `--wa-space-l` | 24 | entre blocos de uma página, padding do conteúdo |
+| `--wa-space-xl` | 32 | entre seções grandes |
+| `--wa-space-3xl` | 48 | fim da página |
+
+- **Proximidade:** o espaço dentro de um grupo é menor que o espaço entre grupos. Um rótulo fica mais perto do que ele nomeia (4px) do que do grupo de cima (16px); um título fica a 8px da descrição e a 24px do próximo bloco.
+- Fora da escala só: bordas, tamanhos (largura, altura, ícones, fontes), deslocamentos de animação, alinhamentos óticos calculados e o recuo de 20px das listas (espaço do marcador). O aviso `#no-ui` usa px porque aparece justamente quando o Web Awesome não carregou. Nesses casos, deixe um comentário dizendo de onde vem o número (ex.: `calc(var(--wa-space-s) + 9px)` = padding do link + metade do ícone).
+- Isso vale também para `style="…"` montado no JavaScript.
+
 ## Layout
 
-- Sidebar à esquerda (248px, recolhe para 80px só com ícones), cabeçalho fixo no topo e conteúdo com `padding: 24px 28px`. Abaixo de 860px a sidebar some e vira gaveta (botão ☰).
+- Sidebar à esquerda (248px, recolhe para 76px só com ícones), cabeçalho fixo no topo e conteúdo com padding de 24px (16px no celular). Abaixo de 860px a sidebar some e vira gaveta (botão ☰).
 - Cada página é uma `<section class="page">` em coluna com `gap: 24px`. Avisos gerais ficam em `#alerts`, acima de todas as páginas.
 - Grades:
   - `.kpis`: números de resumo, colunas de no mínimo 190px.

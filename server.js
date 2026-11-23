@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config, kick, pointsAccounts, saveConfig, saveKick, savePoints, normalizeChannel, MAX_ACCOUNTS, GAMES, gameEnabled, setGameEnabled } from './src/store.js';
+import { config, partnerChanges, kick, pointsAccounts, saveConfig, saveKick, savePoints, normalizeChannel, MAX_ACCOUNTS, GAMES, gameEnabled, setGameEnabled } from './src/store.js';
 import { fetchLive, fetchRewards, isNetworkError } from './src/twitch.js';
 import { fetchKickLive, fetchKickChannel, fetchKickRewards, resetKickToken } from './src/kick.js';
 import { installedBrowsers, browserName, listProfiles, openInProfile } from './src/browser.js';
@@ -29,6 +29,16 @@ const PANEL_FILE = path.join(PUBLIC_DIR, 'index.html');
 const FAVICON_FILE = path.join(PUBLIC_DIR, 'favicon.ico');
 
 const log = (msg) => console.log(`[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`);
+
+// Parceiros que entraram ou saíram com a versão nova (src/store.js): avisa no painel o que mudou na lista.
+const PARTNER_NAMES = { channels: ['twitch', 'Pokeidle'], kickChannels: ['kick', 'Pokeidle'], lolidleChannels: ['twitch', 'LoLdle'], lolidleKickChannels: ['kick', 'LoLdle'] };
+for (const [key, { added, removed }] of Object.entries(partnerChanges)) {
+  const [platform, game] = PARTNER_NAMES[key];
+  const parts = [added.length && `entrou ${added.join(', ')}`, removed.length && `saiu ${removed.join(', ')}`].filter(Boolean);
+  const text = `Parceiros do ${game} atualizados: ${parts.join('; ')}`;
+  log(`${text} (${platform === 'twitch' ? 'Twitch' : 'Kick'})`);
+  addEvent({ kind: 'good', platform, text });
+}
 
 let live = new Map(); // canal -> { viewers, userId, streamId }
 let liveError = null; // mensagem da última falha, para o aviso no painel

@@ -21,8 +21,14 @@ test('usa a pasta da variável IDLELIVE_DATA_DIR', () => {
   assert.equal(DATA_DIR, path.resolve(dataDir));
 });
 
-test('sem arquivos, começa com os valores padrão', () => {
-  assert.deepEqual(store.config, { channels: [], kickChannels: [], lolidleChannels: [], lolidleKickChannels: [] });
+test('sem config.json, começa com as listas do parceiros.json e grava', () => {
+  const partners = JSON.parse(fs.readFileSync(new URL('../parceiros.json', import.meta.url), 'utf8'));
+  for (const key of store.PARTNER_LISTS) {
+    assert.deepEqual(store.config[key], partners[key]);
+    assert.deepEqual(store.config.partners[key], partners[key]);
+  }
+  assert.deepEqual(store.partnerChanges, {});
+  assert.deepEqual(JSON.parse(fs.readFileSync(file('config.json'), 'utf8')).channels, partners.channels);
   assert.deepEqual(store.kick, { accounts: [], lolidleAccounts: [] });
   assert.deepEqual(store.lolidle, { accounts: [] });
 });
@@ -32,9 +38,41 @@ test('points.json antigo (objeto) vira lista', () => {
 });
 
 test('saveConfig grava na pasta de dados', () => {
-  store.config.channels.push('cogu');
+  store.config.channels.push('meucanal');
   store.saveConfig();
-  assert.deepEqual(JSON.parse(fs.readFileSync(file('config.json'), 'utf8')).channels, ['cogu']);
+  assert.equal(JSON.parse(fs.readFileSync(file('config.json'), 'utf8')).channels.at(-1), 'meucanal');
+});
+
+test('mergePartners: entra parceiro novo, sai o antigo e o que o jogador fez continua', () => {
+  // O jogador tirou "b" e adicionou "meu"; os parceiros trocaram "c" por "d".
+  const { list, added, removed } = store.mergePartners(['a', 'c', 'meu'], ['a', 'b', 'c'], ['a', 'b', 'd']);
+  assert.deepEqual(list, ['a', 'meu', 'd']);
+  assert.deepEqual(added, ['d']);
+  assert.deepEqual(removed, ['c']);
+});
+
+test('mergePartners: parceiro novo que o jogador já tinha não repete', () => {
+  assert.deepEqual(store.mergePartners(['a', 'd'], ['a'], ['a', 'd']), { list: ['a', 'd'], added: [], removed: [] });
+});
+
+test('applyPartners: usa a lista guardada em partners e atualiza ela', () => {
+  const cfg = { channels: ['a', 'meu'], kickChannels: ['k'], partners: { channels: ['a', 'x'], kickChannels: ['k'] } };
+  const changes = store.applyPartners(cfg, { channels: ['a', 'n'], kickChannels: ['k'] }, false);
+  assert.deepEqual(cfg.channels, ['a', 'meu', 'n']);
+  assert.deepEqual(changes, { channels: { added: ['n'], removed: [] } });
+  assert.deepEqual(cfg.partners, { channels: ['a', 'n'], kickChannels: ['k'] });
+  // Abrir de novo não muda nada, nem traz de volta canal que o jogador tirou.
+  cfg.channels = ['meu', 'n'];
+  assert.deepEqual(store.applyPartners(cfg, { channels: ['a', 'n'], kickChannels: ['k'] }, false), {});
+  assert.deepEqual(cfg.channels, ['meu', 'n']);
+});
+
+test('applyPartners: config.json da versão 1.5.0 (sem partners) recebe as mudanças desde ela', () => {
+  const cfg = { channels: ['rodil', 'meu'], kickChannels: ['rodil', 'yulla'] };
+  const changes = store.applyPartners(cfg, { channels: ['rodil', 'fnblol9', 'brtt'], kickChannels: ['rodil', 'brtt'] }, false);
+  assert.deepEqual(cfg.channels, ['rodil', 'meu', 'fnblol9', 'brtt']);
+  assert.deepEqual(cfg.kickChannels, ['rodil', 'brtt']);
+  assert.deepEqual(changes.kickChannels, { added: ['brtt'], removed: ['yulla'] });
 });
 
 test('readJson devolve o padrão quando o arquivo não existe', () => {

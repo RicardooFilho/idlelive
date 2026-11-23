@@ -8,3 +8,4 @@ votes.json
 *.json.tmp
 *.json.quebrado-*
 eventos.jsonl*
+config.json

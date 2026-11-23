@@ -70,7 +70,8 @@ O público é de jogadores, não programadores. Veja o [README.md](README.md).
 ## Versões e atualização
 
 - A versão é o `version` do `package.json`. Uma tag `v<versão>` enviada ao GitHub dispara o `.github/workflows/release.yml`, que testa, monta o `IdleLive.zip` e publica a release. A tag e o `package.json` precisam bater.
-- Os jogadores atualizam pelo painel (`src/update.js`): ele baixa o `.tar.gz` da release e troca só os arquivos que mudaram. Nunca troca os arquivos de dados nem um `config.json` que já existe. Novo arquivo de dados? Coloque o nome em `PROTECTED` em `src/update.js`.
+- Os jogadores atualizam pelo painel (`src/update.js`): ele baixa o `.tar.gz` da release e troca só os arquivos que mudaram. Nunca troca os arquivos de dados, e o `config.json` é um deles. Novo arquivo de dados? Coloque o nome em `PROTECTED` em `src/update.js`.
+- Parceiro novo ou que saiu? Mude o `parceiros.json`, não o `config.json` (que é do jogador e está fora do git). Ao abrir, `src/store.js` junta as listas: entra quem foi adicionado e sai quem foi tirado desde a lista guardada em `config.partners`, sem desfazer o que o jogador mudou à mão.
 - Arquivo removido do projeto **não** é apagado na pasta dos jogadores. O código não pode depender de um arquivo sumir.
 - Evite mudar o `iniciar.bat`: o cmd lê o `.bat` aos poucos enquanto roda, então quando ele muda o painel não reinicia sozinho e pede para fechar a janela e abrir de novo.
 - Arquivo só para quem programa (testes, scripts de CI) vai com `export-ignore` no `.gitattributes`, para ficar fora do zip.

@@ -62,7 +62,7 @@ Não precisa rodar `npm install`: o projeto não tem dependências.
 
 O painel procura versão nova sozinho (a cada 6 horas) e mostra um aviso no topo quando sai uma. Clique em **Atualizar agora**: ele baixa a versão nova do GitHub, troca os arquivos do programa e reinicia sozinho. Suas contas, canais e histórico continuam. Também dá para procurar na hora em **Configurações → Procurar atualização**.
 
-A atualização não mexe no `config.json`, então canais que entrarem na lista de parceiros numa versão nova precisam ser adicionados à mão (campo **Adicionar canal**).
+A lista de parceiros se atualiza junto: ao abrir a versão nova, entram os canais que viraram parceiros e saem os que deixaram de ser. Canais que você adicionou ou tirou à mão continuam do seu jeito.
 
 **Baixou com `git clone` ou pelo "Download ZIP" do botão verde?** Faça a troca uma vez só: baixe o **IdleLive.zip** da release, extraia numa pasta nova e copie da pasta antiga para a nova os arquivos da tabela em [Seus dados e segurança](#seus-dados-e-segurança) e o `config.json`. Depois disso, as atualizações são pelo botão. Numa pasta com git o painel só avisa da versão nova, sem instalar, para não bagunçar o repositório.
 
@@ -105,7 +105,7 @@ Opcional: em **Configurações → App da Kick**, cole o Client ID e o Client Se
 Na página **Votar**, adicione o nick que recebe o voto em cada jogo e escolha o perfil do navegador logado no idlehub.io (Google ou Discord) que vota por ele. O botão **Votar** abre a página de voto nesse perfil, já com o nick preenchido: é só clicar em **Votar** no site. O idlehub aceita um voto por conta a cada 24 h, e o painel mostra quando cada um libera de novo.
 
 ### Lista de parceiros
-O painel já vem com os parceiros atuais. Se o jogo adicionar ou remover algum, use o campo **Adicionar canal** em cima de cada lista. Para remover, clique no **✕** do canal.
+O painel já vem com os parceiros atuais e as atualizações trazem os novos (e tiram os que saíram). Se quiser mexer antes, use o campo **Adicionar canal** em cima de cada lista. Para remover, clique no **✕** do canal.
 
 ## Seus dados e segurança
 
@@ -170,7 +170,8 @@ test/*.test.js         testes automatizados (node:test, sem dependências)
 scripts/check.js       confere a sintaxe de todos os .js
 scripts/release-notes.js  texto da release, tirado do CHANGELOG.md
 .github/workflows/     CI (sintaxe e testes no Node 20, 22 e 24 a cada push) e release (a cada tag v*)
-config.json            listas de canais e jogos desligados (games)
+parceiros.json         listas de parceiros de cada versão (entram no config.json ao abrir)
+config.json            seus canais e jogos desligados (games); criado pelo painel, fora do git
 ```
 
 Para trocar a porta, defina `PORT` antes de iniciar (ex.: `set PORT=3005`).

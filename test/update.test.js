@@ -85,10 +85,10 @@ test('grava só o que mudou e não toca nos dados do jogador', () => {
   assert.equal(fs.readdirSync(root).some((f) => f.endsWith('.update-tmp')), false);
 });
 
-test('config.json é criado se ainda não existir', () => {
+test('config.json não é criado pela atualização', () => {
   const root = tmpDir();
   applyFiles([{ path: 'config.json', data: Buffer.from('{"channels":["x"]}') }], root);
-  assert.equal(fs.readFileSync(path.join(root, 'config.json'), 'utf8'), '{"channels":["x"]}');
+  assert.equal(fs.existsSync(path.join(root, 'config.json')), false);
 });
 
 test('iniciar.bat ganha CRLF e só conta como trocado se mudou de verdade', () => {

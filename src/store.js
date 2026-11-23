@@ -1,4 +1,4 @@
-// Persistência: config.json (canais), kick.json (Kick e navegador) e points.json (contas de pontos da Twitch).
+// Persistência: config.json (canais, que começam pelo parceiros.json), kick.json (Kick e navegador) e points.json (contas de pontos da Twitch).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,11 +35,53 @@ export function writeJson(file, data, space = 2) {
   fs.renameSync(tmp, file);
 }
 
+// Listas de parceiros dos jogos. O parceiros.json vem em cada versão e o atualizador troca ele; o config.json é do
+// jogador e nunca é trocado. Ao abrir, entra no config.json quem virou parceiro e sai quem deixou de ser.
+export const PARTNER_LISTS = ['channels', 'kickChannels', 'lolidleChannels', 'lolidleKickChannels'];
+const PARTNERS_FILE = path.join(ROOT, 'parceiros.json');
+// Mudanças desde a versão 1.5.0, a última antes do parceiros.json. Num config.json dessa época, que ainda não
+// guarda a lista em "partners", é assim que se sabe o que mudou desde a versão que o jogador tinha.
+const SINCE_V150 = { channels: { added: ['fnblol9', 'brtt'] }, kickChannels: { added: ['brtt'], removed: ['yulla'] } };
+
+// Junta a lista do jogador com a dos parceiros. "base" é a lista de parceiros da última vez que juntou: só entra quem
+// virou parceiro depois dela e só sai quem deixou de ser. Canal que o jogador tirou ou adicionou à mão continua assim.
+export function mergePartners(list, base, partners) {
+  const added = partners.filter((c) => !base.includes(c) && !list.includes(c));
+  const removed = list.filter((c) => base.includes(c) && !partners.includes(c));
+  return { list: [...list.filter((c) => !removed.includes(c)), ...added], added, removed };
+}
+
+// Aplica o parceiros.json no config. Devolve { lista: { added, removed } } só com o que mudou.
+export function applyPartners(cfg, partners, fresh) {
+  const changes = {};
+  for (const key of PARTNER_LISTS) {
+    const now = partners[key];
+    if (!Array.isArray(now)) continue;
+    if (fresh) {
+      cfg[key] = [...now];
+    } else {
+      const since = SINCE_V150[key] ?? {};
+      const base = cfg.partners?.[key] ?? [...now.filter((c) => !since.added?.includes(c)), ...(since.removed ?? [])];
+      const merged = mergePartners(cfg[key], base, now);
+      cfg[key] = merged.list;
+      if (merged.added.length || merged.removed.length) changes[key] = { added: merged.added, removed: merged.removed };
+    }
+    cfg.partners = { ...cfg.partners, [key]: [...now] };
+  }
+  return changes;
+}
+
 export const config = readJson(CONFIG_FILE, {});
+// Sem nenhuma lista (instalação nova ou config.json quebrado): começa com todos os parceiros.
+const fresh = !PARTNER_LISTS.some((key) => Array.isArray(config[key]));
 config.channels ??= [];
 config.kickChannels ??= [];
 config.lolidleChannels ??= []; // canais da Twitch do LoLdle (só presença no chat)
 config.lolidleKickChannels ??= []; // canais da Kick do LoLdle (pontos do canal, como no Pokeidle)
+const partnersBefore = JSON.stringify(config.partners);
+// O que entrou e saiu da lista ao abrir, para o servidor avisar no painel.
+export const partnerChanges = applyPartners(config, readJson(PARTNERS_FILE, {}), fresh);
+if (JSON.stringify(config.partners) !== partnersBefore) writeJson(CONFIG_FILE, config);
 
 // { clientId, clientSecret, browser: 'chrome' | 'brave' | 'edge', accounts: [{ id, username, token, profile, needsRelink }], lolidleAccounts: [...] }
 // App da Kick (opcional), navegador do botão ▶ e as contas da Kick que juntam pontos (login pelo token da conta):

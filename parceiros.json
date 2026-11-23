@@ -20,7 +20,9 @@
     "daniels",
     "kennzy",
     "ookina",
-    "surskity11"
+    "surskity11",
+    "fnblol9",
+    "brtt"
   ],
   "kickChannels": [
     "guaxilol1",
@@ -38,7 +40,6 @@
     "techzz",
     "dersin2k",
     "mecmeno",
-    "yulla",
     "surskity",
     "denissnider",
     "fnblol",
@@ -46,7 +47,8 @@
     "revolta",
     "yoda",
     "kennzy",
-    "ookina8"
+    "ookina8",
+    "brtt"
   ],
   "lolidleChannels": [
     "ovelhera",
@@ -137,9 +139,5 @@
     "tojitensei",
     "vannnsato",
     "yoda"
-  ],
-  "games": {
-    "lolidle": true,
-    "pokeidle": true
-  }
+  ]
 }

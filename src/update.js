@@ -10,10 +10,9 @@ const APP_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // a API do GitHub aceita 60 pedidos por hora sem login; 4 por dia sobra
 const LAUNCHER = 'iniciar.bat';
 
-// Arquivos do jogador: nunca são trocados, mesmo se um dia vierem na release. O config.json vem com a lista de
-// parceiros, mas depois é do jogador (canais que ele adicionou ou tirou), então só é criado se ainda não existir.
-const PROTECTED = new Set(['accounts.json', 'kick.json', 'points.json', 'lolidle.json', 'stats.json', '.token.json', 'eventos.jsonl', 'votes.json']);
-const KEEP_IF_EXISTS = new Set(['config.json']);
+// Arquivos do jogador: nunca são trocados, mesmo se um dia vierem na release. O config.json é criado pelo painel
+// a partir do parceiros.json (que vem em cada versão), e as listas novas entram nele ao abrir (src/store.js).
+const PROTECTED = new Set(['accounts.json', 'config.json', 'kick.json', 'points.json', 'lolidle.json', 'stats.json', '.token.json', 'eventos.jsonl', 'votes.json']);
 
 // "1.10.0" > "1.9.2". Aceita "v" na frente; partes que faltam contam como 0.
 export function compareVersions(a, b) {
@@ -75,7 +74,6 @@ export function applyFiles(files, root = APP_ROOT) {
     const name = path.basename(file.path);
     if (PROTECTED.has(name) && !file.path.includes('/')) continue;
     const target = path.join(root, file.path);
-    if (KEEP_IF_EXISTS.has(file.path) && fs.existsSync(target)) continue;
     const data = fixLineEndings(file.path, file.data);
     if (fs.existsSync(target) && fs.readFileSync(target).equals(data)) continue;
     pending.push({ rel: file.path.replace(/\\/g, '/'), target, data });

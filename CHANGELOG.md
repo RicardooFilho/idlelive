@@ -2,6 +2,16 @@
 
 Mudanças do IdleLive, da mais recente para a mais antiga.
 
+## 23/11/2026
+
+### Novidades
+- **Parceiros novos chegam com a atualização:** ao abrir uma versão nova, o painel coloca nas suas listas os canais que viraram parceiros e tira os que deixaram de ser, e avisa no 🎁 o que mudou. Canais que você adicionou ou tirou à mão continuam do seu jeito.
+
+### Mudanças
+- Listas de canais oficiais do Pokeidle atualizadas com os parceiros do jogo:
+  - **Twitch:** entraram o brtt e o fnblol9.
+  - **Kick:** entrou o brtt e saiu a yulla.
+
 ## 22/11/2026
 
 ### Novidades

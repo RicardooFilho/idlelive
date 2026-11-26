@@ -2,6 +2,11 @@
 
 Mudanças do IdleLive, da mais recente para a mais antiga.
 
+## 25/11/2026
+
+### Mudanças
+- O botão **Hub** no topo agora abre o novo endereço do guia: pokeidleguide.io.
+
 ## 23/11/2026
 
 ### Novidades
